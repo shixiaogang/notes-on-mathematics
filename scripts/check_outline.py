@@ -21,7 +21,7 @@ def markdown_links(text):
 
 
 def check(root=ROOT):
-    outline = root / "drafts/math-ten-volumes"
+    outline = root / "outlines/math-ten-volumes"
     manifest = json.loads(
         (root / "scripts/outline/math-ten-part-files-manifest.json").read_text()
     )
@@ -104,7 +104,7 @@ def check(root=ROOT):
             errors.append(f"Part missing from global outline: {relative}")
 
     link_count = 0
-    for directory in (root / "plans", root / "drafts"):
+    for directory in (root / "outlines", root / "plans"):
         for path in sorted(directory.rglob("*.md")):
             for target in markdown_links(path.read_text()):
                 parsed = urlsplit(target.strip("<>"))

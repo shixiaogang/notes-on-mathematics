@@ -4,9 +4,11 @@
 
 本轮迁移保留现行五卷正文，共17个部分、63章；正在调整的十卷方案单独同步，尚未据此重组正文。源机器学习仓库的内容继续保留。
 
-- **[最新十卷大纲](drafts/math-ten-volumes/README.md)**：从 `math-nine-volumes-plan` 工作区的 `drafts/math-ten-volumes/` 同步，包括未提交内容；10卷、29个部分、133章。
-- **[当前正文大纲](plans/README.md)**：与现行五卷正文对应。
-- **[保留的五卷目标纲](plans/mathematical-foundations/README.md)**：早期结构讨论材料，后续调整以最新十卷方案为准。
+- **[大纲总入口](outlines/README.md)**：统一查看现行正文、十卷目标及保留大纲。
+- **[最新十卷大纲](outlines/math-ten-volumes/README.md)**：从源仓库 `math-nine-volumes-plan` 工作区的 `drafts/math-ten-volumes/` 同步，包括未提交内容；10卷、29个部分、133章。
+- **[当前正文大纲](outlines/current/README.md)**：与现行五卷正文对应。
+- **[保留的五卷目标纲](outlines/mathematical-foundations/README.md)**：早期结构讨论材料，后续调整以最新十卷方案为准。
+- **[工作计划与配套材料](plans/README.md)**：待办工作的范围、步骤、进度和验收安排，以及尚未出版的稿件。
 - **[迁移说明](migration/README.md)**：来源版本、复制范围、必要适配与校验结果。
 
 ## 构建与阅读
@@ -36,7 +38,7 @@ make test
 
 ## 目录与维护
 
-`tex/` 保存正文、文献、索引与共享样式；`plans/` 保存当前正文提要及保留的五卷目标纲；`drafts/` 保存十卷调整方案和未接入出版入口的数学材料；`figures/`、`fonts/` 保存独立构建与复现所需的资源；`specs/` 保存开发规范。构建缓存 `build/` 不纳入 Git。
+`tex/` 保存正文、文献、索引与共享样式；`outlines/` 统一保存现行正文大纲、十卷调整方案和保留大纲；`plans/` 保存待办工作的实施计划和按任务归档的未出版配套材料；`figures/`、`fonts/` 保存独立构建与复现所需的资源；`specs/` 保存开发规范。构建缓存 `build/` 不纳入 Git。
 
 每次修改正文都须同步对应大纲；仅调整十卷方案时保留正文结构。后续开发使用独立工作区，见[开发要求](specs/development.md)。
 
