@@ -21,7 +21,7 @@ def markdown_links(text):
 
 
 def check(root=ROOT):
-    outline = root / "outlines/math-ten-volumes"
+    outline = root / "plans/ten-volume-migration"
     manifest = json.loads(
         (root / "scripts/outline/math-ten-part-files-manifest.json").read_text()
     )
@@ -92,7 +92,8 @@ def check(root=ROOT):
             errors.append(f"Discontinuous chapter numbers: {volume['volume']}")
         all_chapters.extend(volume_chapters)
 
-    actual = {p.relative_to(outline) for p in outline.rglob("*.md")}
+    actual = {p.relative_to(outline) for p in outline.rglob("*.md")
+              if p.relative_to(outline).parts[0] != "materials"}
     if actual != expected:
         errors.append(f"Unexpected/missing outline files: {sorted(str(p) for p in actual ^ expected)}")
     overview_path = outline / "README.md"

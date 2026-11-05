@@ -1,19 +1,19 @@
 # 数学部分独立迁移
 
-迁移日期：2026-11-05。来源是机器学习笔记的 `main` 提交 `ff88d50e0edf94a815bc6e16e76ded414f406dc2`；最新十卷大纲另取自 `codex/math-nine-volumes-plan` 工作区的 `drafts/math-ten-volumes/`，包括尚未提交的文件。源仓库按用户要求保留原样。本仓库当前的十卷大纲位于 `outlines/math-ten-volumes/`；前述 `drafts/` 路径描述迁移时的源工作区。
+迁移日期：2026-11-05。来源是机器学习笔记的 `main` 提交 `ff88d50e0edf94a815bc6e16e76ded414f406dc2`；最新十卷大纲另取自 `codex/math-nine-volumes-plan` 工作区的 `drafts/math-ten-volumes/`，包括尚未提交的文件。源仓库按用户要求保留原样。本仓库当前已确定的十卷结构、卷章分工及内容完整保存于 `plans/ten-volume-migration/`，作为唯一待执行计划；前述 `drafts/` 路径描述迁移时的源工作区。
 
 ## 保存的材料
 
 - 现行数学五卷正文与当前大纲：17部分、63章，保留原卷目录与正文层级。
-- 正在调整的十卷大纲：30份 Markdown（总索引与29个部分），10卷、133章；原稿逐字节复制，未据此重写正文。
-- 五卷目标纲与 [Lebesgue 待迁移稿](../plans/volume-02-lebesgue-pending-migration/README.md)，分别标记其历史阶段及未接入出版入口的状态。
+- 迁入时的十卷大纲：30份 Markdown（总索引与29个部分），10卷、133章；首次迁入按原稿逐字节复制。现已作为已确定、尚待执行的重组计划保存，尚未据此重写正文。
+- 五卷目标纲与 [Lebesgue 待迁移稿](../plans/ten-volume-migration/materials/volume-02-lebesgue-pending-migration/README.md)，分别标记其历史阶段及未接入出版入口的状态。
 - 数学图像、图源、数据、共享生成器、字体及许可证，连同独立构建、索引与校验工具。
 
 来源文件及原始哈希见 [source-snapshot.json](source-snapshot.json)。该清单中的路径和哈希保存迁移时的来源证据，不随本仓库目录重排改写；此后编辑应以 Git 历史为准，不把来源哈希作为正文永远不得变化的约束。
 
 ## 独立仓库适配
 
-书名改为“数学笔记”，前言说明当前数学内容及十卷方案的状态；封面采用浅暖黄（#F2DE9C），内页采用浅暖黄色块（#DFC66B）和接近白色的奶油背景（#F8F5EC），链接使用深金色。当前卷名保留原“数学准备”前缀，便于和正在调整的大纲对应。
+书名改为“数学笔记”，前言说明当前数学内容及十卷方案的状态；封面采用浅暖黄（#F2DE9C），内页采用浅暖黄色块（#DFC66B）和接近白色的奶油背景（#F8F5EC），链接使用深金色。当前卷名保留原“数学准备”前缀，便于与迁移前的正文材料对应。
 
 数学推导、定义、公式与章节结构沿用原文。正文中11处指向机器学习卷的延伸阅读引用改为原仓库固定版本的网页链接，见 [external-references.json](external-references.json)；对应当前大纲补充迁移说明。这样无需迁入机器学习模型或可信性正文，也能保留原来的阅读去向。
 
@@ -34,6 +34,6 @@ make test
 ./build.sh check-target
 ```
 
-十卷结构清单与当前大纲分别保存于 `scripts/outline/` 和 `outlines/math-ten-volumes/`。当前正文提要位于 `outlines/current/`，保留的五卷目标纲位于 `outlines/mathematical-foundations/`；后续执行安排与未出版材料见[工作计划与配套材料](../plans/README.md)。重新同步时先比较源工作区的未提交内容，再同步实际稿件与匹配的结构清单，避免用旧评审快照覆盖最新稿件。
+十卷结构清单与计划内容分别保存于 `scripts/outline/` 和 `plans/ten-volume-migration/`；该计划同时包含已确定的目标章纲与实施安排，配套稿件归入其 `materials/`。当前正文提要位于 `outlines/current/`，保留的五卷目标纲位于 `outlines/mathematical-foundations/`；当前只登记[十卷重组计划](../plans/ten-volume-migration/README.md)这一项待执行工作。重新同步时先比较源工作区的未提交内容，再同步实际稿件与匹配的结构清单，避免用旧评审快照覆盖最新稿件。
 
 独立迁移时的检查结果见 [validation.json](validation.json)：五卷均按浅暖黄色主题重新构建，成品与当前输入一致；41项单元测试、99项字体校验及大纲结构检查通过，564条本地链接均有效。最终日志无未定义引用、缺失文献或缺字；已抽查封面、目录、部首页、章首页与正文陈述页。五卷分别为1130、559、823、240、164页。此记录不代表对全部数学内容进行新的学术审稿。

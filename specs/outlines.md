@@ -1,21 +1,20 @@
 # 大纲目录规范
 
-本规范约束 `outlines/` 的内容结构与维护，入口为[大纲总索引](../outlines/README.md)。大纲描述书稿讲什么、各章如何组织；待办工作的范围、步骤、验收记录与未出版配套材料放在 `plans/`，遵循[工作计划与配套材料规范](plans.md)。
+本规范约束 `outlines/` 中当前正文提要及来源大纲的组织与维护，入口为[大纲总索引](../outlines/README.md)。已确定、尚待实施的十卷内容结构与卷章分工完整保存在[十卷重组计划](../plans/ten-volume-migration/README.md)中，遵循[工作计划与配套材料规范](plans.md)。
 
 ## 目录与实施状态
 
 - `outlines/current/` 保存当前正文的结构和段落提要，入口为[正文大纲索引](../outlines/current/README.md)。当前五卷的卷目以 `tex/volumes.json` 为准，章节范围和顺序以各卷实际正文入口为准。
-- `outlines/math-ten-volumes/` 保存正在调整的[十卷目标大纲](../outlines/math-ten-volumes/README.md)，尚未落实到正文。该方案是后续结构调整的讨论入口，不能作为相应正文已经完成的依据。
-- `outlines/mathematical-foundations/` 保留前一阶段的[五卷目标纲](../outlines/mathematical-foundations/README.md)，供核对材料来源和既有讨论。目标章标识“部分号.部分内章序号”只作讨论定位，不作为当前正文的正式章号；后续调整以十卷目标大纲为准。
-- `outlines/pending-migration/` 保存未接入出版入口的正文稿所对应的提要，实际草稿放在 `plans/` 对应任务子目录中。提要须说明材料状态并链接到稿件。
+- `outlines/mathematical-foundations/` 保留前一阶段的[五卷目标纲](../outlines/mathematical-foundations/README.md)，供核对材料来源和既有讨论。目标章标识“部分号.部分内章序号”只作讨论定位，不作为当前正文的正式章号；后续调整以十卷重组计划中的目标章纲为准。
+- `outlines/pending-migration/` 保存未接入出版入口的正文稿所对应的提要，实际草稿归入 `plans/ten-volume-migration/materials/`。提要须说明材料状态并链接到稿件。
 
-各套大纲分别维护范围、基线与实施状态。拟调整稿写清调整范围及尚未落实到正文的内容；仅要求审读或调整大纲时，不据此修改正文。下文关于标题层级、`paragraph` 和自然段提要的要求，也适用于拟调整大纲。
+各套大纲分别维护范围、基线与实施状态。十卷计划中已确定的章纲仍是目标内容，不能作为相应正文已经完成的依据。仅要求整理计划或审读大纲时，不据此修改正文。下文关于标题层级、`paragraph` 和自然段提要的要求，也适用于计划中的目标章纲。
 
 ## 文件组织
 
 `outlines/README.md` 作为总入口；当前正文提要由 `outlines/current/README.md` 按卷、部分登记实际章数和链接。当前正文的卷目录与 `tex/` 同名，沿用两位序号和英文名称，例如 `outlines/current/01-basic-mathematics/`。设有部分的卷每部分保存一份大纲，如 `01-sets.md`，同一部分不拆成多份章纲，也不另设重复的卷级大纲；未来若有不设部分的卷，则直接保存一份 `outline.md`，不人为增加正文不存在的部分。
 
-十卷目标大纲保留总索引与逐部分文件，结构清单位于 `scripts/outline/`；标题、编号、文件组织变化时同步清单和索引。保留的五卷目标纲按五卷、十七部分组织，其目标章数与实际正文章数分别统计。
+十卷目标章纲作为同一计划的一部分，保存在 `plans/ten-volume-migration/`，不在 `outlines/` 另留重复副本；结构清单位于 `scripts/outline/`，标题、编号或文件组织变化时同步清单和计划总索引。保留的五卷目标纲按五卷、十七部分组织，其目标章数与实际正文章数分别统计。
 
 大纲目录不放执行清单、聊天讨论、审读记录、正文快照或一次性构建报告。执行计划及未出版配套材料放入 `plans/`；历史版本由 Git 保存，仍有效的校验契约和复现资源按用途归档，清理前检查依赖。
 

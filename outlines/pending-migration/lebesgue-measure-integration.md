@@ -1,6 +1,6 @@
 ## 第8章 勒贝格测度与积分
 
-正文入口：[05-lebesgue-measure-integration.tex](../../plans/volume-02-lebesgue-pending-migration/05-lebesgue-measure-integration.tex)，章内输入集合测量与可测性积分两节。
+正文入口：[05-lebesgue-measure-integration.tex](../../plans/ten-volume-migration/materials/volume-02-lebesgue-pending-migration/05-lebesgue-measure-integration.tex)，章内输入集合测量与可测性积分两节。
 
 1. 从第7章指出的黎曼积分的两处局限进入：在任意短区间内剧烈振荡的有界函数无法累计，黎曼可积函数列的逐点极限可能不再黎曼可积；说明本章先测量更一般的集合、再按取值分层累计，并列出所用的第5章极限与连续、第6章导数与中值定理、第7章黎曼积分。
 
@@ -8,7 +8,7 @@
 
 ### 8.1 集合的测量
 
-正文入口：[`02-set-measurement.tex`](../../plans/volume-02-lebesgue-pending-migration/function-analysis/02-set-measurement.tex)。在第7章的黎曼积分之后，回到“集合有多大”的问题：距离作用于一对点，大小作用于一个集合，同一距离不唯一决定测度。本节先提出把区间长度推广到一般集合的问题，用有限加权计数说明有限可加规则，再从有限区间并的长度与一般集合的内外逼近得到Jordan测量，用有理点集说明有限覆盖的局限；再引入可数集，用可数覆盖定义勒贝格外测度，经Carathéodory分割条件选出可测集并证明可数可加性；最后只就实轴上的勒贝格测度推导集合列性质、零测集与几乎处处，并以康托尔集和康托尔函数说明零测集可以不可数并承载函数的全部增长；一般测度空间留给“测度空间”章。
+正文入口：[`02-set-measurement.tex`](../../plans/ten-volume-migration/materials/volume-02-lebesgue-pending-migration/function-analysis/02-set-measurement.tex)。在第7章的黎曼积分之后，回到“集合有多大”的问题：距离作用于一对点，大小作用于一个集合，同一距离不唯一决定测度。本节先提出把区间长度推广到一般集合的问题，用有限加权计数说明有限可加规则，再从有限区间并的长度与一般集合的内外逼近得到Jordan测量，用有理点集说明有限覆盖的局限；再引入可数集，用可数覆盖定义勒贝格外测度，经Carathéodory分割条件选出可测集并证明可数可加性；最后只就实轴上的勒贝格测度推导集合列性质、零测集与几乎处处，并以康托尔集和康托尔函数说明零测集可以不可数并承载函数的全部增长；一般测度空间留给“测度空间”章。
 
 #### 8.1.1 有限集与Jordan测量
 

@@ -2,13 +2,13 @@
 
 从[机器学习笔记](https://github.com/shixiaogang/notes-on-machine-learning)中独立整理的中文 LaTeX 数学笔记，采用 `tufte-book` 版式与暖黄色主题。
 
-本轮迁移保留现行五卷正文，共17个部分、63章；正在调整的十卷方案单独同步，尚未据此重组正文。源机器学习仓库的内容继续保留。
+本轮迁移保留现行五卷正文，共17个部分、63章；已确定的十卷重组方案作为待执行计划完整保存，尚未据此重组正文。源机器学习仓库的内容继续保留。
 
-- **[大纲总入口](outlines/README.md)**：统一查看现行正文、十卷目标及保留大纲。
-- **[最新十卷大纲](outlines/math-ten-volumes/README.md)**：从源仓库 `math-nine-volumes-plan` 工作区的 `drafts/math-ten-volumes/` 同步，包括未提交内容；10卷、29个部分、133章。
+- **[大纲总入口](outlines/README.md)**：查看现行正文提要、保留的五卷来源大纲和待迁移材料提要。
+- **[十卷重组计划](plans/ten-volume-migration/README.md)**：完整保留已确定的10卷、29个部分、133章的分工与内容，并附逐部分细纲、配套材料及实施安排；这是当前唯一待执行计划。
 - **[当前正文大纲](outlines/current/README.md)**：与现行五卷正文对应。
 - **[保留的五卷目标纲](outlines/mathematical-foundations/README.md)**：早期结构讨论材料，后续调整以最新十卷方案为准。
-- **[工作计划与配套材料](plans/README.md)**：待办工作的范围、步骤、进度和验收安排，以及尚未出版的稿件。
+- **[工作计划索引](plans/README.md)**：登记十卷重组这一项待执行计划及其状态。
 - **[迁移说明](migration/README.md)**：来源版本、复制范围、必要适配与校验结果。
 
 ## 构建与阅读
@@ -20,7 +20,7 @@
 ./build.sh build         # 此后只更新受影响卷
 ./build.sh check-target  # 校验 PDF 与当前输入一致
 ./build.sh volume 01-basic-mathematics
-python3 scripts/check_outline.py  # 校验十卷草案结构与本地链接
+python3 scripts/check_outline.py  # 校验十卷计划章纲与本地链接
 make test
 ```
 
@@ -38,9 +38,9 @@ make test
 
 ## 目录与维护
 
-`tex/` 保存正文、文献、索引与共享样式；`outlines/` 统一保存现行正文大纲、十卷调整方案和保留大纲；`plans/` 保存待办工作的实施计划和按任务归档的未出版配套材料；`figures/`、`fonts/` 保存独立构建与复现所需的资源；`specs/` 保存开发规范。构建缓存 `build/` 不纳入 Git。
+`tex/` 保存正文、文献、索引与共享样式；`outlines/` 保存现行正文大纲、保留的五卷来源大纲及待迁移材料提要；`plans/` 当前只保存十卷重组计划，计划目录同时容纳卷章内容方案、实施安排和配套材料；`figures/`、`fonts/` 保存独立构建与复现所需的资源；`specs/` 保存开发规范。构建缓存 `build/` 不纳入 Git。
 
-每次修改正文都须同步对应大纲；仅调整十卷方案时保留正文结构。后续开发使用独立工作区，见[开发要求](specs/development.md)。
+每次修改正文都须同步对应大纲；仅整理十卷计划时保留正文结构。后续开发使用独立工作区，见[开发要求](specs/development.md)。
 
 远端仓库：[shixiaogang/notes-on-mathematics](https://github.com/shixiaogang/notes-on-mathematics)。
 

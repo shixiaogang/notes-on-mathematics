@@ -1,10 +1,9 @@
 # 数学大纲
 
-本目录集中保存内容结构与章节提要，区分正在调整的目标、现行正文和保留的来源材料。待办任务、实施顺序与验收条件放在[工作计划](../plans/README.md)。
+本目录集中保存现行正文结构、章节提要和保留的来源材料。已确定但尚未实施的[十卷重组计划](../plans/ten-volume-migration/README.md)集中保存卷章分工、内容安排与执行步骤；本目录保留现行正文大纲及来源材料。
 
 | 大纲 | 状态与用途 |
 | --- | --- |
-| [十卷目标大纲](math-ten-volumes/README.md) | 当前正在调整的方案：10卷、29部分、133章，尚未实施到正文。 |
 | [现行正文大纲](current/README.md) | 与现有五卷、17部分、63章正文对应，随正文变更同步维护。 |
 | [保留的五卷目标纲](mathematical-foundations/README.md) | 前一阶段的95个目标章目及细化材料，供十卷方案查阅来源。 |
 | [Lebesgue待迁移稿提要](pending-migration/lebesgue-measure-integration.md) | 对应未接入出版入口的原始稿件，不计入现行正文。 |
