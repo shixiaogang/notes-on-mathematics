@@ -12,7 +12,7 @@
 |---|---:|---:|---|
 | 卷一：集合与一元微积分 | 2 | 7 | [集合](01-sets-and-univariate-calculus/01-sets.md)；[实数与一元函数](01-sets-and-univariate-calculus/02-real-numbers-and-univariate-functions.md) |
 | 卷二：向量、矩阵与多元微积分 | 4 | 24 | [向量与线性空间](02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces.md)；[谱分析](02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md)；[线性方程与优化](02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization.md)；[多元微积分](02-vectors-matrices-and-multivariate-calculus/04-multivariate-calculus.md) |
-| 卷三：图 | 5 | 17 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[局部函数与图上动态规划](03-graphs/04-local-functions-and-dynamic-programming.md)；[图上函数与谱分析](03-graphs/05-graph-functions-and-spectral-analysis.md) |
+| 卷三：图 | 5 | 17 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md)；[图上函数与谱分析](03-graphs/05-graph-functions-and-spectral-analysis.md) |
 | 卷四：度量、测度、函数空间与流形 | 3 | 16 | [度量与测度](04-spaces-measures-and-geometry/01-metric-and-measure.md)；[函数空间](04-spaces-measures-and-geometry/02-function-spaces.md)；[流形](04-spaces-measures-and-geometry/03-manifolds.md) |
 | 卷五：优化 | 3 | 12 | [优化问题与有限维求解](05-optimization/01-finite-dimensional-optimization.md)；[多准则与嵌套优化](05-optimization/02-multiple-criteria-and-nested-optimization.md)；[函数与流形优化](05-optimization/03-function-and-manifold-optimization.md) |
 | 卷六：微分方程 | 2 | 8 | [常微分方程](06-differential-equations/01-ordinary-differential-equations.md)；[偏微分方程](06-differential-equations/02-partial-differential-equations.md) |
@@ -305,7 +305,7 @@
 
 研究成对二值成本何时可以精确表示为割，借最大流最小割求出最优配置。逐项核对常数移位、容量非负和次模条件，说明非次模或附加约束的边界。
 
-### 第四部分：局部函数与图上动态规划
+### 第四部分：图上的动态规划
 
 [查看本部分章、节和小节大纲](03-graphs/04-local-functions-and-dynamic-programming.md)
 
