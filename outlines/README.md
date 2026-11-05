@@ -6,6 +6,5 @@
 | --- | --- |
 | [现行正文大纲](current/README.md) | 与现有五卷、17部分、63章正文对应，随正文变更同步维护。 |
 | [保留的五卷目标纲](mathematical-foundations/README.md) | 前一阶段的95个目标章目及细化材料，供十卷方案查阅来源。 |
-| [Lebesgue待迁移稿提要](pending-migration/lebesgue-measure-integration.md) | 对应未接入出版入口的原始稿件，不计入现行正文。 |
 
 大纲的标题、层级、内容归属和章节状态按[大纲规范](../specs/outlines.md)维护。只调整目标大纲时，正文完成状态仍以实际出版入口为准。

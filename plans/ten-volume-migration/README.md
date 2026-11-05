@@ -42,7 +42,7 @@
 ### 迁移对应与内容缺口
 
 - [ ] 依据下文133章的分工，把现行五卷各章对应到十卷目标，分别标明整章迁移、拆分、合并及尚需补写的内容。
-- [ ] 核对[五卷来源纲](../../outlines/mathematical-foundations/README.md)与[本计划内的Lebesgue待迁移稿](materials/volume-02-lebesgue-pending-migration/README.md)，区分可复用材料和已被正文覆盖的内容。
+- [ ] 核对[五卷来源纲](../../outlines/mathematical-foundations/README.md)中仍用于本计划的章节分工，按当前十卷方案消除重复归属。
 - [ ] 登记跨卷依赖、语义标签、图像及生成器、索引词条和文献的归属，确定每批迁移范围。
 
 完成依据：原有材料没有遗漏或无说明的重复；尚无正文的目标内容明确列为待写，已确定的卷章分工保持一致。

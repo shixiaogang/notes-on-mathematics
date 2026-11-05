@@ -92,8 +92,7 @@ def check(root=ROOT):
             errors.append(f"Discontinuous chapter numbers: {volume['volume']}")
         all_chapters.extend(volume_chapters)
 
-    actual = {p.relative_to(outline) for p in outline.rglob("*.md")
-              if p.relative_to(outline).parts[0] != "materials"}
+    actual = {p.relative_to(outline) for p in outline.rglob("*.md")}
     if actual != expected:
         errors.append(f"Unexpected/missing outline files: {sorted(str(p) for p in actual ^ expected)}")
     overview_path = outline / "README.md"

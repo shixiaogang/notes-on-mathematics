@@ -6,12 +6,12 @@
 
 - [LaTeX 与数学记号](specs/latex.md)：入口、宏、符号、引用与构建。
 - [写作](specs/writings.md)：中文论述与技术含义；各章保留独立的“本章小结”。
-- [大纲](specs/outlines.md)：`outlines/current/` 记录实际正文，其余目录保留五卷来源大纲和待迁移材料提要。只调整大纲时不改正文。
-- [工作计划与配套材料](specs/plans.md)：`plans/` 当前仅有 `ten-volume-migration/` 这一项待执行计划，完整保存已确定的十卷内容结构、逐部分细纲、实施步骤及配套材料；配套稿件归入该计划的 `materials/`。
+- [大纲](specs/outlines.md)：`outlines/current/` 记录实际正文，其余目录保留五卷来源大纲。只调整大纲时不改正文。
+- [工作计划](specs/plans.md)：`plans/` 当前仅有 `ten-volume-migration/` 这一项待执行计划，完整保存已确定的十卷内容结构、逐部分细纲与实施步骤。
 - [图像](specs/figures.md)与[样式](specs/design.md)：资源复现、字体、黄色主题与语义环境。
 
 正文修改须同步相应大纲。沿用稳定语义标签；数学卷之间的引用从源文件生成，机器学习延伸阅读使用外部链接，不依赖源仓库的文件或构建缓存。正文结构迁移前先确认所用目标大纲版本。
 
-交付前运行 `./build.sh build`、`./build.sh check-target`、`python3 scripts/check_outline.py` 及与修改相关的检查；首次构建或共享样式变化时执行 `./build.sh all`。PDF 与构建清单随对应源文件维护。首次迁移保留五卷正文，首卷超过1000页的现状如实记录于迁移说明；页数拆分随十卷正文迁移处理。不得用源仓库旧成品替代本仓库构建。
+交付前运行 `./build.sh build`、`./build.sh check-target`、`python3 scripts/check_outline.py` 及与修改相关的检查；首次构建或共享样式变化时执行 `./build.sh all`。PDF 与构建清单随对应源文件维护。当前保留五卷正文，首卷为1130页，页数拆分随十卷正文迁移处理。不得用源仓库旧成品替代本仓库构建。
 
 字体、图源、数据及许可证保留相对路径。原机器学习仓库仅作为迁移来源；本仓库的普通开发不修改源仓库。
