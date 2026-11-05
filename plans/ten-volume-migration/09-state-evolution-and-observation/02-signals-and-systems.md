@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分建立记录的表示、比较、系统作用与随机统计结构；确定信号入口只需卷一、二，连续变换回用4.11，随机信号再调用卷七及本卷过程部分。
 
-来源：[原信号部分大纲](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)、[当前信号正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/01-signal-representation-and-processing.tex)。这里描述信号与系统；从观测反求未知信号值、状态和轨迹由下一部分集中处理。
+来源：[原信号部分大纲](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)、[当前信号正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/01-signal-representation-and-processing.tex)。这里描述信号与系统，第三部分进一步研究图上的信号；从观测反求未知信号值、状态和轨迹由第四部分集中处理。
 
 ## 9.6 信号的表示与比较
 
@@ -98,7 +98,7 @@
 
 ## 9.8 随机信号与二阶分析
 
-研究随机记录的均值、相关及频谱，解释它们怎样经过系统传播并由有限数据估计。这里估计统计结构，具体信号值与隐藏状态的恢复另在9.10—9.11研究。
+研究随机记录的均值、相关及频谱，解释它们怎样经过系统传播并由有限数据估计。这里估计统计结构，具体信号值与隐藏状态的恢复另在9.14—9.15研究。
 
 ### 9.8.1 均值、相关与平稳性
 

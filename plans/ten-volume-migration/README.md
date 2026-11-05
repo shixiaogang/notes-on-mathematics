@@ -12,13 +12,13 @@
 |---|---:|---:|---|
 | 卷一：集合与一元微积分 | 2 | 7 | [集合](01-sets-and-univariate-calculus/01-sets.md)；[实数与一元函数](01-sets-and-univariate-calculus/02-real-numbers-and-univariate-functions.md) |
 | 卷二：向量、矩阵与多元微积分 | 4 | 24 | [向量与线性空间](02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces.md)；[谱分析](02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md)；[线性方程与优化](02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization.md)；[多元微积分](02-vectors-matrices-and-multivariate-calculus/04-multivariate-calculus.md) |
-| 卷三：图 | 5 | 17 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md)；[图上函数与谱分析](03-graphs/05-graph-functions-and-spectral-analysis.md) |
+| 卷三：图 | 4 | 13 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md) |
 | 卷四：度量、测度、函数空间与流形 | 3 | 16 | [度量与测度](04-spaces-measures-and-geometry/01-metric-and-measure.md)；[函数空间](04-spaces-measures-and-geometry/02-function-spaces.md)；[流形](04-spaces-measures-and-geometry/03-manifolds.md) |
 | 卷五：优化 | 3 | 12 | [优化问题与有限维求解](05-optimization/01-finite-dimensional-optimization.md)；[多准则与嵌套优化](05-optimization/02-multiple-criteria-and-nested-optimization.md)；[函数与流形优化](05-optimization/03-function-and-manifold-optimization.md) |
 | 卷六：微分方程 | 2 | 8 | [常微分方程](06-differential-equations/01-ordinary-differential-equations.md)；[偏微分方程](06-differential-equations/02-partial-differential-equations.md) |
 | 卷七：概率 | 2 | 14 | [概率基础](07-probability/01-probability-foundations.md)；[概率分布的分析与计算](07-probability/02-distribution-analysis-and-computation.md) |
 | 卷八：推断与因果识别 | 2 | 12 | [统计推断](08-inference-and-causal-identification/01-statistical-inference.md)；[因果识别](08-inference-and-causal-identification/02-causal-identification.md) |
-| 卷九：状态的演进与观测 | 3 | 11 | [状态与随机过程的演进](09-state-evolution-and-observation/01-state-evolution-and-stochastic-processes.md)；[信号与系统](09-state-evolution-and-observation/02-signals-and-systems.md)；[信号恢复与估计](09-state-evolution-and-observation/03-signal-reconstruction-and-estimation.md) |
+| 卷九：状态的演进与观测 | 4 | 15 | [状态与随机过程的演进](09-state-evolution-and-observation/01-state-evolution-and-stochastic-processes.md)；[信号与系统](09-state-evolution-and-observation/02-signals-and-systems.md)；[图信号处理](09-state-evolution-and-observation/03-graph-signal-processing.md)；[信号恢复与估计](09-state-evolution-and-observation/04-signal-reconstruction-and-estimation.md) |
 | 卷十：策略 | 3 | 12 | [决策](10-strategies/01-decision.md)；[控制](10-strategies/02-control.md)；[博弈](10-strategies/03-games.md) |
 
 少量向后引用用于保持主题完整：测地线先陈述所需ODE结论，随机优化先说明所需概率假设，随后在主讲处补全；这不要求先读完整个后卷。基本参数推断可以在概率基础之后进入，编码、信道与最优运输不作为共同门槛。
@@ -34,7 +34,7 @@
 5. **后验、随机模型与采样计算。** 后验建模和统计解释在8.1，给定后验的变分逼近调用7.12，积分计算调用7.14。静态随机函数、随机测度的推断模型在8.2；滤过、鞅与停止保证在卷九，长期观测与行动在卷十。7.14主讲独立采样的积分和梯度估计，MCMC、Langevin链及相关路径平均归卷九。
 6. **优化与不同误差。** 卷五主讲通用优化机制及有限步优化误差；卷九研究随机逼近的路径有界和几乎处处长期收敛；卷八处理样本统计误差。5.8是固定目标的静态极小极大及数值求解，参与者的偏好、策略响应和均衡解释归卷十。
 7. **变分、决策与控制。** 5.11建立泛函变分工具，10.6调用该工具和卷六敏感性推导PMP/HJB；连续时间最优控制集中在10.6。具体反馈与LQR先于一般连续时间最优控制，避免在多个部分重复同一套推导。
-8. **信号、估计与行动。** 卷九第二部分研究记录、系统作用和随机统计结构，第三部分反求未知信号值、状态或轨迹。给定模型的滤波在9.11，未知模型参数的推断归卷八，主动观测和行动选择归卷十；10.3调用9.11的信念状态，不重写滤波算法。采样恢复不以随机过程为共同前置，离散Kalman不以随机微积分为前置。
+8. **信号、估计与行动。** 卷九第二部分研究记录、系统作用和随机统计结构，第三部分处理图上信号的表示、滤波与图谱应用，第四部分反求未知信号值、状态或轨迹。给定模型的滤波在9.15，未知模型参数的推断归卷八，主动观测和行动选择归卷十；10.3调用9.15的信念状态，不重写滤波算法。采样恢复不以随机过程为共同前置，离散Kalman不以随机微积分为前置。
 9. **因果识别与结构学习。** 卷八分开说明识别、估计与计算，不把恢复整张因果图设为识别效应的前置。PC、GES、FCI、GIES、NOTEARS的实现与复杂度仍由原机器学习笔记的概率图模型内容主讲。
 
 ## 执行顺序与验收
@@ -324,30 +324,6 @@
 #### 3.13 一般图上动态规划的计算
 
 按最小成本、带保留变量的最小成本、计数和求和三种问题设定展开具体计算，最小成本的求解与最优配置恢复放在一起。各问题分别说明输入、输出、递推、正确性与算例检验，在相应问题中交代消元顺序的适用条件，最后分析实际计算代价。
-
-### 第五部分：图上函数与谱分析
-
-[查看本部分章、节和小节大纲](03-graphs/05-graph-functions-and-spectral-analysis.md)
-
-怎样建立图算子、表示数值场，并完成滤波与谱划分。
-
-主要依赖与分工：依赖卷二内积、谱分解及2.15章的Rayleigh工具，以及图的连接结构；滤波和谱划分是共享图算子的两类应用。
-
-#### 3.14 图上函数与图算子
-
-在非负无向图上给顶点和边赋数值，通过差分、汇总和加权内积建立拉普拉斯算子。归一化说明不同尺度如何比较，并单独处理孤点及正权支撑。
-
-#### 3.15 图谱与谱表示
-
-解释图算子的模态、零空间与连通性，再建立图傅里叶坐标和重构。它是2.4有限维谱分解的应用，不依赖连续Fourier或随机过程理论。
-
-#### 3.16 图滤波
-
-给定谱响应后改变图上函数的模态权重，比较谱分解与多项式两种实现。近似响应、截断和稀疏计算分别核对误差与成本，调用2.6章的谱函数构造及2.3章的范数。
-
-#### 3.17 谱划分
-
-把平衡图划分写成离散二次型问题，再利用2.15章的Rayleigh商作连续松弛。RatioCut与NCut分别处理顶点数和体积平衡，舍入后仍需检验原目标与松弛下界。
 
 ## 卷四：度量、测度、函数空间与流形
 
@@ -751,25 +727,49 @@
 
 #### 9.8 随机信号与二阶分析
 
-研究随机记录的均值、相关及频谱，解释它们怎样经过系统传播并由有限数据估计。这里估计统计结构，具体信号值与隐藏状态的恢复另在9.10—9.11研究。
+研究随机记录的均值、相关及频谱，解释它们怎样经过系统传播并由有限数据估计。这里估计统计结构，具体信号值与隐藏状态的恢复另在9.14—9.15研究。
 
-### 第三部分：信号恢复与估计
+### 第三部分：图信号处理
 
-[查看本部分章、节和小节大纲](09-state-evolution-and-observation/03-signal-reconstruction-and-estimation.md)
+[查看本部分章、节和小节大纲](09-state-evolution-and-observation/03-graph-signal-processing.md)
+
+怎样表示和处理图上的信号，并利用图谱完成滤波与划分。
+
+主要依赖与分工：依赖卷二内积、谱分解及2.15章的Rayleigh工具，以及卷三的图表示与连接结构；承接9.6—9.7的表示和系统作用，研究图上的信号。滤波和谱划分是图谱的两类应用，有限维入口不以随机过程或连续Fourier为共同前置。
+
+#### 9.9 图上函数与图算子
+
+在非负无向图上给顶点和边赋数值，通过差分、汇总和加权内积建立拉普拉斯算子。归一化说明不同尺度如何比较，并单独处理孤点及正权支撑。
+
+#### 9.10 图谱与谱表示
+
+解释图算子的模态、零空间与连通性，再建立图傅里叶坐标和重构。它是2.4有限维谱分解的应用，不依赖连续Fourier或随机过程理论。
+
+#### 9.11 图滤波
+
+给定谱响应后改变图上函数的模态权重，比较谱分解与多项式两种实现。近似响应、截断和稀疏计算分别核对误差与成本，调用2.6章的谱函数构造及2.3章的范数。
+
+#### 9.12 谱划分
+
+把平衡图划分写成离散二次型问题，再利用2.15章的Rayleigh商作连续松弛。RatioCut与NCut分别处理顶点数和体积平衡，舍入后仍需检验原目标与松弛下界。
+
+### 第四部分：信号恢复与估计
+
+[查看本部分章、节和小节大纲](09-state-evolution-and-observation/04-signal-reconstruction-and-estimation.md)
 
 怎样由受限观测恢复未知信号和状态。
 
-主要依赖与分工：依赖信号与系统、卷五拟合和卷七条件期望；状态模型估计另用本卷随机演化。
+主要依赖与分工：依赖信号与系统、卷五拟合和卷七条件期望；状态模型估计另用本卷随机演化，涉及图上信号时按需调用第三部分。
 
-#### 9.9 采样与信号恢复
+#### 9.13 采样与信号恢复
 
 研究由有限、缺失或带误差观测恢复确定信号的问题。先判断观测是否足以区分候选信号，再讨论重建方法与稳定性。
 
-#### 9.10 一般信号估计
+#### 9.14 一般信号估计
 
 研究目标信号与观测的联合规律下怎样作出估计，不预设状态转移模型。先以平方误差建立一般最优基准，再增加线性、平稳和未知统计量条件。
 
-#### 9.11 基于状态模型的信号估计
+#### 9.15 基于状态模型的信号估计
 
 研究由初态、转移和观测规律组成的模型，随新读数递推状态分布并恢复过去状态或整条轨迹。固定模型下的信息状态是主要输出，未知模型辨识只作为卷八推断的应用接口。
 
