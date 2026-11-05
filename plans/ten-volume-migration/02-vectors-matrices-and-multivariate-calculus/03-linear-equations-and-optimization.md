@@ -6,7 +6,7 @@
 
 算法小节先概述所解问题，再按编号段落展开原理、计算公式、实现步骤和可复算算例；算法分析另行讨论成立条件、收敛、成本与数值误差。编号段落属于拟写安排，不增加章、节或小节层级。
 
-[返回全局大纲](../README.md) · [当前正文提要](../../../outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
+[返回全局大纲](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
 
 ## 2.9 线性方程与最小二乘的选解
 

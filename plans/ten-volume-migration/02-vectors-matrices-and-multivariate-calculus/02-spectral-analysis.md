@@ -4,7 +4,7 @@
 
 先由特征方向、正交坐标和极分解解释映射，再用这些表示研究条件数、谱扰动与反复更新。所需前置为本卷向量、矩阵、范数与内积；Rayleigh商及低秩、正交逼近的最优性统一放在第三部分的2.15章。
 
-[返回全局大纲](../README.md) · [当前正文提要](../../../outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
+[返回全局大纲](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
 
 ## 2.4 特征值与谱分解
 

@@ -2,7 +2,7 @@
 
 所属卷：卷四：数学准备：流形、概率分布与统计推断。
 
-状态：以主工作区`e939a80c`为基线，按九章目标目录补充节、小节和关键自然段。基本信息量集中在第一章，无损与有损压缩合为信源编码，信道传输独立成章。本稿是讨论方案，尚未实施到正文。当前正文仍集中在一章“概率分布的分析与优化”，见[正文入口](../../../../tex/04-manifolds-distributions-and-inference/02-probability-distributions/part.tex)与[当前正文提要](../../../../outlines/current/04-manifolds-distributions-and-inference/02-probability-distributions.md)。
+状态：以主工作区`e939a80c`为基线，按九章目标目录补充节、小节和关键自然段。基本信息量集中在第一章，无损与有损压缩合为信源编码，信道传输独立成章。本稿是讨论方案，尚未实施到正文。当前正文仍集中在一章“概率分布的分析与优化”，见[正文入口](../../../../tex_bak/04-manifolds-distributions-and-inference/02-probability-distributions/part.tex)与[当前正文提要](../../../../tex_bak/outlines/current/04-manifolds-distributions-and-inference/02-probability-distributions.md)。
 
 本部分把概率分布本身作为对象。第一章连续建立分布的表示、基本信息量与分布族，第二、三章研究分布之间的比较及分布变化的影响，第四章集中研究联合分布中的变量依赖。第五章研究怎样用有限描述记录并重构信源，将无损和有损两种要求放在同一问题下；第六章转向带噪信道中的可靠传输，再连接压缩与传输。最后分别研究约束下选择一个分布、固定边缘下选择联合配对，以及参数化分布的局部几何与更新。各问题中的给定量、未知量、评价标准和适用条件在当地建立。
 

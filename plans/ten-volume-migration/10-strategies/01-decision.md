@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分研究一个决策者如何依据信息选择行动，先明确损失与风险，再把未来后果、观测限制和探索加入选择问题；前置为卷五优化、卷七概率及卷九过程，统计保证按需回用卷八。
 
-来源：[原决策目录](../source-outline/05-control-decision-and-games/15-decision.md)、[当前决策正文](../../../tex/05-control-decision-and-games/01-decision/03-policy-value-and-optimization.tex)。连续时间PMP与HJB归10.6，过程推断工具归卷九，强化学习的完整算法实现留后续卷。
+来源：[原决策目录](../source-outline/05-control-decision-and-games/15-decision.md)、[当前决策正文](../../../tex_bak/05-control-decision-and-games/01-decision/03-policy-value-and-optimization.tex)。连续时间PMP与HJB归10.6，过程推断工具归卷九，强化学习的完整算法实现留后续卷。
 
 ## 10.1 单次决策与风险
 

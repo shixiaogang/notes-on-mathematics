@@ -2,7 +2,7 @@
 
 状态：本文件是十卷方案的详细目标大纲，尚未修改正文。三章依次回答给定机制能计算什么、给定资料能识别哪些效应、未知结构和机制能恢复到什么程度；不把恢复整张图当成识别一个效应的必要步骤。[返回全局大纲](../README.md)。
 
-材料依据为当前[因果响应正文](../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/05-causal-response-and-structure.tex)和原[第十四部分目标大纲](../source-outline/04-geometry-distributions-and-inference/14-inference-and-causal-identification.md)。现有材料与拟补的前门、工具变量、双重稳健等内容在目标中重新组织，不表示全部已经展开；样本图搜索及PC、GES、FCI、GIES、NOTEARS的算法实现仍由后续概率图模型卷主讲。
+材料依据为当前[因果响应正文](../../../tex_bak/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/05-causal-response-and-structure.tex)和原[第十四部分目标大纲](../source-outline/04-geometry-distributions-and-inference/14-inference-and-causal-identification.md)。现有材料与拟补的前门、工具变量、双重稳健等内容在目标中重新组织，不表示全部已经展开；样本图搜索及PC、GES、FCI、GIES、NOTEARS的算法实现仍由后续概率图模型卷主讲。
 
 前置为卷三的有向图、7.4的条件规律和本卷统计估计。识别讨论总体资料和假设是否足以确定目标，估计讨论有限记录的误差，计算讨论怎样求出既定表达式，三者分别核验。
 

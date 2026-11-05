@@ -2,7 +2,7 @@
 
 状态：十卷调整方案的部分大纲，尚未落实到正文。怎样描述多元映射的局部变化、隐式解与不同几何对象上的累计。范围承接当前正文及已确认的章级分工，以下节、小节说明拟保留的主要内容。
 
-[返回全局大纲](../README.md) · [当前正文提要](../../../outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
+[返回全局大纲](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
 
 ## 2.17 多元函数微分
 

@@ -1,0 +1,228 @@
+\section{正则化方法}
+\label{sec:ls-truncated-svd-ridge}
+
+上一节表明，数据误差沿小奇异值方向被放大$1/\sigma_i$倍。QR等正交算法只能避免在问题本身的敏感度之外再损失精度，改变不了这种放大。本节换一种做法：通过惩罚系数的大小或舍弃部分方向，主动修改求解目标，用一部分拟合误差换取解的稳定。
+
+两种做法分两小节讨论。岭回归与Tikhonov正则化在目标中加入惩罚项，连续地压低敏感方向；谱截断正则化直接舍弃小奇异值方向。每小节先说明目标与它在奇异方向上的作用，再给出计算路线与算例，最后分析误差与代价。由于目标已经改变，算出的是新目标的解，不能把它当作原问题更准确的解。
+
+\subsection{岭回归与Tikhonov正则化}
+\label{sec:ls-regularized-ls}
+
+\paragraph{主要思想}
+对$\lambda>0$，\term{岭回归}（ridge regression）求解
+\begin{equation}
+ \min_{\bm x}\ \lVert\bm A\bm x-\bm b\rVert_2^2+\lambda\lVert\bm x\rVert_2^2 .
+ \label{eq:ls-ridge-objective}
+\end{equation}
+第二项惩罚系数的长度：拟合同样好的两个解中，目标偏向长度较小的一个；$\lambda$越大，偏向越强。
+
+惩罚也可以作用在希望压小的量上，例如相邻分量之差。取惩罚矩阵$\bm\Gamma\in\mathbb R^{p\times d}$，目标改为
+\[
+\lVert\bm A\bm x-\bm b\rVert_2^2+\lambda\lVert\bm\Gamma\bm x\rVert_2^2 ,
+\]
+称为\term{Tikhonov正则化}（Tikhonov regularization）\scite{math-hansen2008regtools}，岭回归是$\bm\Gamma=\bm I$的情形。文献中惩罚矩阵常记作$\bm L$；本部分的$\bm L$已用于表示矩阵的严格下三角部分（第~\ref{sec:ls-matrix-splitting}节），所以这里改记为$\bm\Gamma$。
+
+两项平方长度之和等于把两个残差向量上下堆叠后的平方长度：$\lVert\bm A\bm x-\bm b\rVert_2^2+\lVert\sqrt\lambda\,\bm\Gamma\bm x-\bm0\rVert_2^2$。所以Tikhonov正则化是一个\term{增广最小二乘}（augmented least squares）问题
+\begin{equation}
+ \min_{\bm x}\lVert\tilde{\bm A}\bm x-\tilde{\bm b}\rVert_2^2,\qquad
+ \tilde{\bm A}=\begin{bmatrix}\bm A\\ \sqrt\lambda\,\bm\Gamma\end{bmatrix},\quad
+ \tilde{\bm b}=\begin{bmatrix}\bm b\\ \bm0\end{bmatrix}.
+ \label{eq:ls-augmented-system}
+\end{equation}
+在计算上，惩罚只是在原数据下方增加了$p$行，对应的右端为零：每一行要求$\sqrt\lambda$倍的某个线性组合$(\bm\Gamma\bm x)_i$接近零。由此可以直接读出解的存在性与唯一性。
+
+\begin{theorem}[Tikhonov解的存在与唯一]
+\label{thm:ls-tikhonov-existence-uniqueness}
+设$\bm A\in\mathbb R^{m\times d}$，$\bm\Gamma\in\mathbb R^{p\times d}$，$\lambda>0$。Tikhonov目标的极小点恰为方程
+\[
+ (\bm A^\top\bm A+\lambda\bm\Gamma^\top\bm\Gamma)\bm x=\bm A^\top\bm b
+\]
+的解，这样的解总存在；解唯一当且仅当
+\begin{equation}
+ \ker\bm A\cap\ker\bm\Gamma=\{\bm0\}.
+ \label{eq:linear-algebra-tikhonov-common-nullspace}
+\end{equation}
+特别地，岭回归对任意$\bm A$都有唯一解。
+\end{theorem}
+\begin{proof}
+目标等于增广问题~\eqref{eq:ls-augmented-system}。由第~\ref{sec:ls-ordinary-ls}节，增广残差与$\tilde{\bm A}$的列空间正交的点就是极小点，即正规方程$\tilde{\bm A}^\top\tilde{\bm A}\bm x=\tilde{\bm A}^\top\tilde{\bm b}$的解；它总存在，且唯一当且仅当$\ker\tilde{\bm A}=\{\bm0\}$。代入$\tilde{\bm A}^\top\tilde{\bm A}=\bm A^\top\bm A+\lambda\bm\Gamma^\top\bm\Gamma$与$\tilde{\bm A}^\top\tilde{\bm b}=\bm A^\top\bm b$即得上面的方程。又
+\[
+\bm x^\top(\bm A^\top\bm A+\lambda\bm\Gamma^\top\bm\Gamma)\bm x=\lVert\bm A\bm x\rVert_2^2+\lambda\lVert\bm\Gamma\bm x\rVert_2^2 ,
+\]
+$\lambda>0$时它为零当且仅当$\bm A\bm x=\bm0$且$\bm\Gamma\bm x=\bm0$，所以$\ker\tilde{\bm A}=\ker\bm A\cap\ker\bm\Gamma$。岭回归中$\ker\bm I=\{\bm0\}$。
+\end{proof}
+
+一般的$\bm\Gamma$未必满足条件~\eqref{eq:linear-algebra-tikhonov-common-nullspace}：$\bm A=\bm\Gamma=[\,1\ \ -1\,]$时，$(1,1)^\top$方向既不影响拟合也不受惩罚，无论$\lambda$多大都定不下两个分量的共同水平。加入惩罚以后，目标中的平方不能去掉：最小化$\lVert\bm A\bm x-\bm b\rVert_2+\lambda\lVert\bm x\rVert_2$是另一个问题，不能像无惩罚时那样把残差范数与其平方互换。
+
+\paragraph{奇异方向上的滤波}
+岭回归的作用可以在奇异方向上逐个看清。设$\bm A$的秩为$r$，正奇异值与奇异向量为$\sigma_i,\bm u_i,\bm v_i$，记$c_i=\bm u_i^\top\bm b$。
+
+\begin{theorem}[岭回归的滤波因子]
+\label{thm:ls-ridge-filter-factors}
+设$\lambda>0$，$\bm x_\lambda$为岭回归~\eqref{eq:ls-ridge-objective}的解，则
+\begin{equation}
+ \bm x_\lambda=\sum_{i=1}^r f_i\,\frac{c_i}{\sigma_i}\,\bm v_i,\qquad
+ f_i=\frac{\sigma_i^2}{\sigma_i^2+\lambda}\in(0,1).
+ \label{eq:matrix-analysis-ridge-filter-factor}
+\end{equation}
+每个方向的增益$\sigma_i/(\sigma_i^2+\lambda)$不超过$1/(2\sqrt\lambda)$。残差平方为
+\[
+ \lVert\bm b-\bm A\bm x_\lambda\rVert_2^2=\lVert(\bm I-\bm A\bm A^\dagger)\bm b\rVert_2^2+\sum_{i=1}^r(1-f_i)^2c_i^2,
+\]
+它随$\lambda$增大而不减，$\lVert\bm x_\lambda\rVert_2$随$\lambda$增大而不增，且$\lambda\to0^+$时$\bm x_\lambda\to\bm A^\dagger\bm b$。
+\end{theorem}
+\begin{proof}
+把右奇异向量补成$\mathbb R^d$的标准正交基$\bm v_1,\ldots,\bm v_d$，令$\bm x=\sum_iz_i\bm v_i$。由$\bm A\bm v_i=\sigma_i\bm u_i$（$i\leq r$）与$\bm A\bm v_i=\bm0$（$i>r$），并把$\bm b$分成列空间内的$\sum_{i\leq r}c_i\bm u_i$与正交补中的$(\bm I-\bm A\bm A^\dagger)\bm b$，目标化为
+\[
+\lVert(\bm I-\bm A\bm A^\dagger)\bm b\rVert_2^2+\sum_{i=1}^r\bigl[(\sigma_iz_i-c_i)^2+\lambda z_i^2\bigr]+\lambda\sum_{i>r}z_i^2 .
+\]
+各坐标互不耦合，可以逐个配方：
+\[
+(\sigma_iz_i-c_i)^2+\lambda z_i^2=(\sigma_i^2+\lambda)\Bigl(z_i-\frac{\sigma_ic_i}{\sigma_i^2+\lambda}\Bigr)^2+\frac{\lambda c_i^2}{\sigma_i^2+\lambda},
+\]
+所以$z_i=\sigma_ic_i/(\sigma_i^2+\lambda)$（$i\leq r$），而零空间坐标只受惩罚，取$z_i=0$（$i>r$）。这就是式~\eqref{eq:matrix-analysis-ridge-filter-factor}。
+
+增益界来自$\sigma_i^2+\lambda\geq2\sigma_i\sqrt\lambda$。由$\bm A\bm x_\lambda=\sum_if_ic_i\bm u_i$，残差在$\operatorname{range}\bm A$内的分量为$\sum_i(1-f_i)c_i\bm u_i$，与列空间外的分量正交，得到残差公式。$1-f_i=\lambda/(\sigma_i^2+\lambda)$随$\lambda$增大，$f_i/\sigma_i$随$\lambda$减小，故两个单调性成立；$\lambda\to0^+$时$f_i\to1$，极限为第~\ref{sec:ls-pseudoinverse}节的$\bm A^\dagger\bm b$。
+\end{proof}
+
+伪逆的增益$1/\sigma_i$被换成有界的$\sigma_i/(\sigma_i^2+\lambda)$，不再随$\sigma_i\to0$爆炸。与最小范数解相比，每个方向多乘了一个\term{滤波因子}（filter factor）$f_i$：$\sigma_i^2\gg\lambda$的方向几乎不变，$\sigma_i^2\ll\lambda$的方向被压低，转折点在$\sigma_i=\sqrt\lambda$，那里$f_i=1/2$、增益达到峰值。图~\ref{fig:ls-ridge-tsvd-filter-factors}画出了两种$\lambda$下的滤波因子与增益：$\lambda$每增大一百倍，转折点就向大奇异值移动一个数量级，增益峰值降为十分之一。
+
+代价是拟合改变了，偏差随之引入。$\lambda$太小，噪声沿小奇异值方向放大；太大，真实信号也被压掉。合适的参数依赖数据误差与任务目标，例如已知误差规模$\epsilon$时取使$\lVert\bm b-\bm A\bm x_\lambda\rVert_2\approx\epsilon$的$\lambda$，或在留出的数据上检验预测效果；不能只因某个参数使计算容易就宣称它最合适。
+
+\begin{figure}[htbp]
+ \centering
+ \includegraphics[width=112mm]{figures/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions/matplotlib/c5-ridge-tsvd-filter-factors/figure.pdf}
+ \caption{岭回归与截断SVD沿奇异方向的作用。(a)滤波因子：岭回归$f=\sigma^2/(\sigma^2+\lambda)$在$\sigma=\sqrt\lambda$处取$1/2$并连续过渡，截断SVD在阈值$\tau$处由$0$跳到$1$。(b)方向增益：最小二乘为$1/\sigma$，岭回归为$\sigma/(\sigma^2+\lambda)$，圆点是峰值$1/(2\sqrt\lambda)$；截断后小于$\tau$的方向增益为零。竖虚线是示例~\ref{ex:ls-tsvd-steps}中矩阵的两个奇异值。}
+ \label{fig:ls-ridge-tsvd-filter-factors}
+\end{figure}
+
+\paragraph{算法实现与算例}
+这里要区分两件事。第~\ref{sec:ls-qr-method}节的正交算法改善的是同一问题的计算过程；正则化则主动修改了问题，以控制敏感性。计算路线有三条。
+
+第一条是增广QR，适用于任意$\bm\Gamma$。输入$\bm A,\bm b,\bm\Gamma,\lambda$，先核对$\bm A$与$\bm\Gamma$的列数相同、$\bm b$的长度等于$\bm A$的行数，再构造$\tilde{\bm A}$与$\tilde{\bm b}$。若条件~\eqref{eq:linear-algebra-tikhonov-common-nullspace}成立，$\tilde{\bm A}$满列秩，对它作Householder QR，$\tilde{\bm A}=\bm Q\bm R$，算出$\bm Q^\top\tilde{\bm b}$，再解上三角方程$\bm R\bm x=\bm Q^\top\tilde{\bm b}$。若条件不成立，增广问题的解不唯一，要先按第~\ref{chap:linear-solution-selection}章的准则另选代表，例如对$\tilde{\bm A}$作SVD取最小范数解。退出时报告原残差$\bm b-\bm A\bm x$、惩罚量$\lVert\bm\Gamma\bm x\rVert_2$，并核验增广正规残差$\bm A^\top(\bm b-\bm A\bm x)-\lambda\bm\Gamma^\top\bm\Gamma\bm x$接近零。
+
+第二条只用于$\bm\Gamma=\bm I$：先作一次SVD，算出$c_i=\bm u_i^\top\bm b$，此后每个$\lambda$只需按式~\eqref{eq:matrix-analysis-ridge-filter-factor}乘滤波因子，扫描多个参数时最省。第三条对$\bm A^\top\bm A+\lambda\bm\Gamma^\top\bm\Gamma$作Cholesky分解（第~\ref{sec:ls-cholesky}节），再依次前代、回代；推导中的这个正规矩阵并不是必须显式形成的对象，下面的算法分析会说明这条路线何时可靠。大型问题还可以把LSQR（第~\ref{sec:ls-lsqr}节）用于增广问题~\eqref{eq:ls-augmented-system}。
+
+\begin{example}[增广QR求岭回归]
+\label{ex:ls-ridge-augmented-qr}
+取教学例$\bm A=\operatorname{diag}(3,1)$，$\bm b=(3,1)^\top$，$\bm\Gamma=\bm I$，$\lambda=1$。无惩罚时方程相容，解为$(1,1)^\top$。增广矩阵与右端为
+\[
+\tilde{\bm A}=\begin{bmatrix}3&0\\0&1\\1&0\\0&1\end{bmatrix},\qquad
+\tilde{\bm b}=\begin{bmatrix}3\\1\\0\\0\end{bmatrix}.
+\]
+$\tilde{\bm A}$的两列$(3,0,1,0)^\top$与$(0,1,0,1)^\top$已经正交，长度分别为$\sqrt{10}$与$\sqrt2$，所以QR分解只需把两列单位化：$\bm R=\operatorname{diag}(\sqrt{10},\sqrt2)$，$\bm Q$的两列为$(3,0,1,0)^\top/\sqrt{10}$与$(0,1,0,1)^\top/\sqrt2$。于是
+\[
+\bm Q^\top\tilde{\bm b}=\Bigl(\frac{9}{\sqrt{10}},\ \frac{1}{\sqrt2}\Bigr)^\top,\qquad
+\bm x_\lambda=\bm R^{-1}\bm Q^\top\tilde{\bm b}=\Bigl(\frac{9}{10},\ \frac12\Bigr)^\top .
+\]
+
+逐项核验：$\bm A\bm x_\lambda-\bm b=(27/10-3,\ 1/2-1)^\top=(-3/10,-1/2)^\top$，$\bm A^\top(\bm A\bm x_\lambda-\bm b)+\lambda\bm x_\lambda=(-9/10+9/10,\ -1/2+1/2)^\top=\bm0$，增广正规条件成立。按滤波因子公式，$f_1=9/10$、$f_2=1/2$，同样得到$(9/10,1/2)^\top$：奇异值较小的第二个方向被压掉一半。
+
+原方程本来有精确解$(1,1)^\top$，算法得到的却是$(9/10,1/2)^\top$，残差不为零。这不是计算误差，而是新目标的解：惩罚项改变了要解的问题。
+\end{example}
+
+\begin{example}[直线拟合的岭回归]
+\label{ex:ls-ridge-line-fit}
+沿用示例~\ref{ex:ls-line-least-squares}的$\bm A=\left[\begin{smallmatrix}1&0\\1&1\\1&2\end{smallmatrix}\right]$与$\bm b=(1,2,2)^\top$，取$\lambda=1$，走Cholesky路线。正则化后的方程为
+\[
+ \begin{bmatrix}4&3\\3&6\end{bmatrix}\bm x=\begin{bmatrix}5\\6\end{bmatrix},
+\]
+分解得$l_{1,1}=2$，$l_{2,1}=1.5$，$l_{2,2}=\sqrt{6-1.5^2}\approx1.9365$。前代得$y_1=2.5$，$y_2=(6-1.5\times2.5)/1.9365\approx1.1619$；回代得$x_2=1.1619/1.9365=0.6$，$x_1=(2.5-1.5\times0.6)/2=0.8$。于是$\bm x_\lambda=(0.8,0.6)^\top$，拟合值$(0.8,1.4,2.0)^\top$，残差$(0.2,0.6,0)^\top$。
+
+核验正则化的正规残差：$\bm A^\top\bm r=(0.8,0.6)^\top$恰等于$\lambda\bm x_\lambda$，两者之差为零。与最小二乘解$(7/6,1/2)^\top$相比，残差平方由$1/6$增至$0.4$，解的长度由$1.269$降为$1$。按SVD路线，$\sigma_1^2\approx7.162$、$\sigma_2^2\approx0.838$，滤波因子为$f_1\approx0.877$、$f_2\approx0.456$：$\sigma_2^2$与$\lambda$相当，第二个方向被压掉约一半。
+\end{example}
+
+\paragraph{算法分析}
+Cholesky路线的条件数是$\kappa_2(\tilde{\bm A})^2$。岭回归中$\kappa_2(\tilde{\bm A})=\bigl((\sigma_1^2+\lambda)/(\sigma_d^2+\lambda)\bigr)^{1/2}\leq(1+\sigma_1^2/\lambda)^{1/2}$（$\sigma_d$为第$d$个奇异值，秩亏时为零），即使$\bm A$秩亏也有界。所以只在$\lambda$不太小、$(1+\sigma_1^2/\lambda)u\ll1$时，这条路线与增广QR同样可靠。
+
+无论哪条路线，结果都要回到正则化目标核验：分别报告拟合误差$\lVert\bm A\bm x_\lambda-\bm b\rVert_2$与惩罚大小$\lVert\bm\Gamma\bm x_\lambda\rVert_2$，正规残差应检查$\bm A^\top(\bm b-\bm A\bm x_\lambda)-\lambda\bm\Gamma^\top\bm\Gamma\bm x_\lambda$，而不是原问题的$\bm A^\top\bm r$。
+
+\subsection{谱截断正则化}
+\label{sec:ls-tsvd-solve}
+
+\paragraph{主要思想}
+从第~\ref{chap:singular-value-decomposition}章的SVD出发，先在奇异坐标中写出最小范数最小二乘解：
+\[
+ \bm A^\dagger\bm b=\sum_{i=1}^r\frac{\bm u_i^\top\bm b}{\sigma_i}\,\bm v_i .
+\]
+右端在第$i$个左奇异方向上的误差被放大$1/\sigma_i$倍。若误差预算表明某些方向的观测分量$c_i=\bm u_i^\top\bm b$主要是噪声，就不应在这些方向上反演。谱截断正则化因此只在可靠的奇异方向上恢复系数。
+
+具体地，给定阈值$\tau$，取保留集$J=\{i:\sigma_i>\tau\}$；也可以事先指定保留最大的$k$个正奇异值。奇异值按降序排列，所以$J=\{1,\ldots,k\}$，$k=|J|$。令
+\[
+ \bm x_k=\sum_{i=1}^k\frac{\bm u_i^\top\bm b}{\sigma_i}\,\bm v_i ,\qquad 1\leq k\leq r .
+\]
+这种做法称为\term{截断SVD}（truncated SVD）求解。
+
+它是一个限制在子空间上的最小二乘解。把系数限制在$\operatorname{span}\{\bm v_1,\ldots,\bm v_k\}$中，写$\bm x=\sum_{i\leq k}z_i\bm v_i$，则
+\[
+\lVert\bm A\bm x-\bm b\rVert_2^2=\sum_{i=1}^k(\sigma_iz_i-c_i)^2+\sum_{i=k+1}^rc_i^2+\lVert(\bm I-\bm A\bm A^\dagger)\bm b\rVert_2^2 .
+\]
+只有第一项依赖$\bm z$，取$z_i=c_i/\sigma_i$使它为零，就得到$\bm x_k$。被舍弃方向上的观测分量$c_{k+1},\ldots,c_r$无法再被拟合，全部转入残差。
+
+用矩阵写，$\bm x_k=\bm A_k^\dagger\bm b$，其中$\bm A_k=\sum_{i\leq k}\sigma_i\bm u_i\bm v_i^\top$是第~\ref{sec:ls-low-rank-approximation}节的截断SVD（式~\eqref{eq:matrix-analysis-truncated-svd}），$\bm A_k^\dagger\bm b$是以$\bm A_k$代替$\bm A$后的最小范数最小二乘解。$\bm A_k$作为矩阵的最佳低秩性质在第~\ref{chap:matrix-approximation}章讨论；它与截断求解共用同一个分解，目的却不同：低秩逼近要重建矩阵，截断求解要从带误差的观测中稳定地恢复输入。
+
+\paragraph{算法实现与算例}
+先求经济型SVD，并算出$\bm c=\bm U^\top\bm b$，即$c_i=\bm u_i^\top\bm b$。然后按保留规则逐项设置$z_i=c_i/\sigma_i$（$i\in J$）或$z_i=0$（$i\notin J$），最后计算$\bm x_k=\bm V\bm z$。所有除法只在保留的正奇异值上执行。由$\bm A\bm x_k=\sum_{i\leq k}c_i\bm u_i$可以直接读出拟合值，残差不必再乘$\bm A$就能得到；换一个阈值只需增减和式中的项。退出时核验原残差，并检查限制子空间中的正规条件$\bm v_i^\top\bm A^\top(\bm b-\bm A\bm x_k)=0$（$i\leq k$）。
+
+\begin{example}[对角矩阵的谱截断]
+\label{ex:ls-tsvd-diagonal}
+取$\bm A=\operatorname{diag}(1,1/100)$，真实系数$\bm x_{\mathrm{true}}=(1,1)^\top$，无噪声的观测为$(1,1/100)^\top$；设第二个观测带误差$2/100$，实际得到$\bm b=(1,3/100)^\top$。这里$\sigma_1=1$，$\sigma_2=1/100$，奇异向量就是坐标向量，$c_1=1$，$c_2=3/100$。
+
+不截断时$\bm x=(c_1/\sigma_1,\,c_2/\sigma_2)^\top=(1,3)^\top$：第二个方向把误差$2/100$放大了一百倍。取$\tau=1/10$，只保留$\sigma_1$，得$\bm x_1=(1,0)^\top$，原残差$\bm b-\bm A\bm x_1=(0,3/100)^\top$，正是被舍弃的观测分量。
+
+两种恢复的误差范数分别为$\lVert(1,3)^\top-(1,1)^\top\rVert_2=2$与$\lVert(1,0)^\top-(1,1)^\top\rVert_2=1$，截断的误差较小。但这个改善是以丢掉真实的第二分量为代价的：若真值的第二分量很大而噪声很小，截断反而更差。不能从一个算例推断任意真值和噪声下截断都更好，下面的误差分解说明了一般情形。
+\end{example}
+
+\begin{example}[近共线设计的截断求解]
+\label{ex:ls-tsvd-steps}
+设计矩阵的两列为$(1,1,1)^\top$与$(1,1.01,0.99)^\top$，观测$\bm b=(1,1.1,0.9)^\top$。SVD给出$\sigma_1\approx2.449$、$\sigma_2\approx0.0100$，$\bm v_1\approx(1,1)^\top/\sqrt2$，$\bm v_2\approx(1,-1)^\top/\sqrt2$；投影系数$c_1\approx1.733$，$c_2\approx-0.134$。
+
+取$\tau=0.1$，只有$\sigma_1$超过阈值，$k=1$。于是$\bm x_1=(c_1/\sigma_1)\bm v_1\approx0.7073\,\bm v_1\approx(0.50,0.50)^\top$。$\bm b$在列空间内，残差全部来自舍弃的方向，$\lVert\bm b-\bm A\bm x_1\rVert_2=|c_2|\approx0.134$；正规残差$\bm A^\top(\bm b-\bm A\bm x_1)=\sigma_2c_2\bm v_2$的长度约为$0.0013$，不为零，$\bm x_1$不是原问题的最小二乘解。若不截断，第二个方向贡献$(c_2/\sigma_2)\bm v_2\approx-13.4\,\bm v_2$，得到精确拟合的$(-9,10)^\top$。
+\end{example}
+
+\paragraph{算法分析}
+设观测由真实输入加噪声得到。截断解的误差与拟合损失都可以按奇异方向分开。
+
+\begin{theorem}[截断SVD的误差分解]
+\label{thm:ls-tsvd-error-decomposition}
+设$\bm b=\bm A\bm x_{\mathrm{true}}+\bm e$，$\bm x_{\mathrm{true}}\in\operatorname{range}\bm A^\top$，$1\leq k\leq r$。则
+\[
+ \bm x_k-\bm x_{\mathrm{true}}=\sum_{i=1}^k\frac{\bm u_i^\top\bm e}{\sigma_i}\,\bm v_i-\sum_{i=k+1}^r(\bm v_i^\top\bm x_{\mathrm{true}})\,\bm v_i ,
+\]
+两项正交，第一项的长度不超过$\lVert\bm e\rVert_2/\sigma_k$。此外
+\[
+ \lVert\bm b-\bm A\bm x_k\rVert_2^2=\lVert\bm b-\bm A\hat{\bm x}\rVert_2^2+\sum_{i=k+1}^rc_i^2,\qquad
+ \bm A^\top(\bm b-\bm A\bm x_k)=\sum_{i=k+1}^r\sigma_ic_i\bm v_i ,
+\]
+其中$\hat{\bm x}$为任一最小二乘解。
+\end{theorem}
+\begin{proof}
+由$c_i=\sigma_i\bm v_i^\top\bm x_{\mathrm{true}}+\bm u_i^\top\bm e$，$\bm x_k=\sum_{i\leq k}(\bm v_i^\top\bm x_{\mathrm{true}}+\bm u_i^\top\bm e/\sigma_i)\bm v_i$；而$\bm x_{\mathrm{true}}=\sum_{i\leq r}(\bm v_i^\top\bm x_{\mathrm{true}})\bm v_i$，相减即得误差式。两项落在互相正交的$\bm v_i$上；第一项长度的平方为$\sum_{i\leq k}(\bm u_i^\top\bm e)^2/\sigma_i^2\leq\lVert\bm e\rVert_2^2/\sigma_k^2$。残差$\bm b-\bm A\bm x_k=(\bm I-\bm A\bm A^\dagger)\bm b+\sum_{i>k}c_i\bm u_i$，两部分正交，前者就是最小二乘残差；再用$\bm A^\top\bm u_i=\sigma_i\bm v_i$与$\bm A^\top(\bm I-\bm A\bm A^\dagger)=\bm0$得正规残差。
+\end{proof}
+
+第一项是保留方向的噪声放大，界由$\sigma_k$而不是$\sigma_r$决定；第二项是舍弃方向上真实输入的全部损失，这就是截断引入的偏差。在例~\ref{ex:ls-tsvd-diagonal}中，不截断（$k=r$）时没有舍弃项，误差$(0,2)^\top$全部是噪声放大；截断后误差$(0,-1)^\top$全部是偏差。拟合的代价是残差平方多出被舍弃的$c_i^2$；正规残差只落在被舍弃的方向上，所以限制子空间中的正规条件成立。主要计算代价是一次SVD，为$O(md^2)$量级。
+
+\paragraph{与岭回归的比较}
+岭回归连续地压低小奇异值方向，截断则把滤波因子直接取成$1$（$i\leq k$）或$0$（$i>k$），两者在图~\ref{fig:ls-ridge-tsvd-filter-factors}中分别是光滑曲线与阶梯。下面的例子在同一组数据上比较两者。
+
+\begin{example}[岭回归与截断SVD的比较]
+\label{ex:ls-regularization-response}
+沿用示例~\ref{ex:ls-tsvd-steps}的数据，再把$\bm b$改为$(1,1.11,0.89)^\top$，这个扰动几乎全部落在$\bm u_2$上。下表前两列是原观测下各方法的解与残差长度，最后一列是改动观测后系数的变化与观测的变化之比：
+\[
+ \begin{array}{lccc}
+  \text{方法} & \bm x & \lVert\bm r\rVert_2 & \lVert\Delta\bm x\rVert_2/\lVert\Delta\bm b\rVert_2\\[2pt]
+  \text{最小二乘} & (-9,\,10)^\top & 0 & 100\\
+  \lambda=10^{-4} & (-4.25,\,5.25)^\top & 0.067 & 50\\
+  \lambda=10^{-2} & (0.41,\,0.59)^\top & 0.133 & 0.99\\
+  k=1 & (0.50,\,0.50)^\top & 0.134 & 0.002
+ \end{array}
+\]
+响应比就是第二个方向的增益：最小二乘为$1/\sigma_2=100$，岭回归为$\sigma_2/(\sigma_2^2+\lambda)$，截断后为零，剩下的$0.002$来自扰动在$\bm u_1$上的微小分量。精确拟合的大系数全部来自第二个方向；系数越稳定，残差越大，$\lambda=10^{-2}$的岭回归与$k=1$的截断已经很接近。
+\end{example}
+
+奇异值在某处明显下降时，截断位置有自然的选择，截断把可信与不可信的方向分得最清楚；奇异值缓慢衰减、没有间隔时，连续衰减的岭回归更平稳。阈值应联系噪声规模、截断处的奇异值间隔和任务目标。取$\tau$为数据误差的估计，就是只在第~\ref{sec:ls-pseudoinverse-rank-change}节意义下可辨认的方向上反演；它不等同于按机器精度判定精确秩，只有数据仅含舍入误差时两者才一致。
+
+\paragraph{与低秩逼近的边界}
+截断求解与第~\ref{sec:ls-low-rank-approximation}节的结论有明确的边界。$\bm A_k$在谱范数与Frobenius范数下是最佳秩$k$重建（定理~\ref{thm:matrix-analysis-best-low-rank}），但由定理~\ref{thm:ls-tsvd-error-decomposition}的正规残差，除非被舍弃的$c_i$全为零，$\bm x_k$不是原问题的最小二乘解。矩阵逼近的最优性又不涉及$\bm x_{\mathrm{true}}$与$\bm e$，更不能由它断言$\bm x_k$最接近未知的真实输入。
+
+所以截断求解要同时说明保留了哪些方向、噪声水平多大、允许多大的拟合损失。保留的方向本身是否可靠，还要看截断处的间隔$\sigma_k-\sigma_{k+1}$：间隔很小时，扰动可能使前$k$个奇异方向明显偏转，第~\ref{sec:ls-subspace-sensitivity}节的奇异值与子空间扰动界可以用来判断。

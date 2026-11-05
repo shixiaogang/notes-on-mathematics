@@ -1,0 +1,20 @@
+% 第15章第6节：逼近结果的检验。
+
+\section{逼近结果的检验}
+\label{sec:matrix-approximation-verification}
+
+前几节的最优解都由SVD读出，实际计算出的近似矩阵还要检验。检验回答三个问题：结果是否满足约束，残差是否达到理论下界，残差中哪一部分来自约束本身、哪一部分来自计算。三项检验都要用问题所规定的那一种误差范数；用别的范数评价，会把正确的结果误判为不好，或把不好的结果误判为可接受。
+
+第一项是约束。低秩近似若以因子$\bm U_k$、$\bm\Sigma_k$、$\bm V_k$的形式保存，秩不超过$k$由因子形式直接保证；若已经乘成完整矩阵$\widehat{\bm X}$，可以看它第$k$个以后的奇异值是否只在舍入误差的量级。正交逼近与旋转逼近要检查$\lVert\widehat{\bm R}^\top\widehat{\bm R}-\bm I\rVert_{\mathrm F}$是否接近零；旋转还要检查$\det\widehat{\bm R}=1$，而不是$-1$。
+
+第二项是残差与理论下界的比较。直接计算残差，再与本章给出的最优误差对照：秩$k$逼近在Frobenius范数下为$(\sum_{i>k}\sigma_i^2)^{1/2}$，在谱范数下为$\sigma_{k+1}$；可分离权重下为$(\sum_{i>k}\tilde\sigma_i^2)^{1/2}$；正交逼近的平方误差为$\sum_i(\sigma_i-1)^2$，旋转逼近再加上$s=-1$时的$4\sigma_d$。
+
+满足约束的任何候选，残差都不会低于这些下界。所以若直接算出的残差明显低于下界，说明结果实际上违反了约束（例如数值秩大于$k$），或者所用的奇异值本身不准确；若明显高于下界，则说明计算或截断有误，例如奇异值没有按降序排列，或左右奇异向量的配对被打乱。加权问题要用加权残差比较：示例~\ref{ex:matrix-approximation-weighted-low-rank}中的$\bm X_1=\operatorname{diag}(0,2)$按普通Frobenius范数的误差为$3$，比直接截断$\bm A$的误差$2$大，但它在加权意义下才是最优的。
+
+第三项是区分两种误差。逼近误差由约束决定：秩预算或正交性使$\bm A$本身不可行时，即使精确计算，残差也等于理论下界而不为零，这部分不能靠提高计算精度消除。计算误差则是计算结果与精确最优解之间的差别，来自SVD等步骤的舍入，表现为直接残差与理论下界之间的差距，以及约束检验中偏离零的量。
+
+两者对扰动的反应也不同。由第~\ref{chap:condition-and-spectral-perturbation}章奇异值的Weyl界（定理~\ref{thm:ls-weyl-singular-value}），$\bm A$受到谱范数不超过$\varepsilon$的扰动时，每个奇异值的变化不超过$\varepsilon$，所以最优误差$\sigma_{k+1}$的数值是稳定的。取得最优误差的矩阵却依赖奇异子空间：间隙$\sigma_k-\sigma_{k+1}$很小时，前$k$个奇异方向可能明显转动；间隙为零时，第~\ref{sec:matrix-approximation-low-rank-uniqueness}节已经说明最优矩阵本身不唯一。因此间隙很小时，应把最优误差当作可靠的结论，而把具体的近似矩阵当作许多近乎同样好的候选之一。
+
+本章的算例可以按这三项核对。示例~\ref{ex:matrix-approximation-truncated-three-by-three}中$\bm A_1$秩为一，直接算出的残差为$\sqrt2$（Frobenius）与$1$（谱范数），分别等于$(\sigma_2^2+\sigma_3^2)^{1/2}$与$\sigma_2$；示例~\ref{ex:matrix-approximation-orthogonal-two-by-two}中$\bm R_\star^\top\bm R_\star=\bm I$，平方误差$5=(3-1)^2+(2-1)^2$；示例~\ref{ex:matrix-approximation-rotation-diagonal}中$\det\bm R_\star=1$，平方误差$8=4+4\sigma_2$。这些都是精确算例，计算误差为零，残差全部来自约束。
+
+最后区分本章的截断与第~\ref{chap:solution-error-regularization}章的截断。那里的截断SVD求解$\bm x_k=\bm A_k^\dagger\bm b$同样只保留前$k$个奇异方向，但目的是从带误差的观测中稳定地求出输入，检验的是向量残差$\bm b-\bm A\bm x_k$与解的误差；选择$k$时，要同时比较舍弃方向带来的拟合损失与保留方向上$1/\sigma_k$的噪声放大。本章检验的是矩阵残差$\bm A-\bm A_k$，最佳矩阵逼近本身不替代那里对$k$的判断。

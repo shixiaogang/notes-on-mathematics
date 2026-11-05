@@ -1,0 +1,108 @@
+\section{连通与分隔}
+\label{sec:graph-connectivity-separation}
+
+上一节的可达关系一次只回答两个顶点之间的问题。道路网规划还需要整体的回答：全部城市分成几片互相到达的区域，封闭哪些路口或道路会把区域切开。前一个问题由可达关系的等价类回答，有向图中则要区分强、弱两种连通；后一个问题要看删除顶点或边以后是否还有替代路径。这里只讨论结构上的路径是否存在；概率模型中的条件独立另有自己的分离判据，不在本卷讨论。
+
+\subsection{无向图的连通分量}
+\label{sec:graph-conn-components}
+
+我们想把全部城市分成若干片，同一片中的城市两两可以互相到达，不同片之间无路可通；有了这样的划分，“能否互相到达”就只需看是否在同一片中。第~\ref{sec:graph-conn-reachability}小节说明，无向图中的可达关系是等价关系；等价类两两不交、并起来恰为$V$，所以它们恰好构成这样的划分。
+
+\begin{definition}[连通分量]
+\label{def:graph-conn-component}
+无向图$\mathcal G=(V,E)$中可达关系的每个等价类$C\subseteq V$称为$\mathcal G$的一个\term{连通分量}（connected component）；有时也把诱导子图$\mathcal G[C]$称为连通分量。若$\mathcal G$非空且恰有一个连通分量，即任意两个顶点之间都有路径，就称$\mathcal G$是\term{连通}（connected）的。
+\end{definition}
+
+这个划分有三条直接的性质。连接同一分量中两点的路径不会离开该分量，因为路径上的每个顶点都与起点可达，所以$\mathcal G[C]$本身连通。不同分量之间没有边，否则两端可达，应属同一分量。划分只取决于可达关系，由图唯一确定。
+
+图~\ref{fig:graph-conn-components}(a)是三角形$\{1,2,3\}$加上孤立顶点$4$，有两个分量$\{1,2,3\}$与$\{4\}$，不连通。空图的分量数为$0$，按定义不算连通，用“恰有一个分量”判断连通时要先排除这个情形。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=133.809mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-components/figure.pdf}
+  \caption{连通分量。蓝色实线框是无向图或底层无向图的连通分量，绿色虚线框是强连通分量。(a)孤立点自成一个分量；(b)单向链$1\to2\to3$忽略方向后连成一片，但没有两个顶点能互相到达，每个顶点自成一个强分量；(c)有向环上任意两个顶点都能互相到达，三个顶点属于同一个强分量。}
+  \label{fig:graph-conn-components}
+\end{figure*}
+
+\paragraph{分量划分的核对}
+核对别人给出的划分不必逐对找路径，上面的前两条性质反过来就够了。
+
+\begin{lemma}[分量划分的核对]
+\label{lem:graph-conn-component-check}
+设$C_1,\ldots,C_c$是无向图$\mathcal G$的顶点集的一个划分。若每个$\mathcal G[C_k]$都连通，并且没有一条边的两端位于不同的块中，则$C_1,\ldots,C_c$恰好是$\mathcal G$的全部连通分量。
+\end{lemma}
+
+\begin{proof}
+同一块中的两点由块内连通而可达。反过来，若$j$从$i$可达，取一条行走，它的每一步沿一条边，而没有边跨越不同的块，所以$i,j$在同一块中。于是各块就是可达关系的等价类。
+\end{proof}
+
+于是核对分两步：给顶点写上块编号，逐条扫描边，检查两端编号相同；再对每一块给出把块内顶点连在一起的边。图~\ref{fig:graph-conn-components}(a)的划分$(1,1,1,2)$两步都通过；若把贯穿图划分为$\{1,2\}$与$\{3,4\}$，第一步就在边$\{1,3\}$处失败。第二步所需的块内连接在第~\ref{sec:graph-trees-forests}节整理为生成森林；从零求出全部分量，由第~\ref{sec:graph-connectivity-computation}节在与$n+m$成正比的时间内完成。
+
+一张图是否连通，取决于删去连接以后有没有替代路径。在贯穿图中删除边$\{2,3\}$，$2$与$3$仍可经$1$或$4$相连；在图~\ref{fig:graph-conn-cut-bridge}(a)中删除连接两个三角形的边$\{3,4\}$，图就分成两个分量。两次都只删除一条边，结果不同是因为前者的边位于环上，环的另一侧提供了替代路径。第~\ref{sec:graph-conn-cut-bridge}小节会把这一观察写成桥的判别条件。
+
+\subsection{强连通与弱连通}
+\label{sec:graph-conn-strong-weak}
+
+有向图中可达不是等价关系，不能直接用来划分顶点。修补的办法有两种：要求双向都可达，回答哪些顶点能“绕得回来”；或者忽略方向，只问是否连成一片。
+
+若$j$从$i$可达且$i$从$j$可达，称$i,j$相互可达。相互可达关系是自反的（零长度行走）、对称的（定义对$i,j$对称）、传递的（两个方向分别首尾相接），因此是等价关系。它的等价类称为\term{强连通分量}（strongly connected component）；若有向图非空且只有一个强连通分量，就称它\term{强连通}（strongly connected）。
+
+忽略方向的办法用底层无向图（第~\ref{sec:graph-conn-directions}小节）的连通分量划分顶点，所得的分量称为原图的\term{弱连通分量}（weakly connected component）；底层无向图连通时，称原有向图\term{弱连通}（weakly connected）。
+
+在小图上可以直接读出两种分量。记$R^+(v)$与$R^-(v)$分别为从$v$可达与能到达$v$的顶点集（都含$v$），由定义，$v$所在的强分量是$R^+(v)\cap R^-(v)$；弱分量则在底层无向图上读出。图~\ref{fig:graph-conn-components}(b)的单向链中，$R^+(2)=\{2,3\}$，$R^-(2)=\{1,2\}$，强分量为$\{2\}$，三个顶点各成一个强分量，却只有一个弱分量。(c)的有向环中两个可达集都是$\{1,2,3\}$，图强连通。在大图上求全部强分量的线性时间方法见第~\ref{sec:graph-connectivity-computation}节。
+
+有向路径去掉箭头后是底层无向图中的路径，所以每个强分量都包含在某个弱分量之内，强连通蕴含弱连通。单向链说明反过来不成立。需要回答“能否往返”时，必须使用强分量。
+
+\subsection{分隔集}
+\label{sec:graph-conn-separators}
+
+规划者还关心脆弱性：封闭哪些路口能把两个区域隔开。被封闭的路口不能属于要隔开的两组本身；“隔开”的含义是，删掉这些路口以后，两组之间一条路径也不剩。
+
+\begin{definition}[分隔]
+\label{def:graph-conn-separation}
+设$A,B,S\subseteq V$两两不相交。若在$\mathcal G-S$中不存在从$A$中顶点到$B$中顶点的路径，就称$S$\term{分隔}（separate）$A$与$B$，称$S$为$A$与$B$之间的一个\term{分隔集}（separator）。
+\end{definition}
+
+等价地，$\mathcal G$中从$A$到$B$的每条路径都至少经过$S$中的一个顶点，因为$\mathcal G-S$中的路径就是$\mathcal G$中避开$S$的路径。所以验证一个候选集要考虑全部路径，找到一条被阻断的路径并不够。
+
+核对时却不必列举路径：在$\mathcal G-S$中从$A$出发求出可达集$R$（第~\ref{sec:graph-bfs}节的广度优先遍历允许以一组顶点为起点），$S$分隔$A$与$B$当且仅当$R\cap B=\varnothing$。在图~\ref{fig:graph-conn-separator-sets}中取$A=\{1\}$、$B=\{4\}$：删除$\{2\}$后$R=\{1,3,4\}$，路径$(1,3,4)$仍在，$\{2\}$不是分隔集；删除$\{2,3\}$后$1$的邻居全被删去，$R=\{1\}$，$\{2,3\}$是分隔集。若$A$与$B$原本位于不同分量，空集就分隔它们。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=104.186mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-separator-sets/figure.pdf}
+  \caption{在贯穿图中检验分隔集，$A=\{1\}$为绿色，$B=\{4\}$为黄色，被删除的候选集$S$为红色虚线顶点。(b)删除$\{2\}$后蓝色路径$(1,3,4)$仍然存在，$\{2\}$不是分隔集；(c)删除$\{2,3\}$后从$1$到$4$没有路径，$\{2,3\}$分隔$\{1\}$与$\{4\}$。}
+  \label{fig:graph-conn-separator-sets}
+\end{figure}
+
+不指定两组顶点时，分隔集由删除后的分量给出。对连通图$\mathcal G$，若$\mathcal G-S$不连通，则$S$分隔$\mathcal G-S$中任意两个不同分量的顶点集。例如贯穿图删除$\{2,3\}$后余下$\{1\}$与$\{4\}$。第~\ref{sec:graph-separator-blocks}节将沿这样的分隔集把图分成可以分别处理的块。
+
+\subsection{割点与桥}
+\label{sec:graph-conn-cut-bridge}
+
+最脆弱的情形是只失去一个路口或一条道路，网络就断开。删除顶点$v$后$\mathcal G-\{v\}$的分量数大于$\mathcal G$的分量数，称$v$为\term{割点}（cut vertex）；删除边$e$后$\mathcal G-e$的分量数大于$\mathcal G$的分量数，称$e$为\term{桥}（bridge）。图~\ref{fig:graph-conn-cut-bridge}(a)由两个三角形$\{1,2,3\}$、$\{4,5,6\}$和边$\{3,4\}$组成，$3,4$是割点，$\{3,4\}$是桥，三角形内部的边和顶点$1,2,5,6$都不是；(b)的链中，中间顶点$2$是割点，两条边都是桥；(c)的三角形中，删除任意一个顶点或一条边都不会断开。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=134.765mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-cut-vertex-bridge/figure.pdf}
+  \caption{割点与桥，红色顶点为割点，红色粗边为桥。(a)两个三角形由一条边相连，这条边是桥，它的两个端点是割点；(b)链上每条边都是桥，中间顶点是割点，端点$1,3$虽是桥的端点却不是割点；(c)三角形的每条边都位于环上，删除任何一条边或一个顶点都不会断开。}
+  \label{fig:graph-conn-cut-bridge}
+\end{figure*}
+
+\paragraph{桥的判别}
+按定义判断桥要比较删除前后的分量数。下面的定理把它换成只看这条边两端的条件，并说明环正是替代路径的来源。
+
+\begin{theorem}[桥的判别]
+\label{thm:graph-conn-bridge-cycle}
+设$e=\{i,j\}$是无向图$\mathcal G$的一条边。以下三条等价：(1)$e$是桥；(2)$\mathcal G-e$中没有从$i$到$j$的路径；(3)$e$不在$\mathcal G$的任何环上。并且删除任何一条边，分量数至多增加$1$。
+\end{theorem}
+
+\begin{proof}
+删除$e$只可能拆开$e$所在的分量$C$。$C$中任一顶点$x$在原图中有到$i$的路径；若它经过$e$，取它第一次到达$i$或$j$之前的部分。这部分不含$e$，所以删除后$x$仍连到$i$或$j$。因此$\mathcal G-e$中$C$至多分成$i$所在和$j$所在两部分，分量数至多增加$1$，并且增加当且仅当$i,j$不再连通，即(1)与(2)等价。若$e$在某个环上，环的另一侧就是$\mathcal G-e$中从$i$到$j$的路径，所以(2)蕴含(3)；反过来，$\mathcal G-e$中从$i$到$j$的路径长度至少为$2$，接上$e$就是一个环，所以(3)蕴含(2)。
+\end{proof}
+
+\paragraph{割点与桥的检验}
+由定理，检验$e=\{i,j\}$是否为桥，只需在$\mathcal G-e$中从$i$做一次可达性搜索，看能否到达$j$：在图~\ref{fig:graph-conn-cut-bridge}(a)中删去$\{3,4\}$后从$3$只能到达$\{1,2,3\}$，它是桥；删去$\{1,2\}$后仍可经$3$到达$2$，它不是桥。
+
+检验顶点$v$是否为割点，则删去$v$后从它的一个邻居出发，看能否到达它的其余全部邻居。只看邻居就够了：$v$所在分量中的其他顶点，沿通往$v$的路径走到第一次遇到$v$的邻居为止，这一段避开了$v$，所以它们在删去$v$后仍连到$v$的某个邻居。于是分量是否断开，只取决于$v$的邻居之间是否仍然连通。逐一检验全部顶点或全部边，每次都要做一次这样的搜索。
+
+删点与删边的效果并不对称。删除一个顶点会同时删除它的全部邻边，可能把分量拆成很多块：星形图删除中心顶点后，其余每个顶点都自成一个分量；删除一条边却至多增加一个分量。桥的端点不一定是割点，例如图~\ref{fig:graph-conn-cut-bridge}(b)的端点$1$；没有桥的图也可能有割点，例如两个三角形共用一个顶点。所以“删点能否断开”与“删边能否断开”需要分别检查。

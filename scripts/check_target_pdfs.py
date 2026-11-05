@@ -60,6 +60,8 @@ def inputs():
 
     common = ["build.sh", ".latexmkrc", ".gitattributes",
               "scripts/check_target_pdfs.py", "scripts/book_catalog.py", "scripts/publish_volume.py"]
+    if (ROOT / "tex/planned-references.json").is_file():
+        common.append("tex/planned-references.json")
     # Document-class and xindy inputs are loaded by LaTeX/tool lookup rather
     # than literal \input, so include their pinned repository versions.
     common += [p.relative_to(ROOT).as_posix() for p in (ROOT / "tex/styles").glob("*")

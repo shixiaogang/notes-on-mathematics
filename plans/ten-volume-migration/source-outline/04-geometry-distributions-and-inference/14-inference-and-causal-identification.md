@@ -4,7 +4,7 @@
 
 状态：本文件是数学基础五卷的目标大纲讨论稿，已按研究对象与问题展开为十章，并补充节、小节及关键自然段安排；尚未实施到正文。此次依据本地基线 `ae32b1c2` 的正文和前十三部分已确定的分工重组，只调整目标大纲及目录索引。
 
-当前正文入口为[推断与因果识别](../../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/part.tex)，主要材料来自[统计推断](../../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/04-statistical-inference.tex)和[因果响应](../../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/05-causal-response-and-structure.tex)。现有两章不会因本大纲保存而自动拆分。返回[五卷目录](../README.md)。
+当前正文入口为[推断与因果识别](../../../../tex_bak/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/part.tex)，主要材料来自[统计推断](../../../../tex_bak/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/04-statistical-inference.tex)和[因果响应](../../../../tex_bak/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/05-causal-response-and-structure.tex)。现有两章不会因本大纲保存而自动拆分。返回[五卷目录](../README.md)。
 
 章目标识采用“14.部分内章序号”；节、小节采用“章序号.节序号.小节序号”。叶条目下的编号是关键自然段的展开顺序，不是新增正文标题。每章保留独立的“本章小结”。
 
