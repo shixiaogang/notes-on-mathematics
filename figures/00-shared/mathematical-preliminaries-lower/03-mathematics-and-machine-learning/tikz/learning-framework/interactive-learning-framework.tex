@@ -1,0 +1,56 @@
+% 同一环境分阶段接入两种策略；右侧与静态图共用分布、采样、训练和评价的读法。
+\begin{tikzpicture}[
+  box/.style={draw=NNLine,line width=1.1pt,rounded corners=2pt,
+    text width=3.7cm,minimum height=1.1cm,align=center,
+    font=\figurefont\small,inner sep=5pt},
+  data/.style={box,draw=NNInput,fill=FigureInputFill},
+  train/.style={box,draw=NNHidden,fill=FigureRedFill},
+  result/.style={box,draw=NNOutput,fill=FigureYellowFill},
+  flow/.style={-{Stealth[length=2mm]},draw=NNWire,line width=1.2pt},
+  analysis/.style={flow,dashed},
+  annotation/.style={font=\figurefont\footnotesize,align=center},
+  every node/.append style={text=NNInk}]
+  \draw[draw=NNLine,line width=.85pt,rounded corners=3pt,fill=NNPanel]
+    (-2.15,-6.25) rectangle (2.15,.9);
+  \node[annotation,anchor=south west] at (-2.15,1.0) {策略与同一环境的交互};
+  \node[result] (beta) at (0,0) {采集：行为策略$\beta$\\$a_t\sim\beta_t(\cdot\mid I_t)$};
+  \node[data,minimum height=1.45cm] (env) at (0,-2.7) {同一环境$\mathcal E$\\$\mu_0,T$；观测核$K_o$};
+  \node[result] (pi) at (0,-5.4) {执行：学得策略$\pi$\\$a_t\sim\pi_t(\cdot\mid I_t)$};
+  \draw[flow] ([xshift=-.65cm]beta.south) --
+    node[left,annotation] {行动$a_t$} ([xshift=-.65cm]env.north);
+  \draw[flow] ([xshift=.65cm]env.north) --
+    node[right,annotation] {$o_t,I_t$} ([xshift=.65cm]beta.south);
+  \draw[flow] ([xshift=-.65cm]pi.north) --
+    node[left,annotation] {行动$a_t$} ([xshift=-.65cm]env.south);
+  \draw[flow] ([xshift=.65cm]env.south) --
+    node[right,annotation] {$o_t,I_t$} ([xshift=.65cm]pi.north);
+
+  \node[data] (train-law) at (5.15,0) {轨迹律与记录分布\\
+    $P_{\mathcal E}^{\beta}$\\$P_{\mathrm{rec}}^{\beta}=b_{\#}P_{\mathcal E}^{\beta}$};
+  \node[data] (sample) at (10.3,0) {可见训练轨迹样本\\$D\sim(P_{\mathrm{rec}}^{\beta})^n$};
+  \draw[flow] (beta) -- node[above,annotation] {诱导} (train-law);
+  \draw[flow] (train-law) -- node[above,annotation] {独立\\采样} (sample);
+
+  \node[train] (objective) at (5.15,-2.7) {训练目标与可行集\\$F_D$及训练约束};
+  \node[result] (learned) at (10.3,-2.7) {学得策略\\$\pi=A(D,U)$};
+  \draw[flow] (sample.south) -- (10.3,-1.25)
+    -- node[above,annotation] {构造$B$} (5.15,-1.25) -- (objective.north);
+  \draw[flow] (objective) -- node[above,annotation] {优化} (learned);
+  \draw[flow] (learned.south) -- (10.3,-3.55)
+    -- node[below,annotation] {固定学得策略后执行} (1.8,-3.55)
+    -- ([xshift=1.8cm]pi.north);
+
+  \node[data] (test-law) at (5.15,-5.4) {轨迹律与记录分布\\
+    $P_{\mathcal E}^{\pi}$\\$P_{\mathrm{rec}}^{\pi}=b_{\#}P_{\mathcal E}^{\pi}$};
+  \node[data] (test-sample) at (10.3,-5.4) {可见测试轨迹样本\\$D_{\mathrm{te}}\sim(P_{\mathrm{rec}}^{\pi})^m$};
+  \draw[flow] (pi) -- node[above,annotation] {诱导} (test-law);
+  \draw[flow] (test-law) -- node[above,annotation] {独立\\采样} (test-sample);
+
+  \node[result] (risk) at (5.15,-7.4) {总体轨迹风险$R_{\mathcal M}(\pi)$\\
+    $\mathbb E_{P_{\mathcal E}^{\pi}}[\ell(\pi,\tau)]$};
+  \node[result] (estimate) at (10.3,-7.4) {风险估计\\$\widehat R_{D_{\mathrm{te}}}(\pi)$};
+  \draw[analysis] (test-law) -- node[left,annotation] {期望定义} (risk);
+  \draw[flow] (test-sample) -- (estimate);
+  \draw[flow] (learned.east) -- (13,-2.7) -- (13,-7.4) -- (estimate.east);
+  \draw[analysis] (estimate) -- node[above,annotation] {统计\\分析} (risk);
+\end{tikzpicture}

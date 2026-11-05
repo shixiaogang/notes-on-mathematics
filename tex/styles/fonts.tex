@@ -1,0 +1,251 @@
+% 直接加载仓库内固定版本的中西文字体；缺失时报错，不静默替换字形。
+\setmainfont{STIXTwoText}[
+  Path=fonts/, Extension=.otf,
+  UprightFont=*-Regular, BoldFont=*-Bold,
+  ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]
+\setsansfont{SourceSans3}[
+  Path=fonts/, Extension=.otf,
+  UprightFont=*-Regular, BoldFont=*-Semibold,
+  ItalicFont=*-RegularIt, BoldItalicFont=*-SemiboldIt,
+  Scale=MatchLowercase]
+\setmonofont{SourceCodePro}[
+  Path=fonts/, Extension=.otf,
+  UprightFont=*-Regular, BoldFont=*-Semibold,
+  ItalicFont=*-RegularIt, BoldItalicFont=*-SemiboldIt,
+  Scale=0.88]
+\setCJKmainfont{SourceHanSerifCN-Regular.otf}[
+  Path=fonts/, BoldFont={SourceHanSerifCN-Bold.otf},
+  ItalicFont={LXGWWenKai-Regular.ttf}, BoldItalicFont={LXGWWenKai-Medium.ttf}]
+\setCJKsansfont{SourceHanSansSC-Regular.otf}[
+  Path=fonts/, BoldFont={SourceHanSansSC-Bold.otf}]
+\setCJKmonofont{LXGWWenKaiMono-Regular.ttf}[Path=fonts/]
+\setCJKfamilyfont{bookkai}{LXGWWenKai-Regular.ttf}[
+  Path=fonts/, BoldFont={LXGWWenKai-Medium.ttf},
+  ItalicFont={LXGWWenKai-Regular.ttf}, BoldItalicFont={LXGWWenKai-Medium.ttf}]
+% 图内文字统一采用清晰的无衬线字体；数学模式仍由 STIX2 提供。
+\DeclareRobustCommand{\figurefont}{\sffamily\CJKfamily{\CJKsfdefault}}
+\newcommand{\songti}{\rmfamily\CJKfamily{\CJKrmdefault}}
+\newcommand{\heiti}{\sffamily\CJKfamily{\CJKsfdefault}}
+\newcommand{\kaishu}{\rmfamily\CJKfamily{bookkai}}
+
+\ExplSyntaxOn
+
+\prop_new:N \g_book_index_translation_prop
+\prop_new:N \g_book_index_alias_display_prop
+\prop_new:N \g_book_index_alias_translation_prop
+\tl_new:N \l_book_index_display_tl
+\tl_new:N \l_book_index_translation_tl
+\tl_new:N \l_book_index_entry_tl
+
+\msg_new:nnn { book-index } { empty-term }
+  { Index~term~must~not~be~empty. }
+\msg_new:nnn { book-index } { empty-translation }
+  { English~translation~for~'#1'~must~not~be~empty. }
+\msg_new:nnn { book-index } { duplicate-term }
+  { Index~term~'#1'~has~already~been~declared. }
+\msg_new:nnn { book-index } { duplicate-alias }
+  { Index~semantic~alias~'#1'~has~already~been~declared. }
+\msg_new:nnn { book-index } { unknown-alias }
+  { Index~semantic~alias~'#1'~has~not~been~declared. }
+\msg_new:nnn { book-index } { alias-display-mismatch }
+  { Index~semantic~alias~'#1'~does~not~use~its~declared~display. }
+\msg_new:nnn { book-index } { reserved-character }
+  {
+    Index~term~or~translation~'#1'~contains~a~reserved~
+    makeindex/xindy~character~(@,~!,~|,~or~").
+  }
+
+\prg_new_conditional:Npnn \book_index_value_valid:n #1 { T, F, TF }
+  {
+    \tl_if_in:nnTF {#1} {@}
+      { \prg_return_false: }
+      {
+        \tl_if_in:nnTF {#1} {!}
+          { \prg_return_false: }
+          {
+            \tl_if_in:nnTF {#1} {|}
+              { \prg_return_false: }
+              {
+                \tl_if_in:nnTF {#1} {"}
+                  { \prg_return_false: }
+                  { \prg_return_true: }
+              }
+          }
+      }
+  }
+
+\cs_new_protected:Npn \book_index_term_declare:nn #1#2
+  {
+    \tl_if_blank:nTF {#1}
+      { \msg_error:nn { book-index } { empty-term } }
+      {
+        \tl_if_blank:nTF {#2}
+          {
+            \msg_error:nnn
+              { book-index } { empty-translation } {#1}
+          }
+          {
+            \book_index_value_valid:nTF {#1}
+              {
+                \book_index_value_valid:nTF {#2}
+                  {
+                    \prop_if_in:NnTF
+                      \g_book_index_translation_prop {#1}
+                      {
+                        \msg_error:nnn
+                          { book-index } { duplicate-term } {#1}
+                      }
+                      {
+                        \prop_gput:Nnn
+                          \g_book_index_translation_prop {#1} {#2}
+                      }
+                  }
+                  {
+                    \msg_error:nnn
+                      { book-index } { reserved-character } {#2}
+                  }
+              }
+              {
+                \msg_error:nnn
+                  { book-index } { reserved-character } {#1}
+              }
+          }
+      }
+  }
+
+\NewDocumentCommand \DeclareBookIndexTerm { m m }
+  { \book_index_term_declare:nn {#1} {#2} }
+
+\cs_new_protected:Npn \book_index_alias_declare:nnn #1#2#3
+  {
+    \tl_if_blank:nTF {#1}
+      { \msg_error:nn { book-index } { empty-term } }
+      {
+        \tl_if_blank:nTF {#2}
+          { \msg_error:nn { book-index } { empty-term } }
+          {
+            \tl_if_blank:nTF {#3}
+              {
+                \msg_error:nnn
+                  { book-index } { empty-translation } {#2}
+              }
+              {
+                \book_index_value_valid:nTF {#1}
+                  {
+                    \book_index_value_valid:nTF {#2}
+                      {
+                        \book_index_value_valid:nTF {#3}
+                          {
+                            \prop_if_in:NnTF
+                              \g_book_index_alias_display_prop {#1}
+                              {
+                                \msg_error:nnn
+                                  { book-index } { duplicate-alias } {#1}
+                              }
+                              {
+                                \prop_gput:Nnn
+                                  \g_book_index_alias_display_prop {#1} {#2}
+                                \prop_gput:Nnn
+                                  \g_book_index_alias_translation_prop {#1} {#3}
+                              }
+                          }
+                          {
+                            \msg_error:nnn
+                              { book-index } { reserved-character } {#3}
+                          }
+                      }
+                      {
+                        \msg_error:nnn
+                          { book-index } { reserved-character } {#2}
+                      }
+                  }
+                  {
+                    \msg_error:nnn
+                      { book-index } { reserved-character } {#1}
+                  }
+              }
+          }
+      }
+  }
+
+\NewDocumentCommand \DeclareBookIndexTermAlias { m m m }
+  { \book_index_alias_declare:nnn {#1} {#2} {#3} }
+
+\prg_new_protected_conditional:Npnn
+  \book_index_term_get:nN #1#2 { T, F, TF }
+  {
+    \prop_get:NnNTF
+      \g_book_index_translation_prop {#1} #2
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+\cs_new_protected:Npn \book_index_display_set:n #1
+  {
+    \tl_set:Nn \l_book_index_display_tl {#1}
+    \book_index_term_get:nNT {#1}
+      \l_book_index_translation_tl
+      {
+        \tl_put_right:Nn \l_book_index_display_tl {，}
+        \tl_put_right:NV
+          \l_book_index_display_tl
+          \l_book_index_translation_tl
+      }
+  }
+
+\cs_new_protected:Npn \book_index_write:nn #1#2
+  {
+    \group_begin:
+      \book_index_display_set:n {#2}
+      \tl_set:Nn \l_book_index_entry_tl {#1@}
+      \tl_put_right:NV
+        \l_book_index_entry_tl
+        \l_book_index_display_tl
+      \exp_args:NV \index \l_book_index_entry_tl
+    \group_end:
+  }
+
+\cs_new_protected:Npn \book_index_alias_write:nn #1#2
+  {
+    \group_begin:
+      \prop_get:NnNTF
+        \g_book_index_alias_display_prop {#1}
+        \l_book_index_display_tl
+        {
+          \tl_if_eq:NnF \l_book_index_display_tl {#2}
+            {
+              \msg_error:nnn
+                { book-index } { alias-display-mismatch } {#1}
+            }
+          \prop_get:NnN
+            \g_book_index_alias_translation_prop {#1}
+            \l_book_index_translation_tl
+          \tl_set:Nn \l_book_index_entry_tl {#2-#1@#2，}
+          \tl_put_right:NV
+            \l_book_index_entry_tl
+            \l_book_index_translation_tl
+          \exp_args:NV \index \l_book_index_entry_tl
+        }
+        { \msg_error:nnn { book-index } { unknown-alias } {#1} }
+    \group_end:
+  }
+
+\ExplSyntaxOff
+
+\makeatletter
+\ExplSyntaxOn
+\NewDocumentCommand{\term}{o m}{%
+  \if@mainmatter
+    \IfNoValueTF{#1}
+      {\book_index_write:nn{#2}{#2}}
+      {\book_index_write:nn{#1}{#2}}%
+  \fi
+  {\heiti\mdseries #2}}
+\NewDocumentCommand{\termalias}{m m}{%
+  \if@mainmatter
+    \book_index_alias_write:nn{#1}{#2}%
+  \fi
+  {\heiti\mdseries #2}}
+\ExplSyntaxOff
+\makeatother
+\DeclareRobustCommand{\code}[1]{\texttt{#1}}

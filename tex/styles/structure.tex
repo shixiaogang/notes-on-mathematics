@@ -1,0 +1,207 @@
+% 各卷独立出版，部分与章从1编号，章号跨部分连续。
+% 目录卷标题预留与下属条目同页的空间，避免空部分组跨页散开。
+\usepackage{needspace}
+\newcounter{volume}
+\renewcommand{\thevolume}{\arabic{volume}}
+\newcommand{\BookVolumeName}{第\chinese{volume}卷}
+\newcommand{\BookVolumeTitle}{}
+\newcommand{\BookPartEnglishTitle}{}
+\ifBookVolumeEdition
+  \newcommand{\BookTopBookmarkLevel}{-1}
+\else
+  \newcommand{\BookTopBookmarkLevel}{-2}
+\fi
+\newcommand{\BookTopBookmark}[2]{%
+  \pdfbookmark[\BookTopBookmarkLevel]{#1}{#2}}
+
+\makeatletter
+% 引用位置由源文件生成；单卷编译不读取其他卷的 aux 或 PDF。
+\newcommand{\BookDeclareReference}[3]{%
+  \expandafter\gdef\csname BookReferenceVolume@#1\endcsname{#2}%
+  \expandafter\gdef\csname BookReferenceText@#1\endcsname{#3}}
+\newcommand{\BookReference}[2]{%
+  \ifdefined\BookVolumeNumber
+    \ifcsname BookReferenceVolume@#1\endcsname
+      \ifnum\csname BookReferenceVolume@#1\endcsname=\BookVolumeNumber\relax
+        #2%
+      \else
+        \csname BookReferenceText@#1\endcsname
+      \fi
+    \else
+      #2%
+    \fi
+  \else
+    #2%
+  \fi}
+\NewDocumentCommand{\BookVolumeRef}{m m}{%
+  \BookReference{#1}{卷\zhnumber{\BookVolumeNumber}《\BookVolumeChineseTitle》}}
+\NewDocumentCommand{\BookPartRef}{m m}{\BookReference{#1}{第~\ref{#1}部分}}
+\NewDocumentCommand{\BookChapterRef}{m m}{\BookReference{#1}{第~\ref{#1}章}}
+\NewDocumentCommand{\BookSectionRef}{m m}{\BookReference{#1}{第~\ref{#1}节}}
+\NewDocumentCommand{\BookTheoremRef}{m m}{\BookReference{#1}{定理~\ref{#1}}}
+\NewDocumentCommand{\BookDefinitionRef}{m m}{\BookReference{#1}{定义~\ref{#1}}}
+\NewDocumentCommand{\BookLemmaRef}{m m}{\BookReference{#1}{引理~\ref{#1}}}
+\NewDocumentCommand{\BookEquationRef}{m m}{\BookReference{#1}{式~\eqref{#1}}}
+\ifdefined\BookVolumeSlug
+  \InputIfFileExists{build/\BookVolumeSlug-references.tex}{}{}
+\fi
+\makeatother
+
+\makeatletter
+% amsmath 每个编号只接受一个标签；旧标签在环境后绑定当前公式编号与锚点。
+\NewDocumentCommand{\BookEquationAliases}{m}{%
+  \begingroup
+    \protected@edef\@currentlabel{\p@equation\theequation}%
+    #1%
+  \endgroup}
+% 注册高于 part 的目录及 PDF 书签层级，不改动第三方模板。
+\def\ttll@volume{-2}
+\def\toclevel@volume{-2}
+\def\ttll@bookbackmatter{-1}
+\def\toclevel@bookbackmatter{-1}
+\ifdefined\BookVolumeNumber
+  \ifnum\BookVolumeNumber=7
+    \def\toclevel@chapter{-1}
+    \def\toclevel@section{0}
+    \def\toclevel@subsection{1}
+    \def\toclevel@subsubsection{2}
+  \else\ifnum\BookVolumeNumber=8
+    \def\toclevel@chapter{-1}
+    \def\toclevel@section{0}
+    \def\toclevel@subsection{1}
+    \def\toclevel@subsubsection{2}
+  \fi\fi
+\fi
+\providecommand*{\theHvolume}{\arabic{volume}}
+\def\Hy@numberline#1{%
+  \ifdefined\BookVolumeNumber
+    \ifnum\BookVolumeNumber=7
+      \ifnum\Hy@level=-1 第 #1 章\space\else #1\space\fi
+    \else\ifnum\BookVolumeNumber=8
+      \ifnum\Hy@level=-1 第 #1 章\space\else #1\space\fi
+    \else
+      \BookNumberlineWithParts{#1}%
+    \fi\fi
+  \else
+    \BookNumberlineWithParts{#1}%
+  \fi}
+\def\BookNumberlineWithParts#1{%
+  \ifnum\Hy@level=-2
+    第\zhnumber{#1}卷\space
+  \else\ifnum\Hy@level=-1
+    第\zhnumber{#1}部分\space
+  \else\ifnum\Hy@level=0
+    第 #1 章\space
+  \else
+    #1\space
+  \fi\fi\fi}
+\newcommand{\BookBackmatterTocEntry}[1]{%
+  \begingroup
+    \long\def\Hy@writebookmark##1##2##3##4##5{}%
+    \addcontentsline{toc}{bookbackmatter}{\protect\booktocbackmatterbadge{#1}}%
+  \endgroup}
+\newcommand{\BookBackmatterChapter}[2]{%
+  \chapter*{#1}%
+  \BookTopBookmark{#1}{#2}%
+  \markboth{#1}{}%
+  \BookBackmatterTocEntry{#1}}
+\newcommand{\BookBackmatterIndexChapter}[1]{%
+  \BookOriginalChapter*{#1}%
+  \BookTopBookmark{#1}{book-index}%
+  \markboth{#1}{}%
+  \BookBackmatterTocEntry{#1}}
+\renewcommand{\tableofcontents}{%
+  \chapter*{\contentsname}\markboth{\contentsname}{}%
+  \BookTopBookmark{\contentsname}{book-contents}%
+  \begin{fullwidth}
+    \@starttoc{toc}%
+  \end{fullwidth}}
+\makeatother
+
+\contentsmargin{0pt}
+\titlecontents{volume}[0pt]
+  {\Needspace{60mm}\addvspace{17pt}\contentsmargin{0pt}%
+    \heiti\large\mdseries\color{BookAccentInk}\hypersetup{linkcolor=BookAccentInk}}
+  {\booktocvolumeband{\thecontentslabel}}{}%
+  {\hfill\booktocpage}
+  [\vspace{5pt}]
+\titlecontents{part}[\booktoctitleindent]
+  {\addvspace{9pt}\heiti\bfseries\color{BookTeal}}
+  {\contentslabel[\booktocpartbadge{\thecontentslabel}]{25mm}}{}%
+  {\hspace{0.6em}\titlerule*[0.6pc]{\textcolor{BookRule}{.}}\booktocpage}
+\titlecontents{bookbackmatter}[\booktoctitleindent]
+  {\addvspace{9pt}\heiti\bfseries\color{BookTeal}}
+  {}{\hspace*{-25mm}}%
+  {\hspace{0.6em}\titlerule*[0.6pc]{\textcolor{BookRule}{.}}\booktocpage}
+\titlecontents{chapter}[\booktoctitleindent]
+  {\addvspace{5pt}\heiti\color{BookInk}}
+  {\contentslabel[第\thecontentslabel 章]{22mm}}{}%
+  {\hfill\booktocpage}
+\titlecontents{section}[\booktoctitleindent]
+  {\small\color{BookMuted}}
+  {\contentslabel{22mm}}{}{\hfill\booktocpage}
+
+% 卷首页只接收中英文标题；具体视觉样式留在 layout.tex 中。
+\makeatletter
+\newcommand{\bookvolume}[2]{%
+  \ifBookVolumeEdition\else
+    \clearpage\thispagestyle{empty}%
+  \fi
+  \refstepcounter{volume}%
+  \renewcommand{\BookVolumeTitle}{#1}%
+  \NR@gettitle{#1}%
+  \markboth{\BookVolumeName\quad #1}{}%
+  \ifBookVolumeEdition\else
+    \addcontentsline{toc}{volume}{\protect\numberline{\thevolume}#1}%
+    \null
+    \bookvolumetitlepage{#1}{#2}\par
+  \fi
+  \ignorespaces}
+
+\newcommand{\bookpart}[2]{%
+  \renewcommand{\BookPartEnglishTitle}{#2}\part{#1}}
+\newcommand{\BookPartGuide}[1]{%
+  \clearpage
+  \thispagestyle{empty}%
+  \begingroup
+    \markboth{}{}%
+    \setlength{\parindent}{2em}%
+    \setlength{\parskip}{0.7\baselineskip plus 1pt}%
+    \noindent\textcolor{BookAccent}{\rule{28mm}{3mm}}\par
+    \medskip
+    {\noindent\heiti\bfseries\fontsize{24}{31}\selectfont\color{BookInk}阅读指引\par}
+    \bigskip
+    #1\par
+    \vfill\null
+  \endgroup
+  \clearpage
+  \ignorespaces}
+\RenewDocumentCommand{\part}{s o m}{%
+  % 不依赖 openright 或单双面选项：部首页始终使用奇数书页码。
+  % 在建立标签、目录与书签锚点之前补空白页，避免链接落到空白页。
+  \clearpage
+  \ifodd\value{page}\else
+    \null\thispagestyle{empty}\newpage
+  \fi
+  \thispagestyle{empty}
+  \IfBooleanTF{#1}{\phantomsection}{\refstepcounter{part}}
+  \NR@gettitle{#3}%
+  \IfBooleanF{#1}{\IfNoValueTF{#2}
+    {\addcontentsline{toc}{part}{\protect\numberline{\thepart}#3}}
+    {\addcontentsline{toc}{part}{\protect\numberline{\thepart}#2}}}
+  \markboth{#3}{}\null
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[BookPaper] (current page.north west) rectangle (current page.south east);
+    \fill[BookAccent] ([xshift=23mm,yshift=-54mm]current page.north west) rectangle ++(57mm,-22mm);
+    \node[anchor=center,text=BookAccentInk,font=\heiti\fontsize{21}{27}\selectfont]
+      at ([xshift=51.5mm,yshift=-65mm]current page.north west)
+      {\IfBooleanF{#1}{\BookPartName}};
+    \node[anchor=north west,inner sep=0pt,text=BookInk,text width=169mm,
+      font=\heiti\bfseries\fontsize{29}{38}\selectfont]
+      at ([xshift=23mm,yshift=-106mm]current page.north west) {#3};
+    \node[anchor=north west,inner sep=0pt,text=BookMuted,
+      font=\sffamily\fontsize{11}{16}\selectfont]
+      at ([xshift=23mm,yshift=-126mm]current page.north west) {\BookPartEnglishTitle};
+  % 到下一个结构命令才输出，使随后的 label 指向当前入口页。
+  \end{tikzpicture}\par\ignorespaces}
+\makeatother

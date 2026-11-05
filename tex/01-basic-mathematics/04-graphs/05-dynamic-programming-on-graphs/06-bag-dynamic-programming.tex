@@ -1,0 +1,204 @@
+% 第5章第6节：树分解上的动态规划（问题与思路、算法实现、算法分析、计数与有限加权求和）。
+
+\section{树分解上的动态规划}
+\label{sec:graph-bag-dp}
+
+有了一个已经核验的树分解，就可以把第~\ref{sec:graph-tree-dp}节树上的递推搬到袋组成的树上：每个节点是一组变量，消息以相邻两袋的接口为索引。递推的正确性只用到最小值与加法的几条代数规则，所以把这两种运算换成求和与乘法，同一套计算还能回答可行配置计数和加权求和。
+
+\subsection{问题与思路}
+\label{sec:graph-dp-bag-idea}
+
+输入有两部分：局部函数之和$F=\sum_a\phi_a$，即各变量的有限状态集合和局部函数表；原始图的一个已经核验的树分解$(\mathcal T,\{B_t\}_{t\in T})$。输出与第~\ref{sec:graph-dp-problem}小节相同：最小成本$F^\star$、一个最优配置或不可行的报告。本节的例子仍是四变量问题：树分解有两个节点$s,t$，袋为$B_s=\{1,2,3\}$与$B_t=\{2,3,4\}$，接口为$\{2,3\}$；局部函数$\phi_A,\phi_B$由表~\ref{tab:graph-dp-ternary-tables}给出。
+
+若把每个袋的联合取值$\bm x_{B_t}$看成一个“大变量”的状态，袋树就像第~\ref{sec:graph-dp-tree-messages}小节的依赖树：每个局部函数归入某个袋，相邻两袋之间通过接口联系。与那里不同的是，相邻两个大变量共享接口上的变量，它们的取值必须一致；所以发往邻袋的表不必以整个袋为索引，只需以接口为索引。
+
+可以把每个袋想成一个只看得见袋内变量的计算者。$s$向邻居$t$汇报的是：“若接口取这组值，我这一侧最好能做到多少成本。”$t$不需要知道$s$一侧的其他变量取什么，因为由运行交集，这些变量不会在$t$一侧再出现，它们只需在$s$一侧选好即可。设节点$s,t$在袋树中相邻，接口为$S_{s,t}=B_s\cap B_t$，$\Phi_s$是归入$s$的局部函数之和（下一小节给出准确定义）。从$s$发往$t$的消息是一张以接口变量为索引的表：固定接口取值后，把袋成本与$s$从其他邻居收到的消息相加，再对$B_s$中不属于接口的变量取最小，
+\begin{equation}
+\mu_{s\to t}(\bm x_{S_{s,t}})=\min_{\bm x_{B_s\setminus S_{s,t}}}\Bigl[\Phi_s(\bm x_{B_s})+\sum_{r\in N(s)\setminus\{t\}}\mu_{r\to s}(\bm x_{S_{r,s}})\Bigr],
+\label{eq:graph-dp-bag-message}
+\end{equation}
+其中$N(s)$是$s$在袋树中的邻居。这与式~\eqref{eq:graph-dp-tree-message}的结构相同，只是被汇总的不再是单个变量，而是袋内的非接口变量。“$s$一侧最好能做到多少”这一含义依赖于运行交集，将在第~\ref{sec:graph-dp-bag-analysis}小节证明。
+
+\subsection{算法实现}
+\label{sec:graph-dp-bag-algorithm}
+
+\paragraph{局部函数的分配}
+计算前先把每个局部函数$\phi_a$归入一个袋$B_{\alpha(a)}$，要求$S_a\subseteq B_{\alpha(a)}$；由引理~\ref{lem:graph-dp-clique-in-bag}，这样的袋总存在。每个函数只归入一次。节点$t$上全部归入函数之和称为袋成本：
+\begin{equation}
+\Phi_t(\bm x_{B_t})=\sum_{a:\,\alpha(a)=t}\phi_a(\bm x_{S_a}),
+\label{eq:graph-dp-bag-cost}
+\end{equation}
+没有函数归入的袋取$\Phi_t\equiv0$，但仍保留袋中的变量，因为它们可能需要经过这个袋来保持一致。在例子中，$\phi_A$只能归入$B_s$，$\phi_B$只能归入$B_t$，于是$\Phi_s=\phi_A$、$\Phi_t=\phi_B$。
+
+只归入一次是数值正确性的要求：若另有成对项$\phi_{2,3}(x_2,x_3)$，它可以归入$B_s$或$B_t$，但两边各计一次就会求出$F+\phi_{2,3}$的最小值。共享变量可以在多个袋中重复出现，同一个成本项却只能计一次；袋之间的交集本身不对应任何成本。计算前应逐项检查分配清单：无遗漏、无重复、作用域包含于所归的袋。
+
+\paragraph{袋表的数据结构}
+袋成本、消息和回溯表都是以一组变量为索引的稠密表。为每张表固定变量的排列（例如按编号），各取值按字典序存放，于是一组取值的位置可以按混合进制直接算出；例子中的表都按这种字典序列出。计算时要在袋$B_s$的一组取值$\bm x_{B_s}$上读取$\phi_a(\bm x_{S_a})$或$\mu_{r\to s}(\bm x_{S_{r,s}})$，即从$\bm x_{B_s}$中挑出$S_a$或$S_{r,s}$的那几个分量，再算它们在小表中的位置。各变量在$B_s$中的位置事先记下，每次读取就只需几次乘加。接口上的“对齐”指的正是这一步：发送方和接收方按同一组接口变量、同一排列存取消息。
+
+\paragraph{袋消息的实现}
+树分解、各袋成本表$\Phi_t$在运行中不变；任选一个根节点$\rho$，事先求出袋树中每个节点的父节点和一个后序，它们只规定处理次序，也不算状态。算法维护四项状态：
+\begin{itemize}
+  \item 消息表$\mu_{s\to t}$：每个非根节点$s$发往父节点$t$一张，以接口$S_{s,t}$为索引，初始时尚未计算；
+  \item 回溯表$\beta_{s\to t}$：与消息表同样索引，记录达到最小值时$B_s$中非接口变量的取值，初始时尚未计算；
+  \item 根处合并表$R$：以$\bm x_{B_\rho}$为索引，在全部消息算完后计算；
+  \item 配置$\bm x^\star$：初始时各变量都未赋值，回溯时逐袋填写。
+\end{itemize}
+按后序依次处理非根节点$s$，记$t$为它的父节点；此时$s$的全部子节点发来的消息都已算出。处理$s$时，对接口$S_{s,t}$的每种取值做两件事：
+\begin{itemize}
+  \item 枚举：对$B_s\setminus S_{s,t}$的每种取值，按式~\eqref{eq:graph-dp-bag-message}方括号内的式子计算候选值；
+  \item 记录：取最小者记入$\mu_{s\to t}$，达到最小值的非接口取值（并列时按字典序取最小者）记入$\beta_{s\to t}$。
+\end{itemize}
+全部非根节点处理完后，在根处合并袋成本与入消息：
+\[
+R(\bm x_{B_\rho})=\Phi_\rho(\bm x_{B_\rho})+\sum_{r\in N(\rho)}\mu_{r\to\rho}(\bm x_{S_{r,\rho}}),
+\]
+最小成本为$\min_{\bm x_{B_\rho}}R$。若它为$+\infty$，报告没有可行配置并停止；否则回溯：
+\begin{itemize}
+  \item 根：取$R$的最小点（并列时按字典序取最小者）作为$\bm x^\star_{B_\rho}$；
+  \item 非根节点：按前序处理$s$，它的接口变量已在父袋中赋值，用这组接口取值查$\beta_{s\to t}$，给$B_s$的非接口变量赋值。
+\end{itemize}
+全部节点回溯完后停止，输出最小成本与$\bm x^\star$。
+
+\begin{algorithm}[树分解上的动态规划]
+\label{alg:graph-dp-bag-dp}
+输入：局部函数表，原始图的已核验树分解。输出：最小成本，以及一个最优配置或“不可行”。
+\begin{enumerate}
+  \item 把每个局部函数归入一个包含其作用域的袋，按式~\eqref{eq:graph-dp-bag-cost}计算各袋成本$\Phi_t$。
+  \item 选根节点$\rho$，求出每个节点的父节点和后序。
+  \item 按后序处理每个非根节点$s$（父节点为$t$）：对接口$S_{s,t}$的每种取值，枚举$B_s\setminus S_{s,t}$的全部取值，按式~\eqref{eq:graph-dp-bag-message}计算$\mu_{s\to t}$，并把达到最小值的非接口取值记入$\beta_{s\to t}$。
+  \item 计算根处合并表$R$与最小成本$\min R$；若为$+\infty$，报告不可行并停止。
+  \item 取$R$的最小点为根袋变量赋值；按前序处理每个非根节点$s$，查$\beta_{s\to t}$为$B_s$的非接口变量赋值。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在例子中取$t$为根，后序为$s,t$。
+\begin{itemize}
+  \item 分配：$\Phi_s=\phi_A$，$\Phi_t=\phi_B$。
+  \item 处理$s$：它是叶节点，没有入消息，非接口变量只有$x_1$，所以
+  \[
+  \mu_{s\to t}(x_2,x_3)=\min_{x_1}\phi_A(x_1,x_2,x_3).
+  \]
+  图~\ref{fig:graph-dp-bag-message-table}逐行列出了这张四项表：接口取值为$00,01,10,11$时，消息值依次为$0,0,1,2$，达到最小值的$x_1$依次为$1,0,1,1$。它与第~\ref{sec:graph-variable-elimination}节消去$x_1$得到的$\psi_1$相同。$x_1$已经被汇总，不再出现在表中；$x_2,x_3$作为接口仍然显式保留，右袋读取这张表时要按同样的$(x_2,x_3)$取值对齐。
+  \item 根处合并：$R=\phi_B+\mu_{s\to t}$按$(x_2,x_3,x_4)$的字典序依次为$2$，$1$，$0$，$+\infty$，$+\infty$，$1$，$3$，$4$，最小值$0$在$(0,1,0)$处达到。
+  \item 回溯：根取$(x_2,x_3,x_4)=(0,1,0)$，查左袋的回溯表得$\beta_{s\to t}(0,1)=0$，即$x_1=0$。
+\end{itemize}
+恢复的配置$(0,0,1,0)$代回原始局部函数得$\phi_A(0,0,1)+\phi_B(0,1,0)=0+0=0$，与最优值一致，也与第~\ref{sec:graph-dp-problem}小节的枚举和第~\ref{sec:graph-variable-elimination}节两种消元次序的结果相同。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=105.650mm]{figures/01-basic-mathematics/04-graphs/tikz/c5-bag-message-table/figure.pdf}
+  \caption{两袋之间的消息。左袋$B_s=\{1,2,3\}$只含$\phi_A$，右袋$B_t=\{2,3,4\}$只含$\phi_B$，接口为$\{2,3\}$（绿色）。下方表格对接口的每种取值比较$x_1=0,1$两个候选，取较小者作为消息值，黄色格是被选中的候选；绿色列是消息值，最后一列是回溯表。根袋$B_t$把消息与$\phi_B$相加后对$x_2,x_3,x_4$取最小，得到最优值$0$。}
+  \label{fig:graph-dp-bag-message-table}
+\end{figure}
+
+\subsection{算法分析}
+\label{sec:graph-dp-bag-analysis}
+
+\paragraph{正确性}
+树上消息的正确性依赖于一件事：删去一条边后，两侧除了接收变量以外没有共同的变量。袋树上，这件事由运行交集保证。删去袋树边$\{s,t\}$后，袋树分成两部分；记$s$一侧全部袋中出现的变量为$V_{s|t}$，$t$一侧为$V_{t|s}$。若某个变量$v$在两侧都出现，从它在$s$侧的某个出现位置到$t$侧的某个出现位置，袋树路径必须经过边$\{s,t\}$，由运行交集，$B_s$与$B_t$都含$v$。所以
+\begin{equation}
+V_{s|t}\cap V_{t|s}\subseteq S_{s,t},
+\label{eq:graph-dp-interface-separation}
+\end{equation}
+即接口把两侧的变量隔开：固定接口取值后，两侧的其余变量互不重叠，可以分别求最小。
+
+\begin{theorem}[袋消息的含义]
+\label{thm:graph-dp-bag-message}
+设$(\mathcal T,\{B_t\}_{t\in T})$是原始图的树分解，每个局部函数恰好归入一个包含其作用域的袋。对袋树的边$\{s,t\}$，记$A_{s|t}$为归入$s$一侧各袋的局部函数。则对每个接口取值$\bm x_{S_{s,t}}$，
+\[
+\mu_{s\to t}(\bm x_{S_{s,t}})=\min_{\bm x_{V_{s|t}\setminus S_{s,t}}}\ \sum_{a\in A_{s|t}}\phi_a(\bm x_{S_a}).
+\]
+进一步，对任意根节点$\rho$，$\min_{\bm x}F(\bm x)=\min_{\bm x_{B_\rho}}\bigl[\Phi_\rho+\sum_{r\in N(\rho)}\mu_{r\to\rho}\bigr]$。
+\end{theorem}
+
+\begin{proof}
+对$s$一侧的节点数归纳。设$s$在$t$以外的邻居为$r_1,\ldots,r_k$（叶节点时$k=0$）。删去$s$后，$s$一侧的其余节点分成$r_1,\ldots,r_k$各自的一侧。由式~\eqref{eq:graph-dp-interface-separation}应用于边$\{r_j,s\}$，$V_{r_j|s}$与$B_s$的公共变量都在$S_{r_j,s}$中；不同的$r_j,r_l$两侧若有公共变量，它在袋树上的两个出现位置之间的路径经过$s$，所以也在$B_s$中。因此集合
+\[
+B_s\setminus S_{s,t},\qquad V_{r_1|s}\setminus B_s,\qquad\ldots,\qquad V_{r_k|s}\setminus B_s
+\]
+两两不交，它们的并恰为$V_{s|t}\setminus S_{s,t}$。另一方面，$A_{s|t}$按函数归入的节点分为归入$s$的部分和归入各$r_j$一侧的部分$A_{r_j|s}$，每个函数恰在一处；$A_{r_j|s}$中函数的变量都在$V_{r_j|s}$中，其中属于$B_s$的部分又在$S_{r_j,s}$中。
+
+现在固定$\bm x_{B_s}$。各$A_{r_j|s}$中函数之和只依赖$\bm x_{S_{r_j,s}}$与互不相交的变量组$\bm x_{V_{r_j|s}\setminus B_s}$，按式~\eqref{eq:graph-dp-min-rules}后的第三条规则可以分别求最小，由归纳假设，第$j$项的最小值为$\mu_{r_j\to s}(\bm x_{S_{r_j,s}})$。再对$\bm x_{B_s\setminus S_{s,t}}$求最小值，就得到式~\eqref{eq:graph-dp-bag-message}。根处的等式用同样的拆分得到：由顶点覆盖，全部变量是$B_\rho$与各$V_{r|\rho}\setminus B_\rho$的不交并，全部函数分为归入$\rho$的与归入各邻居一侧的。
+\end{proof}
+
+证明用到了三项条件：运行交集保证接口隔开两侧；顶点覆盖保证根处的汇总涉及全部变量；每个函数恰好归入一个袋，保证每一项只计一次。少了任何一项，递推得到的数都可能不等于原问题的最小值。
+
+回溯也给出一致的配置。回溯时，$B_s$中属于接口的变量此前已在父袋$B_t$中取定；不属于接口的变量由运行交集不会出现在$s$一侧以外，因而此前没有被赋值。所以每个变量恰好被赋值一次，在它出现的所有袋中取同一个值。与树上的论证相同，对一侧的节点数归纳可知，按回溯表赋值后$s$一侧所归函数之和恰好等于$\mu_{s\to t}$在当前接口取值处的值，于是整个配置的成本等于根处的最小合并值。若根处的最小值为$+\infty$，则报告没有可行配置。
+
+\paragraph{复杂度}
+设袋树有$N$个节点，宽度为$k$，各变量至多$q$个状态。计算$\mu_{s\to t}$时要枚举$\bm x_{B_s}$的至多$q^{k+1}$种取值，每种取值读取归入$s$的各函数一次、读取$s$的其他入消息各一次，所以全部向上消息的时间约为
+\[
+\sum_{s}\bigl(|A_s|+|N(s)|\bigr)q^{k+1}=O\bigl((|A|+N)\,q^{k+1}\bigr),
+\]
+其中$|A_s|$是归入$s$的函数个数，并用到了袋树中$\sum_s|N(s)|=2(N-1)$。每张消息表与回溯表各有$\prod_{i\in S_{s,t}}|\mathcal X_i|\leq q^{k}$项；回溯时每个节点只查一次表，开销可以忽略。若还需要每个袋上各取值的最小总成本，就像树上那样再按前序发送一遍反向消息，时间与存储加倍；那时每个袋都能得到类似根处$R$的一张表。
+
+\paragraph{与树上递推和变量消元的关系}
+第~\ref{sec:graph-dp-tree-messages}小节的树上递推是本节的特例：对依赖树选定根，以$\{u,p(u)\}$为袋（第~\ref{sec:graph-dp-treewidth}小节宽度为$1$的分解），把$\phi_u$和$\phi_{u,p(u)}$归入这个袋，接口就是单个变量，袋消息退化为顶点之间的消息。
+
+变量消元也可以看成袋树上的消息传递：在图~\ref{fig:graph-dp-bags-interface}中间由次序$(1,4,2,3)$得到的袋树上以$\{3\}$为根计算，各条消息恰好是表~\ref{tab:graph-dp-elimination-trace}中的$\psi_1,\psi_4,\psi_2'$。两种做法的差别在于组织方式：变量消元边走边决定新函数交给谁，结构与数值交织在一起；树分解先把结构确定下来并核验，同一个分解可以用于作用域相同而数值不同的多组局部函数，也便于按前序再发一遍消息，得到每个袋上的表。
+
+\paragraph{适用范围}
+这里的计算是精确的，但精确不等于便宜。宽度$k$出现在指数上，$q=10$、$k=10$时一张袋表就有$10^{11}$项；若查询要求保留很多变量的联合最小成本表，输出本身也可能大得不可承受。另外，本节的正确性证明依赖袋树无环和运行交集。若直接在带环的原始图上按式~\eqref{eq:graph-dp-tree-message}反复交换消息，同一部分成本会沿环被重复计入，上面的证明不再适用；这类迭代是否收敛、收敛到什么，需要另外分析，留到后续推断部分。
+
+\subsection{计数与有限加权求和}
+\label{sec:graph-dp-semiring}
+
+保持同样的局部结构和袋树，还可以回答另外两个问题。第一个问题是：有多少个可行配置？把每个局部函数换成可行性指示$\mathbb I\{\phi_a(\bm x_{S_a})<+\infty\}$，一个配置可行当且仅当这些指示全为$1$，即它们的乘积为$1$；于是可行配置数为$\sum_{\bm x}\prod_a\mathbb I\{\phi_a<+\infty\}$。第二个问题是：给每个局部函数一张非负权重表$w_a(\bm x_{S_a})$，把配置的权重定义为各局部权重之积，求全部配置的权重总和$\sum_{\bm x}\prod_a w_a(\bm x_{S_a})$。两个问题的输入与最小成本问题相同（第二个问题把成本表换成权重表），输出都是一个数。
+
+两者都把“局部项相加、对变量取最小”换成“局部项相乘、对变量求和”，推导与最小成本完全平行。式~\eqref{eq:graph-dp-min-rules}中的三条规则换成：有限求和可以分步进行；与求和变量无关的因子可以提到求和号外，即$\sum_y c\,g(y)=c\sum_y g(y)$；互不相交的变量组上，乘积之和等于和之积。于是把式~\eqref{eq:graph-dp-bag-message}中的加号换成乘号、最小化换成求和，消息就变成“$s$一侧的可行配置数”或“$s$一侧的权重总和”，以接口取值为索引；袋上消息递推的处理次序不变，消息表照样以接口为索引，只是不再需要回溯表；袋成本改为归入函数之积，没有函数归入的袋取常数$1$。
+
+\paragraph{执行过程}
+表~\ref{tab:graph-dp-weights}给出四变量例子的权重表，权重恰在禁止的组合处为$0$。表~\ref{tab:graph-dp-three-aggregations}对接口的每种取值并列三种任务的左袋消息和右袋汇总值，最后一行是根处的结果：最小成本为$0$，可行配置有$10$个，权重总和为$19$。逐一枚举$16$个配置可以核对这三个数，其中最小成本和可行配置数已在第~\ref{sec:graph-dp-problem}小节的枚举中得到。
+
+\begin{table}[!htb]
+  \centering
+  \caption{四变量例子的非负局部权重。第一列的三位二进制串对$w_A$表示$(x_1,x_2,x_3)$，对$w_B$表示$(x_2,x_3,x_4)$；权重为$0$的位置恰是表~\ref{tab:graph-dp-ternary-tables}中成本为$+\infty$的位置。}
+  \label{tab:graph-dp-weights}
+  \begin{tabular}{ccccccccc}
+    \toprule
+    取值 & $000$ & $001$ & $010$ & $011$ & $100$ & $101$ & $110$ & $111$\\
+    \midrule
+    $w_A$ & $1$ & $2$ & $1$ & $0$ & $2$ & $1$ & $1$ & $1$\\
+    $w_B$ & $1$ & $1$ & $2$ & $0$ & $0$ & $2$ & $1$ & $2$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[!htb]
+  \centering
+  \caption{三种任务在同一接口上的消息。最小成本使用$\min$与$+$，可行计数与加权总和使用$\sum$与$\times$。“左”列是从$B_s$发出的消息，对$x_1$汇总；“右”列是$B_t$对$x_4$的汇总；根处对每个接口取值组合两列（最小成本相加，其余相乘），再对接口汇总（最小成本取最小，其余求和）。}
+  \label{tab:graph-dp-three-aggregations}
+  \begin{tabular}{ccccccc}
+    \toprule
+    & \multicolumn{2}{c}{最小成本} & \multicolumn{2}{c}{可行计数} & \multicolumn{2}{c}{加权总和}\\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    $(x_2,x_3)$ & 左 & 右 & 左 & 右 & 左 & 右\\
+    \midrule
+    $(0,0)$ & $0$ & $1$ & $2$ & $2$ & $3$ & $2$\\
+    $(0,1)$ & $0$ & $0$ & $2$ & $1$ & $3$ & $2$\\
+    $(1,0)$ & $1$ & $0$ & $2$ & $1$ & $2$ & $2$\\
+    $(1,1)$ & $2$ & $1$ & $1$ & $2$ & $1$ & $3$\\
+    \midrule
+    根处 & \multicolumn{2}{c}{$\min(1,0,1,3)=0$} & \multicolumn{2}{c}{$4+2+2+2=10$} & \multicolumn{2}{c}{$6+6+4+3=19$}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+以接口取$(1,1)$的一行为例：$x_1=0$的一行被禁止，左袋的最小成本消息为$\min(+\infty,2)=2$，计数消息为$0+1=1$，加权消息为$0+1=1$。
+
+三种任务的计算量与表大小相同，但输出含义不同：最小成本是一个配置的值，可以回溯出达到它的配置；计数和加权总和是对全部配置的汇总，没有“达到它的配置”，也不需要回溯表。
+
+\paragraph{半环}
+三种任务共用同一套递推，是因为它们的运算满足同样的代数规则。每种任务都用到两种运算，分工不同：一种把同一配置的各局部项组合成这个配置的值（相加或相乘），另一种把不同取值的结果汇总成一个数（取最小或全部加起来）。消息之所以能在局部提前汇总，靠的是“先组合再汇总”与“先汇总再组合”结果相同，例如$a+\min(b,c)=\min(a+b,a+c)$、$a(b+c)=ab+ac$：与被汇总变量无关的项$a$可以留到汇总之后再组合。下面把这些规则抽象出来。设集合$\mathcal S$上有两种运算：$\oplus$用于跨不同取值的汇总，$\otimes$用于在一个配置内组合各局部项。若两种运算都满足结合律和交换律，各有单位元$\bar0$与$\bar1$，满足$\bar0\otimes a=\bar0$，并且$\otimes$对$\oplus$满足分配律
+\[
+a\otimes(b\oplus c)=(a\otimes b)\oplus(a\otimes c),
+\]
+就称$(\mathcal S,\allowbreak\oplus,\allowbreak\otimes,\allowbreak\bar0,\allowbreak\bar1)$为交换\term{半环}（semiring）。最小成本对应$(\mathbb R\cup\{+\infty\},\allowbreak\min,\allowbreak+,\allowbreak+\infty,\allowbreak0)$，此时分配律就是$a+\min(b,c)=\min(a+b,a+c)$；计数对应自然数上的$(+,\times,0,1)$；加权求和对应非负实数上的$(+,\times,0,1)$；只判断是否存在可行配置时，还可以用布尔值上的“或”与“且”。把变量消元和袋消息中的$\min$换成$\oplus$、$+$换成$\otimes$，前面的正确性证明逐字成立，因为证明只用到了结合律、交换律和分配律。半环不要求减法或除法。
+
+\paragraph{混合汇总}
+分配律只保证同一种汇总可以分步、移项。若一个问题对一部分变量取最大值、对另一部分变量求和，两种汇总一般不能交换次序。例如对表$h(x,y)$，$h(0,0)=h(1,1)=4$、$h(0,1)=h(1,0)=0$，有
+\[
+\max_x\sum_y h(x,y)=4,\qquad \sum_y\max_x h(x,y)=8 .
+\]
+前者要求所有$y$共用同一个$x$，后者允许$x$随$y$改变。这类混合问题只能按限定的次序消元，所需的中间表可能比单一汇总时大。把非负权重归一化为概率还要求总和为正且有限；这些概率解释、边缘化查询以及带环图上的近似消息方法，都留到后续推断部分。

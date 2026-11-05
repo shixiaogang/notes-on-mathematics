@@ -1,0 +1,184 @@
+% 第三卷的图形入口启用文字字族；离开该卷后恢复为空样式。
+% 在 picture 内设置基础字体，使只指定字号的旧节点也能继承图内字体。
+\tikzset{
+  model figure typography/.style={},
+  every picture/.append style={model figure typography}
+}
+
+% 神经网络章节的可复用图形语法；颜色在 layout.tex 集中定义。
+\tikzset{
+  nn neuron/.style={circle,minimum size=8mm,inner sep=0pt,
+    line width=1.1pt,text=NNInk,draw=NNHidden,fill=NNHidden!18},
+  nn input/.style={nn neuron,draw=NNInput,fill=NNInput!18},
+  nn hidden/.style={nn neuron,draw=NNHidden,fill=NNHidden!18},
+  nn output/.style={nn neuron,draw=NNOutput,fill=NNOutput!18},
+  nn link/.style={draw=NNLine,line width=.85pt},
+  nn flow/.style={-{Stealth[length=2mm,width=1.4mm]},
+    draw=NNInput,line width=1.2pt},
+  nn gradient/.style={-{Stealth[length=2mm,width=1.4mm]},
+    draw=NNGradient,line width=1.2pt,dashed},
+  nn heading/.style={font=\figurefont\bfseries\footnotesize,text=NNInk},
+  nn annotation/.style={font=\figurefont\footnotesize,text=BookMuted},
+  nn transform/.style={rounded corners=1.5mm,draw=NNOutput,
+    fill=NNOutput!18,line width=1.1pt,minimum height=9mm,
+    inner sep=3pt,align=center,text=NNInk},
+  model input/.style={draw=NNInput,fill=NNInput!18,line width=1.1pt},
+  model hidden/.style={draw=NNHidden,fill=NNHidden!18,line width=1.1pt},
+  model output/.style={draw=NNOutput,fill=NNOutput!18,line width=1.1pt},
+  model training/.style={draw=NNGradient,fill=NNGradient!18,line width=1.1pt},
+  model context/.style={draw=NNLine,fill=NNPanel,line width=.85pt},
+  model flow/.style={nn flow,draw=NNWire,rounded corners=1.2mm},
+  model feedback/.style={nn gradient,rounded corners=1.2mm}
+}
+
+% 操作示例的数值网格：左上 x/y、行数、列数、格宽、边框色、行/列/值。
+% 空间索引从零开始，色彩和字号沿用神经网络图形语法。
+\newcommand{\cnnGrid}[7]{%
+  \draw[draw=#6,line width=.95pt] (#1,#2)
+    rectangle ({#1+#4*#5},{#2-#3*#5});%
+  \ifnum#4>1\relax
+  \pgfmathtruncatemacro{\cnnGridLast}{#4-1}%
+  \foreach \cnnGridIndex in {1,...,\cnnGridLast}{%
+    \draw[nn link,line width=.5pt] ({#1+\cnnGridIndex*#5},#2)--
+      ({#1+\cnnGridIndex*#5},{#2-#3*#5});%
+  }%
+  \fi
+  \ifnum#3>1\relax
+  \pgfmathtruncatemacro{\cnnGridLast}{#3-1}%
+  \foreach \cnnGridIndex in {1,...,\cnnGridLast}{%
+    \draw[nn link,line width=.5pt] (#1,{#2-\cnnGridIndex*#5})--
+      ({#1+#4*#5},{#2-\cnnGridIndex*#5});%
+  }%
+  \fi
+  \foreach \cnnGridRow/\cnnGridCol/\cnnGridValue in {#7}{%
+    \node at ({#1+(\cnnGridCol+.5)*#5},{#2-(\cnnGridRow+.5)*#5})
+      {$\cnnGridValue$};%
+  }%
+}
+
+% CNN 的长方体表示空间与通道；局部块、角点连线及平面 MLP 共用颜色。
+\pgfdeclarelayer{cnn background}
+\tikzset{
+  cnn plane/.style={draw=NNHidden,line width=1.1pt},
+  cnn flow/.style={nn flow},
+  cnn skip/.style={nn flow,draw=NNHidden,line width=1.1pt,rounded corners=2mm},
+  cnn mapping/.style={draw=NNHidden!48,line width=.85pt,
+    dash pattern=on 2.2pt off 1.5pt},
+  cnn scale/.style={draw=NNLine,line width=.85pt},
+  cnn title/.style={font=\figurefont\bfseries\footnotesize,text=NNInk,align=center},
+  cnn size/.style={font=\figurefont\footnotesize,text=NNInk,align=center},
+  cnn operation/.style={font=\figurefont\footnotesize,text=BookMuted,align=center},
+  cnn neuron/.style={nn hidden,minimum size=3.5mm},
+  cnn merge/.style={circle,draw=NNInk,fill=NNCanvas,
+    minimum size=5.5mm,inner sep=0pt,line width=1.1pt}
+}
+% 单行架构的统一标题线、尺寸线；真正并行的分支可保留局部标题。
+\newcommand{\cnnArchitecture}[2]{%
+  \def\cnnTitleY{#1}\def\cnnSizeY{#2}%
+  \pgfsetlayers{cnn background,main}%
+}
+\newcommand{\cnnLayerTitle}[3]{%
+  \ifdefined\cnnTitleY
+    \node[cnn title,anchor=north] at ({#1},\cnnTitleY) {#3};%
+  \else
+    \node[cnn title,anchor=south] at ({#1},{#2}) {#3};%
+  \fi
+}
+\newcommand{\cnnLayerSize}[3]{%
+  \ifdefined\cnnSizeY
+    \node[cnn size,anchor=north] at ({#1},\cnnSizeY) {#3};%
+  \else
+    \node[cnn size,anchor=north] at ({#1},{#2}) {#3};%
+  \fi
+}
+% 名称、外框左下 x/y、正面宽/高、示意厚度、颜色、标题、实际形状。
+\newcommand{\cnnFeature}[9]{%
+  \pgfmathsetmacro{\cnnDepth}{.7*#6}%
+  \colorlet{cnn-#1-color}{#7}%
+  \draw[cnn plane,draw=#7,fill=#7!12]
+    (#2,{#3+#5+\cnnDepth})--({#2+#4},{#3+#5+\cnnDepth})--
+    ({#2+#4+\cnnDepth},{#3+#5})--({#2+\cnnDepth},{#3+#5})--cycle;%
+  \draw[cnn plane,draw=#7,fill=#7!30]
+    (#2,{#3+\cnnDepth})--({#2+\cnnDepth},#3)--
+    ({#2+\cnnDepth},{#3+#5})--(#2,{#3+#5+\cnnDepth})--cycle;%
+  \draw[cnn plane,draw=#7,fill=#7!20]
+    ({#2+\cnnDepth},#3) rectangle ({#2+#4+\cnnDepth},{#3+#5});%
+  \coordinate (#1-west) at (#2,{#3+#5/2+\cnnDepth/2});%
+  \coordinate (#1-east) at ({#2+#4+\cnnDepth},{#3+#5/2});%
+  \coordinate (#1-north) at ({#2+(#4+\cnnDepth)/2},{#3+#5+\cnnDepth});%
+  \coordinate (#1-south) at ({#2+(#4+\cnnDepth)/2},#3);%
+  % 相邻张量连接右侧面与左侧面；分别保留前后、上下四个角点。
+  \foreach \cnnLevel/\cnnY in {bottom/0,top/1}{%
+    \coordinate (#1-left-front-\cnnLevel) at ({#2+\cnnDepth},{#3+\cnnY*#5});%
+    \coordinate (#1-left-back-\cnnLevel) at (#2,{#3+\cnnY*#5+\cnnDepth});%
+    \coordinate (#1-right-front-\cnnLevel) at ({#2+#4+\cnnDepth},{#3+\cnnY*#5});%
+    \coordinate (#1-right-back-\cnnLevel) at ({#2+#4},{#3+\cnnY*#5+\cnnDepth});%
+  }%
+  \foreach \cnnCorner/\cnnX/\cnnY in {sw/0/0,se/1/0,nw/0/1,ne/1/1}{%
+    \coordinate (#1-face-\cnnCorner) at ({#2+\cnnDepth+\cnnX*#4},{#3+\cnnY*#5});%
+    \coordinate (#1-patch-\cnnCorner) at ({#2+\cnnDepth+(.18+.37*\cnnX)*#4},{#3+(.22+.31*\cnnY)*#5});%
+    \coordinate (#1-patch-back-\cnnCorner) at ({#2+(.18+.37*\cnnX)*#4},{#3+(.22+.31*\cnnY)*#5+\cnnDepth});%
+    \coordinate (#1-cell-\cnnCorner) at ({#2+\cnnDepth+(.2+.14*\cnnX)*#4},{#3+(.32+.14*\cnnY)*#5});%
+    \coordinate (#1-cell-back-\cnnCorner) at ({#2+(.2+.14*\cnnX)*#4},{#3+(.32+.14*\cnnY)*#5+\cnnDepth});%
+  }%
+  \foreach \cnnUnit/\cnnRatio in {1/.2,2/.5,3/.8}{%
+    \coordinate (#1-vout-\cnnUnit) at ({#2+#4+\cnnDepth},{#3+\cnnRatio*#5});%
+    \coordinate (#1-vin-\cnnUnit) at ({#2+\cnnDepth},{#3+\cnnRatio*#5});%
+  }%
+  \cnnLayerTitle{#2+(#4+\cnnDepth)/2}{#3+#5+\cnnDepth+2.5}{#8}%
+  \cnnLayerSize{#2+(#4+\cnnDepth)/2}{#3-2.5}{#9}%
+}
+\newcommand{\cnnScaleLinks}[2]{%
+  \begin{pgfonlayer}{cnn background}%
+  \foreach \cnnSide in {front,back}{\foreach \cnnLevel in {bottom,top}{%
+    \draw[cnn scale] (#1-right-\cnnSide-\cnnLevel)--(#2-left-\cnnSide-\cnnLevel);%
+  }%
+  }%
+  \end{pgfonlayer}%
+}
+% 小块沿通道厚度贯穿，以所属张量的深色突出。
+\newcommand{\cnnLocalBlock}[2][NNHidden]{%
+  \draw[draw=#1!80!NNInk,fill=#1!38,line width=1.1pt]
+    (#2-back-nw)--(#2-back-ne)--(#2-ne)--(#2-nw)--cycle;%
+  \draw[draw=#1!80!NNInk,fill=#1!65,line width=1.1pt]
+    (#2-back-sw)--(#2-sw)--(#2-nw)--(#2-back-nw)--cycle;%
+  \draw[draw=#1!80!NNInk,fill=#1!48,line width=1.1pt]
+    (#2-sw)--(#2-se)--(#2-ne)--(#2-nw)--cycle;%
+}
+\newcommand{\cnnMap}[2]{%
+  % 局部块同样只连接彼此相向的侧面：右侧面的四角对应左侧面的四角。
+  \foreach \cnnFrom/\cnnTo in {se/sw,ne/nw,back-se/back-sw,back-ne/back-nw}{%
+    \draw[cnn mapping] (#1-patch-\cnnFrom)--(#2-cell-\cnnTo);%
+  }%
+  \cnnLocalBlock[cnn-#1-color]{#1-patch}%
+  \cnnLocalBlock[cnn-#2-color]{#2-cell}%
+}
+\newcommand{\cnnWholeLinks}[2]{%
+  \foreach \cnnFrom in {1,2,3}{\foreach \cnnTo in {1,2,3}{%
+    \draw[nn link] (#1-vout-\cnnFrom)--(#2-vin-\cnnTo);%
+  }}%
+}
+% 平面全连接层：可选颜色、名称、中心 x/y、层名、单元数。
+\newcommand{\cnnFC}[6][NNHidden]{%
+  \draw[draw=#1,fill=#1!8,line width=1.1pt]
+    ({#3-3.4},{#4-13}) rectangle ({#3+3.4},{#4+13});%
+  \foreach \cnnUnit/\cnnY in {1/-8,2/0,3/8}{%
+    \node[cnn neuron,draw=#1,fill=#1!18] (#2-\cnnUnit) at (#3,{#4+\cnnY}) {}; %
+    \coordinate (#2-vin-\cnnUnit) at ({#3-1.75},{#4+\cnnY});%
+    \coordinate (#2-vout-\cnnUnit) at ({#3+1.75},{#4+\cnnY});%
+  }%
+  \coordinate (#2-west) at ({#3-3.4},#4);%
+  \coordinate (#2-east) at ({#3+3.4},#4);%
+  \cnnLayerTitle{#3}{#4+15.5}{#5}%
+  \cnnLayerSize{#3}{#4-15.5}{#6}%
+}
+\newcommand{\cnnDenseLinks}[2]{\cnnWholeLinks{#1}{#2}}
+
+\input{tex/styles/neural-operators}
+
+% 用于第18章旧图形组件的兼容样式；语义颜色与后续章节相同。
+\tikzset{
+  nn legacy node/.style={nn operator,inner sep=5pt},
+  nn legacy arrow/.style={nn flow,draw=NNWire},
+  nn frame/.style={draw=NNLine,fill=NNPanel,line width=.85pt,rounded corners=1.5mm}
+}

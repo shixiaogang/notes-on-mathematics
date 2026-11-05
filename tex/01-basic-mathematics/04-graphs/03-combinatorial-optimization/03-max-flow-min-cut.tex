@@ -1,0 +1,397 @@
+% 第3章第3节：最大流与最小割（流、容量与割；残量网络与增广；Edmonds--Karp算法；Dinic算法；方法比较与结果检验）。
+
+\section{最大流与最小割}
+\label{sec:graph-max-flow}
+
+前两节各选出一个结构：一条路线或一棵树。现在设想从水厂向用户输水，每段管道有输送上限，水可以并行、汇合、分流，问单位时间内最多能送出多少水。这次选择的对象是每条弧上的流量，它们要同时满足容量上限和中途不积存的条件。
+
+任何一组把源与汇隔开的管道，其容量之和都限制了输送量；而改进一个输送方案时，常常要把先前送出的流量改道。允许撤回旧流量的残量网络把改进统一为找一条增广路径，找不到时恰好能读出一组与流值相等的隔断管道。具体算法的差别在于怎样找路：Edmonds--Karp算法每次找一条弧数最少的路，Dinic算法一次分层后在层内把能走的最短路都堵住。记顶点数为$n$、原弧数为$a$。
+
+\subsection{流、容量与割}
+\label{sec:graph-opt-flow-cut}
+
+设$\mathcal G=(V,E)$是有限有向图，指定两个不同的顶点：源点$s$与汇点$t$。每条弧$u\to v$带有有限非负实数\emph{容量}$c_{u,v}$，表示该弧单位时间内最多能通过的量。这样的四元组$(\mathcal G,c,s,t)$称为\term{流网络}（flow network）。
+
+\begin{definition}[流与流值]
+\label{def:graph-opt-flow}
+流网络上的一个\term{流}（flow）是给每条弧$u\to v$赋予实数$x_{u,v}$的一组数$\bm x=(x_{u,v})$，满足
+\begin{gather}
+  0\leq x_{u,v}\leq c_{u,v}\quad\text{对每条弧}\ u\to v,\label{eq:graph-opt-capacity}\\
+  \sum_{u:\,u\to v}x_{u,v}=\sum_{w:\,v\to w}x_{v,w}\quad\text{对每个}\ v\in V\setminus\{s,t\}.\label{eq:graph-opt-conservation}
+\end{gather}
+前者称为容量约束，后者称为\term{流守恒}（flow conservation）。源点的净流出
+\[
+  \operatorname{val}(\bm x)=\sum_{w:\,s\to w}x_{s,w}-\sum_{u:\,u\to s}x_{u,s}
+\]
+称为\term{流值}（flow value）。流值最大的流称为\term{最大流}（maximum flow）。
+\end{definition}
+
+中间顶点只转运、不积存。把各顶点的净流出（流出减流入）全部相加，每条弧的流量一正一负，总和为零；中间顶点的净流出都是零，于是源点的净流出等于汇点的净流入，$\operatorname{val}(\bm x)$也是$t$收到的净量。流值不是全图各弧流量的总和：一单位流量经过三条弧到达汇点，只算一单位流值。
+
+为了估计流值能有多大，把顶点分成包含$s$的一侧$S$与包含$t$的一侧$\bar S=V\setminus S$，称$(S,\bar S)$为一个$s$--$t$割。这沿用第~\ref{sec:graph-opt-cut-property}节割的含义，只是要求源、汇分居两侧。割的\term{割容量}（cut capacity）只累计从源侧跨向汇侧的弧：
+\[
+  c(S,\bar S)=\sum_{u\in S,\ v\in\bar S,\ u\to v}c_{u,v}.
+\]
+从汇侧指回的弧不计入。直观上，从$s$到$t$的输送都要穿过这个割，总量不能超过这些弧的容量之和。
+
+\begin{lemma}[流值不超过割容量]
+\label{lem:graph-opt-weak-duality}
+对任意流$\bm x$与任意$s$--$t$割$(S,\bar S)$，有
+\begin{equation}
+  \operatorname{val}(\bm x)=\sum_{u\in S,\,v\in\bar S}x_{u,v}-\sum_{v\in\bar S,\,u\in S}x_{v,u}\leq c(S,\bar S).
+  \label{eq:graph-opt-net-flow-cut}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+对$S$中的全部顶点把净流出相加。$s$贡献$\operatorname{val}(\bm x)$，其余顶点都是中间顶点（$t\notin S$），贡献为零，所以和等于$\operatorname{val}(\bm x)$。另一方面，两端都在$S$内的弧在起点计正、在终点计负，相互抵消；剩下的只有跨割的弧：从$S$指向$\bar S$的弧计正，从$\bar S$指回$S$的弧计负。这就得到式~\eqref{eq:graph-opt-net-flow-cut}中的等式。再由容量约束，第一个和不超过$c(S,\bar S)$，第二个和不小于零，得到不等式。
+\end{proof}
+
+于是流值等于跨过任意一个割的净流量，每个割的容量都是流值的上界。若某个流与某个割数值相等，这个流就不可能再增大，这个割也不可能更小。图~\ref{fig:graph-opt-flow-network-cut}给出一例：取$S=\{s,b\}$，净流量$3+3-1=5$恰为流值，不超过割容量$6$。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=82.564mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-flow-network-cut/figure.pdf}
+  \caption{流网络、流与割。弧旁“$x/c$”为流量与容量，流值为$5$。浅色底为源侧$S=\{s,b\}$：跨出弧$s\to a$、$b\to t$（蓝色粗弧）计入割容量$3+3=6$；指回弧$a\to b$（红色虚线）不计容量，其流量从净流量中扣除。}
+  \label{fig:graph-opt-flow-network-cut}
+\end{figure}
+
+\subsection{残量网络与增广}
+\label{sec:graph-opt-residual-network}
+
+候选的流有无穷多个，只能从一个可行流出发逐步改进。最朴素的办法是找一条每条弧都有空余的$s$--$t$路径多送一些，但先选的路线可能占用别的路线需要的容量。取弧$s\to a$、$s\to b$、$a\to b$、$a\to t$、$b\to t$，容量都为$1$。若先沿$s\to a\to b\to t$送一单位，三条弧都满了，剩下的$s\to b$与$a\to t$连不成路径，只会追加的办法停在流值$1$；而$s\to a\to t$与$s\to b\to t$本可送出$2$。补救的办法是允许撤回旧流量，把撤回也当作一种可走的“通道”。
+
+给定流$\bm x$，对每条原弧$u\to v$建立两条\emph{残量弧}：正向残量弧$u\to v$，容量$c_{u,v}-x_{u,v}$，表示还能追加多少；反向残量弧$v\to u$，容量$x_{u,v}$，表示能撤回多少。只保留容量为正的残量弧，得到的有向图称为\term{残量网络}（residual network），记作$\mathcal G_{\bm x}$，残量弧的容量记作$r_{\bm x}$。例如原弧容量为$3$、当前流量为$2$时，正向残量为$1$、反向残量为$2$（图~\ref{fig:graph-opt-residual-arc}）：沿$u\to v$再送$1$表示追加，沿$v\to u$送$2$表示把原弧上的流量全部撤回，并不要求原网络中真有一条从$v$到$u$的管道。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=74.186mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-residual-arc/figure.pdf}
+  \caption{一条原弧对应两条残量弧。(a) 原弧$u\to v$容量$3$、流量$2$。(b) 正向残量弧（蓝色）容量$1$，可追加；反向残量弧（绿色虚线）容量$2$，可撤回。流量为$0$时无反向弧，满流时无正向弧。}
+  \label{fig:graph-opt-residual-arc}
+\end{figure}
+
+回到单位容量的例子。第一次送流后，残量网络中出现反向残量弧$b\to a$，于是有路径$s\to b\to a\to t$：在$s\to b$与$a\to t$上各追加一单位，同时把$a\to b$上的流量撤回一单位。更新后$a\to b$为$0$，其余四条弧各为$1$，流值为$2$（图~\ref{fig:graph-opt-undo-flow}）：第一次经过$a\to b$的那一单位被“改道”到了$a\to t$。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=113.901mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-undo-flow/figure.pdf}
+  \caption{单位容量网络中撤回旧流量。(a) 沿$s\to a\to b\to t$送一单位（蓝色粗弧）后，只用正向残量已无$s$--$t$路径。(b) 残量网络中绿色路径$s\to b\to a\to t$经过反向残量弧$b\to a$（灰色为其余反向弧）。(c) 更新后$a\to b$的流量被撤回，流值为$2$。}
+  \label{fig:graph-opt-undo-flow}
+\end{figure*}
+
+有了反向残量弧，改进一个流就统一成了找路。残量网络$\mathcal G_{\bm x}$中从$s$到$t$的简单路径$P$称为关于$\bm x$的\term{增广路径}（augmenting path）。$P$上残量容量的最小值
+\[
+  \Delta=\min_{(u\to v)\in P}r_{\bm x}(u,v)>0
+\]
+称为$P$的\term{瓶颈容量}（bottleneck capacity），即这条路一次最多能多送的量。沿$P$增广$\Delta$，是指对$P$上的每条残量弧：若它是原弧$u\to v$的正向残量，令$x_{u,v}\leftarrow x_{u,v}+\Delta$；若它是原弧$v\to u$的反向残量，令$x_{v,u}\leftarrow x_{v,u}-\Delta$。
+
+\begin{lemma}[沿增广路径更新保持可行]
+\label{lem:graph-opt-augment}
+设$\bm x$是流，$P$是增广路径，瓶颈容量为$\Delta$。沿$P$增广$\Delta$后得到的$\bm x'$仍是流，并且$\operatorname{val}(\bm x')=\operatorname{val}(\bm x)+\Delta$。
+\end{lemma}
+
+\begin{proof}
+容量约束：正向残量弧满足$\Delta\leq c_{u,v}-x_{u,v}$，追加后不超过容量；反向残量弧满足$\Delta\leq x_{v,u}$，撤回后不小于零。流守恒：$P$经过每个中间顶点$v$恰好一次，一条残量弧进入$v$，一条离开$v$。进入的那条若是正向残量，$v$的流入增加$\Delta$；若是反向残量，即撤回一条从$v$出发的原弧上的流量，$v$的流出减少$\Delta$。两种情形都使$v$的净流出减少$\Delta$。同理，离开的那条使$v$的净流出增加$\Delta$，两者相抵。最后，$P$的第一条残量弧离开$s$，使$s$的净流出增加$\Delta$，而$P$不再回到$s$，所以流值增加$\Delta$。
+\end{proof}
+
+引理直接给出一个改进框架：从零流出发，只要残量网络中还有增广路径就沿它增广。这个框架称为\term{Ford--Fulkerson方法}（Ford--Fulkerson method）。称它为“方法”，是因为它没有规定选哪条路，后面两种算法给出不同的规定。
+
+\begin{algorithm}[Ford--Fulkerson增广框架]
+\label{alg:graph-opt-ford-fulkerson}
+输入：流网络$(\mathcal G,c,s,t)$。输出：流$\bm x$与割$(S,\bar S)$。
+\begin{enumerate}
+  \item 令$\bm x=\bm 0$。
+  \item 在$\mathcal G_{\bm x}$中从$s$搜索；若到达不了$t$，令$S$为搜索到的顶点集，输出$\bm x$与$(S,\bar S)$，停止。
+  \item 取一条增广路径$P$，求瓶颈$\Delta$，按引理~\ref{lem:graph-opt-augment}更新$\bm x$，回到第2步。
+\end{enumerate}
+\end{algorithm}
+
+框架能否停下来，取决于每次能送多少。
+
+\begin{theorem}[整数容量下的有限终止]
+\label{thm:graph-opt-integer-termination}
+若所有容量都是非负整数，则无论怎样选择增广路径，算法~\ref{alg:graph-opt-ford-fulkerson}至多经过$C_s=\sum_{w:\,s\to w}c_{s,w}$次增广就停止，并且全程每条弧上的流量都是整数。
+\end{theorem}
+
+\begin{proof}
+零流是整数的；若当前流量都是整数，则残量$c_{u,v}-x_{u,v}$与$x_{u,v}$都是整数，瓶颈$\Delta$是正整数，更新后流量仍为整数。于是每次增广使流值至少增加$1$。另一方面，取$S=\{s\}$，由引理~\ref{lem:graph-opt-weak-duality}，流值不超过$C_s$，所以增广至多$C_s$次。
+\end{proof}
+
+容量为有理数时，乘以公分母即化为整数情形。对一般实容量，这个论证不能照搬：增加量可能越来越小。已知存在含无理容量的网络，任意选路的框架永不停止，流值甚至收敛到小于最大流值的数。
+
+框架停止时没有增广路径。这时的流是最大的，而且可以从残量网络中直接读出一个与流值相等的割。
+
+\begin{theorem}[增广路径判据]
+\label{thm:graph-opt-augmenting-path}
+设$\bm x$是流网络上的一个流，则下列三条等价：
+\begin{enumerate}
+  \item $\bm x$是最大流；
+  \item 残量网络$\mathcal G_{\bm x}$中不存在增广路径；
+  \item 存在某个$s$--$t$割$(S,\bar S)$，使$\operatorname{val}(\bm x)=c(S,\bar S)$。
+\end{enumerate}
+此时$(S,\bar S)$是割容量最小的$s$--$t$割，可取$S$为$\mathcal G_{\bm x}$中从$s$可达的顶点集。
+\end{theorem}
+
+\begin{proof}
+由1推2：若存在增广路径，由引理~\ref{lem:graph-opt-augment}可得流值更大的流，与$\bm x$最大矛盾。
+
+由2推3：令$S$为$\mathcal G_{\bm x}$中从$s$可达的顶点集。$s\in S$，而没有增广路径说明$t\notin S$。若$u\in S$、$v\in\bar S$且$u\to v$是原弧，则必有$x_{u,v}=c_{u,v}$，否则正向残量弧$u\to v$存在，$v$就从$s$可达了。若$v\in\bar S$、$u\in S$且$v\to u$是原弧，则必有$x_{v,u}=0$，否则反向残量弧$u\to v$存在，同样使$v$可达。代入式~\eqref{eq:graph-opt-net-flow-cut}，第一个和等于$c(S,\bar S)$，第二个和为零，故$\operatorname{val}(\bm x)=c(S,\bar S)$。
+
+由3推1：对任意流$\bm y$，引理~\ref{lem:graph-opt-weak-duality}给出$\operatorname{val}(\bm y)\leq c(S,\bar S)=\operatorname{val}(\bm x)$，所以$\bm x$最大。同一不等式对任意割$(S',\bar S')$给出$c(S',\bar S')\geq\operatorname{val}(\bm x)=c(S,\bar S)$，所以$(S,\bar S)$的割容量最小。
+\end{proof}
+
+割容量最小的$s$--$t$割称为\term{最小割}（minimum cut）。定理把“是否最优”化成在残量网络中做一次遍历就能回答的问题；停止时的流与割互为证书，可以逐弧核对，不必相信算法过程。结合定理~\ref{thm:graph-opt-integer-termination}，整数容量的网络存在每条弧流量都为整数的最大流，第~\ref{sec:graph-matching}节会用到这一点。图~\ref{fig:graph-opt-max-flow-certificate}是同一网络的最大流及其证书。判据只检验给定的流；一般实容量下能否有限步到达这样的流，要由具体的选路规则保证。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=104.186mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-max-flow-certificate/figure.pdf}
+  \caption{最大流与最小割互为证书。(a) 最大流，弧旁为“流量/容量”，流值为$5$；虚线为割$(\{s\},\{a,b,t\})$，跨出弧（红色）均满流，割容量$3+2=5$。(b) 残量网络只剩反向残量弧（绿色虚线），$s$没有出弧，可达集为$S=\{s\}$（浅色底）。}
+  \label{fig:graph-opt-max-flow-certificate}
+\end{figure}
+
+实现时，后面两种算法共用同一种表示。每条原弧$u\to v$登记一对残量边，分别挂在$u$、$v$的邻接表上，互相指向对方。每条残量边$e$记录终点、当前残量$r_e$和同伴边$\bar e$的编号；正向边初值$r_e=c_{u,v}$，反向边初值为$0$。沿$e$送$\Delta$时令$r_e\gets r_e-\Delta$、$r_{\bar e}\gets r_{\bar e}+\Delta$，两条边总是成对更新，原弧流量随时可读作其反向边的残量。真实的反向弧与平行弧各有自己的边对，“真实反向输送”与“撤回流量”不会混为一谈。因此搜索时要记住到达每个顶点所经的\emph{边编号}，只记前一个顶点无法确定改哪条边。
+
+\subsection{Edmonds--Karp算法}
+\label{sec:graph-opt-edmonds-karp}
+
+Edmonds--Karp算法保留残量网络与增广更新，只规定每轮用广度优先遍历选出弧数最少的增广路径。这条规则决定了增广次数能否摆脱容量数值的影响。
+
+\subsubsection{主要思想}
+
+把$s$看作供水处、$t$看作收水处，$a,b$为中转点。四条外弧$s\to a$、$s\to b$、$a\to t$、$b\to t$容量都为$4$，中间弧$a\to b$容量为$1$，最大流值为$8$。先选$s\to a\to b\to t$，瓶颈是中间弧，只能送$1$；再选$s\to b\to a\to t$，经反向残量弧$b\to a$撤回那一单位，又只增加$1$。两步后中间弧恢复空闲，同样两条路可以再选。一直交替，送满$8$要增广$8$次（图~\ref{fig:graph-opt-edmonds-karp-choice}(a)）。若外弧容量改为$10^6$，就要$2\times10^6$次。
+
+回到零流，一层一层看：一步到$a,b$，两步到$t$。这样首先找到两弧路$s\to a\to t$，送$4$；再找到$s\to b\to t$，又送$4$，两次就达到$8$（图~\ref{fig:graph-opt-edmonds-karp-choice}(b)）。这就是\emph{最短增广路}规则：在残量网络中用广度优先遍历找弧数最少的$s$--$t$路径。遍历决定走哪条路，瓶颈决定这次送多少；路径长短只数弧的条数，容量不参与比较。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=78.444mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-edmonds-karp-choice/figure.pdf}
+  \caption{选路规则决定增广次数。外弧容量$4$，中间弧$a\to b$容量$1$。(a) 交替选蓝色路径$s\to a\to b\to t$与绿色虚线路径$s\to b\to a\to t$（经反向残量$b\to a$），每次送$1$，共$8$次。(b) 按层数$h$先找到两条两弧路径（黄色），两次各送$4$。}
+  \label{fig:graph-opt-edmonds-karp-choice}
+\end{figure}
+
+一般情况下，弧数最少的路未必瓶颈最大；规则的保证来自另一处：增广不会让任何顶点离$s$更近，于是同一条弧不能频繁地成为瓶颈，这在后面证明。Sedgewick与Wayne的最大流实现正是用广度优先遍历选路\scite{math-graph-sedgewick-maxflow}。
+
+\subsubsection{算法流程}
+
+\paragraph{算法状态与初始化}
+手工找路要记住：哪些管道还能追加或撤回、本轮找到了哪些点、各点经哪条边到达、共送出多少。残量边对的结构（邻接表、终点与同伴编号）建图后不变，不算状态。算法维护：
+\begin{itemize}
+  \item 残量$r_e$：每条残量边一个，正向边初值为容量，反向边初值为$0$，跨轮保留；
+  \item 流值$F$：初值为$0$，跨轮累加；
+  \item 访问标记与队列：每轮开始时清空，只标记$s$、队列只含$s$；
+  \item 前驱边$\pi(v)$：到达$v$所经的残量边编号，每轮开始时清空。
+\end{itemize}
+
+\paragraph{一次增广与停止}
+每一轮做三件事：
+\begin{itemize}
+  \item 搜索：按广度优先次序取出顶点$u$，扫描$u$的残量边$e$；若$r_e>0$且终点$v$未标记，就标记$v$、记$\pi(v)=e$、让$v$入队。$t$被标记即可结束搜索。
+  \item 求瓶颈：从$t$沿$\pi$回溯到$s$，取路径上残量的最小值$\Delta$。
+  \item 更新：再回溯一次，对路径上每条边$e$令$r_e\gets r_e-\Delta$、$r_{\bar e}\gets r_{\bar e}+\Delta$，并令$F\gets F+\Delta$。
+\end{itemize}
+某一轮标记不到$t$时停止，被标记的顶点集就是割的源侧$S$。增广会让一些边耗尽、一些反向边出现，所以每轮都在更新后的残量上重新搜索。
+
+\begin{algorithm}[Edmonds--Karp算法]
+\label{alg:graph-opt-edmonds-karp}
+输入：用残量边对存储的流网络，源点$s$，汇点$t$。输出：流值$F$、各原弧流量与割$(S,\bar S)$。
+\begin{enumerate}
+  \item 每对残量边中，正向边$r_e=c_{u,v}$，反向边$r_{\bar e}=0$；$F=0$。
+  \item 清空标记与前驱边，标记$s$，令队列$Q=[s]$。
+  \item 当$Q$非空且$t$未标记时，取出队首$u$；对$u$的每条残量边$e$（终点$v$），若$r_e>0$且$v$未标记，则标记$v$，置$\pi(v)=e$，$v$入队。
+  \item 若$t$未标记，令$S$为已标记顶点集；每条原弧的流量取其反向边的残量；输出$F$、流量与$(S,\bar S)$，停止。
+  \item 从$t$沿$\pi$回溯到$s$，求$\Delta=\min r_e$；再回溯一次，对路径上每条$e$置$r_e\gets r_e-\Delta$、$r_{\bar e}\gets r_{\bar e}+\Delta$；$F\gets F+\Delta$，回到第2步。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{运行示例}
+继续主要思想中外弧容量$4$、中间弧容量$1$的网络。边对按$s\to a$、$s\to b$、$a\to b$、$a\to t$、$b\to t$的次序登记，$s$的邻接表先列$a$后列$b$；表~\ref{tab:graph-opt-edmonds-karp-trace}按出队逐行记录。
+\begin{itemize}
+  \item 第$1$轮：$s$出队，发现$a,b$；$a$出队，反向边$a\to s$残量为$0$，$b$已标记，经$a\to t$发现$t$。回溯得$s\to a\to t$，瓶颈$4$，两条边耗尽，反向边残量变为$4$。
+  \item 第$2$轮：$s\to a$已耗尽，$s$只发现$b$；$b$出队，经$b\to t$发现$t$。路径$s\to b\to t$，瓶颈$4$，流值为$8$。
+  \item 第$3$轮：$s$的两条出边残量都为$0$，只标记了$s$，停止，$S=\{s\}$。
+\end{itemize}
+割$(\{s\},\{a,b,t\})$的容量$4+4=8$等于流值，这是最大流。
+
+\begin{table*}[!htb]
+  \centering
+  \caption{Edmonds--Karp算法在外弧容量$4$、中间弧容量$1$的网络上的运行。每行是一次出队，“前驱边”为新记录的$\pi$。}
+  \label{tab:graph-opt-edmonds-karp-trace}
+  \begin{tabular}{@{}cccccc@{}}
+    \toprule
+    轮 & 出队 & 出队后队列 & 前驱边 & 更新 & $F$ \\
+    \midrule
+    $1$ & $s$ & $[a,b]$ & $\pi(a)=s\to a$，$\pi(b)=s\to b$ & — & $0$ \\
+    $1$ & $a$ & $[b,t]$ & $\pi(t)=a\to t$ & $\Delta=4$；$s\to a$、$a\to t$耗尽 & $4$ \\
+    $2$ & $s$ & $[b]$ & $\pi(b)=s\to b$ & — & $4$ \\
+    $2$ & $b$ & $[t]$ & $\pi(t)=b\to t$ & $\Delta=4$；$s\to b$、$b\to t$耗尽 & $8$ \\
+    $3$ & $s$ & $[\,]$ & — & $t$不可达，$S=\{s\}$ & $8$ \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+图~\ref{fig:graph-opt-undo-flow}的单位容量例子在共同框架下先走三弧路、再撤回，用来说明边对的语义；Edmonds--Karp算法在该网络上直接选两条两弧路，不需撤回。撤回在本算法中仍然必要，只是要在别的网络上才会出现。
+
+\subsubsection{正确性与复杂度}
+
+例中每次推送后中转点进出相等、各边不超容量；送满的$8$等于源点出弧容量和，不可能再超过。一般网络上，可行性由引理~\ref{lem:graph-opt-augment}保证，停止时由定理~\ref{thm:graph-opt-augmenting-path}得到最大流与最小割。需要另证的是任意有限实容量下的终止。
+
+在主要思想的交替选路中，中间弧$a\to b$被填满、撤空、再填满，反复成为瓶颈。要反复用$a\to b$，就要反复用$b\to a$；而在弧数最少的路上，$a\to b$要求$b$比$a$深一层，$b\to a$却要求$a$比$b$深一层。下面证明层数不会回退，于是每这样来回一次，$a$的层数至少上升$2$。记$h_{\bm x}(v)$为$v$在$\mathcal G_{\bm x}$中从$s$出发的最少弧数，不可达时为$+\infty$。
+
+\begin{lemma}[残量层数单调不减]
+\label{lem:graph-opt-levels-monotone}
+设$\bm x'$由$\bm x$沿$\mathcal G_{\bm x}$中一条弧数最少的增广路径增广得到，则对每个顶点$v$都有$h_{\bm x'}(v)\geq h_{\bm x}(v)$。
+\end{lemma}
+
+\begin{proof}
+假设结论不成立，在所有满足$h_{\bm x'}(v)<h_{\bm x}(v)$的顶点中取$h_{\bm x'}(v)$最小的一个$v$，显然$v\neq s$。取$\mathcal G_{\bm x'}$中一条$s$到$v$的最短路径，设其最后一条弧为$u\to v$，则$h_{\bm x'}(u)=h_{\bm x'}(v)-1$；由$v$的最小性，$h_{\bm x'}(u)\geq h_{\bm x}(u)$。
+
+若$u\to v$在增广前已在$\mathcal G_{\bm x}$中，则$h_{\bm x}(v)\leq h_{\bm x}(u)+1\leq h_{\bm x'}(u)+1=h_{\bm x'}(v)$，与假设矛盾。
+
+否则$u\to v$是增广新产生的残量弧。增广只会让路径上残量弧的反向弧获得正容量，所以$v\to u$在增广路径上；这条路弧数最少，相邻顶点层数相差一，故$h_{\bm x}(u)=h_{\bm x}(v)+1$。于是$h_{\bm x}(v)=h_{\bm x}(u)-1\leq h_{\bm x'}(u)-1=h_{\bm x'}(v)-2$，同样矛盾。
+\end{proof}
+
+每次增广中，瓶颈弧的残量降为零，称它在这次增广中\emph{饱和}。
+
+\begin{theorem}[Edmonds--Karp算法的增广次数]
+\label{thm:graph-opt-edmonds-karp}
+在有限实容量的流网络上，Edmonds--Karp算法至多进行$na$次增广就停止。
+\end{theorem}
+
+\begin{proof}
+残量弧按其对应的原弧与方向区分，至多有$2a$条。固定其中一条$u\to v$。它在某次增广中饱和时位于最短增广路径上，所以$h_{\bm x}(v)=h_{\bm x}(u)+1$，随后从残量网络中消失。它要再次出现，之后某次增广的路径必须经过反向弧$v\to u$，设当时的流为$\bm x''$，则$h_{\bm x''}(u)=h_{\bm x''}(v)+1$。由引理~\ref{lem:graph-opt-levels-monotone}，
+\[
+  h_{\bm x''}(u)=h_{\bm x''}(v)+1\geq h_{\bm x}(v)+1=h_{\bm x}(u)+2.
+\]
+所以$u\to v$相邻两次饱和之间，$u$的层数至少增加$2$。$u$作为增广路径上的非汇点顶点，层数在$0$到$n-2$之间，因此$u\to v$至多饱和$n/2$次。每次增广至少饱和一条残量弧，总增广次数不超过$2a\cdot n/2=na$。
+\end{proof}
+
+这个界只依赖顶点数与弧数，与容量的数值无关。由此得到本节的核心结论。
+
+\begin{theorem}[最大流最小割定理]
+\label{thm:graph-opt-max-flow-min-cut}
+在有限非负实容量的流网络中，最大流存在，并且最大流值等于最小$s$--$t$割的割容量。
+\end{theorem}
+
+\begin{proof}
+由定理~\ref{thm:graph-opt-edmonds-karp}，Edmonds--Karp算法有限步停止，输出流$\bm x$在残量网络中没有增广路径。由定理~\ref{thm:graph-opt-augmenting-path}，$\bm x$是最大流，且存在割$(S,\bar S)$使$\operatorname{val}(\bm x)=c(S,\bar S)$，这个割的割容量最小。
+\end{proof}
+
+这一结论通常称为\term{最大流最小割定理}（max-flow min-cut theorem）。
+
+开销方面，先在线性时间内删去不与任何弧关联的非源汇孤立点，此后$O(n+a)=O(a)$。每轮广度优先遍历与两次回溯用时$O(a)$，乘以至多$na$轮，总时间为$O(na^2)$次算术与比较操作，另加线性预处理，存储为$O(n+a)$。这个界不依赖整数容量，但它把每次加减比较算作一步，不等同于按输入位长计的复杂度。容量都是整数时，每次更新仍保持整数流，输出的最大流是整数流。
+
+\subsection{Dinic算法}
+\label{sec:graph-opt-dinic}
+
+Edmonds--Karp算法每送一条路就重做一次遍历，而相邻两次的层次常常相同。Dinic算法在同一份层次内持续增广，直到这一层次下的最短路全都走不通才重建层次；关键是在层内找路时不重复试探已失败的方向。
+
+\subsubsection{主要思想}
+
+把$s\to a$、$s\to b$、$a\to b$、$a\to t$、$b\to t$的容量依次设为$3,2,1,2,3$，即图~\ref{fig:graph-opt-flow-network-cut}的网络。从零流分层，$s$在第$0$层，$a,b$在第$1$层，$t$在第$2$层。沿$s\to a\to t$送完$2$后，$s\to b\to t$还能送$2$；两条路都只走向下一层，原层次足以指导第二次找路。
+
+送完$4$后，$a\to t$与$s\to b$都满了，只沿向下一层的边已到不了$t$。但残量网络中还有$s\to a\to b\to t$可送$1$：它用到的$a\to b$连接两个第$1$层的点，在旧层次里不可走。重新分层后$s,a,b,t$各在第$0,1,2,3$层，$a\to b$成了向下一层的边（图~\ref{fig:graph-opt-dinic-phases}）。“这一层次下走不通”只说明最短的路用完了，不等于整个网络不能再增加流量。
+
+把这两个观察写成定义。给定流$\bm x$，令$\mathrm{level}(v)=h_{\bm x}(v)$为广度优先层数。残量弧$u\to v$若满足$r_{\bm x}(u,v)>0$且$\mathrm{level}(v)=\mathrm{level}(u)+1$，就称为\emph{可用边}；全部可用边构成的子图称为\term{分层网络}（level graph），记作$L_{\bm x}$。$L_{\bm x}$中的$s$--$t$路径恰好是$\mathcal G_{\bm x}$中弧数最少的增广路径。
+
+\begin{definition}[阻塞流]
+\label{def:graph-opt-blocking-flow}
+以残量为容量，$L_{\bm x}$上满足容量约束与内部守恒的流$\bm g$若使$L_{\bm x}$中每条$s$--$t$路径都至少有一条边满足$g_e=r_{\bm x}(e)$，就称为$L_{\bm x}$的\term{阻塞流}（blocking flow）。
+\end{definition}
+
+阻塞流把本轮所有最短路至少堵住一处，但不要求是分层网络上的最大流：借反向弧还能多送的部分留给下一轮。Dinic算法就是循环两步：建立分层网络，求它的一个阻塞流并加到当前流上；汇点不可达时停止\scite{math-graph-kyng2020dinic}。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=89.129mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-dinic-phases/figure.pdf}
+  \caption{Dinic算法在$3,2,1,2,3$网络上的两个阶段，顶点按层数从左到右排列，弧旁为残量。(a) 第$1$阶段：同层边$a\to b$（灰色虚线）不可用，沿两条两弧路径（黄色）各推送$2$。(b) 第$2$阶段：绿色虚线为反向残量，沿$s\to a\to b\to t$推送$1$。}
+  \label{fig:graph-opt-dinic-phases}
+\end{figure}
+
+\subsubsection{算法流程}
+
+\paragraph{算法状态与初始化}
+例中给每个点标了层数，又依次尝试它的出边。算法要记住的正是这两件事：每个点本轮处于第几层，邻接表试到了哪里。层数约束推进方向，进度让失败的方向不再重试；重新分层后可用边变了，进度只在阶段内保留。算法维护：
+\begin{itemize}
+  \item 残量$r_e$与流值$F$：初值同Edmonds--Karp算法，跨阶段保留；
+  \item 层数$\mathrm{level}(v)$：每个阶段开始时由广度优先遍历重算，不可达的顶点没有层数；
+  \item \term{当前弧}（current arc）指针$\mathrm{ptr}(u)$：指向$u$的邻接表中下一条待试的残量边，每个阶段开始时复位到表头，阶段内只向后移。
+\end{itemize}
+
+\paragraph{分层与阻塞流计算}
+外层循环每个阶段先做广度优先遍历求$\mathrm{level}$，$t$不可达就结束。随后反复从$s$做一次深度优先推送$\mathrm{Push}(s,+\infty)$。$\mathrm{Push}(u,f)$表示“从$u$出发、手里最多带着$f$，试着送一条路到$t$”，返回实际送达的量：$u=t$时返回$f$；否则从$\mathrm{ptr}(u)$起依次检查边$e=(u\to v)$，满足$r_e>0$与$\mathrm{level}(v)=\mathrm{level}(u)+1$时递归调用$\mathrm{Push}(v,\min\{f,r_e\})$。递归送达$d>0$时，回程中成对更新$r_e$与$r_{\bar e}$并把$d$逐层返回。$\mathrm{Push}(s,+\infty)$返回$0$时，本阶段结束。
+
+指针何时前移，决定搜索既不漏、也不重复：
+\begin{itemize}
+  \item 跳过：$r_e=0$，或$\mathrm{level}(v)\neq\mathrm{level}(u)+1$，或递归$\mathrm{Push}(v,\cdot)$返回$0$，说明本阶段从这条边已到不了$t$，令$\mathrm{ptr}(u)$前移；
+  \item 保留：递归成功时不前移，因为这条边可能还有残量，下一次推送还能用；若它这次被用尽，下次来到$u$时会因$r_e=0$而跳过。
+\end{itemize}
+指针若在每次推送时清零，失败的分支会被反复搜索；若成功后无条件前移，又会丢掉仍有残量的边。
+
+\begin{algorithm}[Dinic算法]
+\label{alg:graph-opt-dinic}
+输入：用残量边对存储的流网络，源点$s$，汇点$t$。输出：流值$F$、各原弧流量与割$(S,\bar S)$。
+\begin{enumerate}
+  \item 正向边$r_e=c_{u,v}$，反向边$r_{\bar e}=0$；$F=0$。
+  \item 从$s$只经$r_e>0$的边做广度优先遍历，求$\mathrm{level}$。若$t$不可达，令$S$为可达顶点集，原弧流量取其反向边的残量，输出并停止。
+  \item 对每个顶点$u$令$\mathrm{ptr}(u)$指向其邻接表表头。
+  \item 令$d=\mathrm{Push}(s,+\infty)$。若$d>0$，置$F\gets F+d$，重复本步；否则回到第2步。
+\end{enumerate}
+$\mathrm{Push}(u,f)$：
+\begin{enumerate}
+  \item 若$u=t$，返回$f$。
+  \item 当$\mathrm{ptr}(u)$尚未越过表尾时，取其所指的边$e$，终点为$v$：若$r_e>0$且$\mathrm{level}(v)=\mathrm{level}(u)+1$，令$d=\mathrm{Push}(v,\min\{f,r_e\})$；若$d>0$，置$r_e\gets r_e-d$、$r_{\bar e}\gets r_{\bar e}+d$，返回$d$。其余情形令$\mathrm{ptr}(u)$前移一位。
+  \item 返回$0$。
+\end{enumerate}
+\end{algorithm}
+
+递归深度不超过$n-1$；必要时可用显式栈按同样规则前进与回退。
+
+\paragraph{运行示例}
+继续$3,2,1,2,3$的网络，边对按同样次序登记，于是$a$的邻接表依次是$a\to s$（反向）、$a\to b$、$a\to t$，$b$的依次是$b\to s$、$b\to a$（均为反向）、$b\to t$。
+\begin{itemize}
+  \item 第$1$阶段分层：$\mathrm{level}(s,a,b,t)=(0,1,1,2)$，全部指针在表头。
+  \item 第$1$次推送：$s$试$s\to a$可用，进入$a$。$a\to s$残量为$0$，跳过；$a\to b$通向同层，跳过；$a\to t$可用，到达$t$。送$\min\{3,2\}=2$，$\mathrm{ptr}(a)$停在$a\to t$，$F=2$。
+  \item 第$2$次推送：$s\to a$仍有残量$1$，进入$a$；$a\to t$已耗尽，$\mathrm{ptr}(a)$越过表尾，返回$0$。$s$因此跳过$s\to a$，本阶段不再尝试；改试$s\to b$，$b$跳过两条反向边，经$b\to t$送$\min\{2,3\}=2$，$F=4$。
+  \item 第$3$次推送：$s\to b$已耗尽，$\mathrm{ptr}(s)$越过表尾，返回$0$，阻塞流为$4$。
+  \item 第$2$阶段分层：残量网络中$s\to a$剩$1$，$a\to b$剩$1$，$b\to t$剩$1$，层数变为$(0,1,2,3)$；指针全部复位。上一阶段放弃的$s\to a$又被尝试。
+  \item 第$1$次推送：$s\to a$，$a$跳过$a\to s$后经$a\to b$进入$b$，$b$跳过两条反向边后经$b\to t$到达$t$，送$1$，$F=5$。第$2$次推送返回$0$，阶段结束。
+  \item 第$3$次分层：$s$的出边都已耗尽，$t$不可达，停止，$S=\{s\}$，割容量$3+2=5$等于流值。
+\end{itemize}
+同一输入上，Edmonds--Karp算法要做三次成功的遍历（$s\to a\to t$、$s\to b\to t$、$s\to a\to b\to t$），Dinic算法只用两个成功的阶段；两者都另有一次失败的遍历，给出同一个最小割。
+
+\subsubsection{正确性与复杂度}
+
+例中第$1$阶段后只能走三弧的路。一般地，完成一个阻塞流后汇点的残量距离严格增加；这以“阶段内的推送确实形成阻塞流”为前提。
+
+每次成功的$\mathrm{Push}(s,+\infty)$沿$L_{\bm x}$中的一条$s$--$t$路径送出该路径的残量最小值（递归中逐层取$\min$），按引理~\ref{lem:graph-opt-augment}，流保持可行，流值增加送出的量。阶段内，送流使路径上可用边的残量减少，同时让反向边获得残量；但反向边从第$i+1$层指向第$i$层，不是可用边。所以阶段内可用边只会减少，不会新增。由此，从$v$一旦到不了$t$，整个阶段都到不了，被跳过的边不会重新有用。图~\ref{fig:graph-opt-dinic-phases}(b)中的绿色反向残量都是第$1$阶段产生的，按该阶段的层数全指向低一层，不会为失败的分支开出新路。当$\mathrm{Push}(s,+\infty)$返回$0$时，$s$的每条边都已被跳过，从$s$沿剩余可用边到不了$t$，即阶段开始时$L_{\bm x}$中每条$s$--$t$路径都含一条已被用尽的边，本阶段送出的总流是阻塞流。
+
+\begin{lemma}[阶段距离严格增加]
+\label{lem:graph-opt-dinic-distance}
+设$\bm x'$由$\bm x$加上$L_{\bm x}$的一个阻塞流得到。若$t$在$\mathcal G_{\bm x'}$中可达，则$h_{\bm x'}(t)>h_{\bm x}(t)$。
+\end{lemma}
+
+\begin{proof}
+记$\ell=h_{\bm x}$为阶段开始时的层数。$\mathcal G_{\bm x'}$中的残量弧$u\to v$只有两种来源：阶段开始时已在$\mathcal G_{\bm x}$中，由层数定义有$\ell(v)\leq\ell(u)+1$；或者是阶段内送流产生的反向弧，其反向是可用边，有$\ell(v)=\ell(u)-1$。总之每条残量弧都满足$\ell(v)\leq\ell(u)+1$。于是$\mathcal G_{\bm x'}$中任一条$s$--$t$路径每走一步层数至多加一，弧数至少为$\ell(t)-\ell(s)=h_{\bm x}(t)$。若恰好相等，路径上每一步都必须使层数加一，因而每条弧都是阶段开始时的可用边，并且送流后仍有残量；这条路就是$L_{\bm x}$中一条未被堵住的$s$--$t$路径，与阻塞流的定义矛盾。所以$h_{\bm x'}(t)>h_{\bm x}(t)$。
+\end{proof}
+
+\begin{theorem}[Dinic算法的正确性与开销]
+\label{thm:graph-opt-dinic}
+在有限实容量的流网络上，Dinic算法至多经过$n-1$个阶段就停止，输出最大流与最小割。使用当前弧指针时，每个阶段用时$O(na)$，总时间为$O(n^2a)$，存储为$O(n+a)$。
+\end{theorem}
+
+\begin{proof}
+汇点可达时距离在$1$到$n-1$之间，由引理~\ref{lem:graph-opt-dinic-distance}每个阶段至少加一，所以至多$n-1$个阶段后$t$不可达，算法停止。停止时没有增广路径，由定理~\ref{thm:graph-opt-augmenting-path}输出最大流与最小割。
+
+一个阶段内，广度优先遍历用时$O(n+a)$。每次成功推送至少用尽一条可用边，而可用边在阶段内只减不增，所以成功推送至多$2a$次。考察一次$\mathrm{Push}(s,+\infty)$检查的边：每条被检查的边要么使某个指针前移，要么位于本次成功送达的路径上。指针在一个阶段内总共前移至多$2a$次；成功路径至多$n-1$条弧，共至多$2a$条路径。加上每次调用的常数开销，一个阶段为$O(2a+2a(n-1)+n+a)=O(na)$。乘以至多$n-1$个阶段，总时间$O(n^2a)$；另计线性预处理。除残量边对外只多存$\mathrm{level}$与$\mathrm{ptr}$，存储为$O(n+a)$。
+\end{proof}
+
+这也给出最大流最小割定理的另一种构造性证明。在单位容量的二部网络上，阶段数还能进一步压低，第~\ref{sec:graph-opt-hopcroft-karp}小节说明这一更强的界。
+
+\subsection{方法比较与结果检验}
+\label{sec:graph-opt-max-flow-analysis}
+
+两种算法共用残量边对与增广更新，差别在于一次遍历之后做多少工作：Edmonds--Karp算法只确定一条最短路，状态只需前驱边；Dinic算法建立整个分层网络，用当前弧指针连续推送到所有最短路被堵住，多存层数与指针。理论界分别为$O(na^2)$与$O(n^2a)$，弧多于顶点时后者较小；但这是最坏情形的上界，不能直接当成实测排名。
+
+算法应输出流$\bm x$、残量可达集确定的割$(S,\bar S)$及共同的数值。检验时逐项核对：每条弧满足$0\leq x_{u,v}\leq c_{u,v}$；每个中间顶点流入等于流出；源点净流出与汇点净流入相等；割容量按跨出弧重新求和，并与流值比较。两者相等时，由引理~\ref{lem:graph-opt-weak-duality}，流与割同时最优，检验不依赖算法过程。最小割不一定唯一：在$3,2,1,2,3$的网络中，$S=\{s\}$、$\{s,a\}$、$\{s,a,b\}$的割容量都是$5$，只有$S=\{s,b\}$为$6$；残量可达集给出的是源侧最小的一个。采用浮点数时，应分别报告守恒误差、容量违反量以及流值与割容量之差，不能把近似满足称为精确证书。
+
+后面的问题都要先转成某种网络再使用这里的结论。第~\ref{sec:graph-matching}节的二部图匹配对应单位容量网络，可直接维护匹配；第~\ref{sec:graph-min-cost-flow}节再把各点的供需与每条弧的费用纳入一般模型；第~\ref{sec:graph-pairwise-binary-cut}节把一类二值变量的成对目标写成割容量，再用最小割求解。这些转换关系必须逐一建立，不能因都画在图上就共享最优性结论。

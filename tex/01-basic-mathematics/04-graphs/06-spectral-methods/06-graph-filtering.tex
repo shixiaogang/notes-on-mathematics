@@ -1,0 +1,266 @@
+% 第6章第6节：图滤波（滤波问题与谱响应、基于谱分解的滤波、多项式滤波、方法比较与结果检验）。
+
+\section{图滤波}
+\label{sec:graph-filtering}
+
+图傅里叶变换只换坐标，不改变函数。章首的第二个问题是压低逐点跳动、保留整体趋势，这需要真正改变函数：在谱坐标中，它就是按特征值调节各模态的系数。规定了要得到的输出之后，还要考虑怎样算出它；先求谱基再逐模态缩放最直接，但代价高，多项式响应则只需稀疏乘法。
+
+\subsection{滤波问题与谱响应}
+\label{sec:graph-spec-filtering-problem}
+
+传感器读数常混有逐点跳动的噪声，而真实的温度场在相邻测点间变化平缓。上一节的分解~\eqref{eq:graph-spec-parseval}说明，逐点跳动主要落在大特征值的模态上。于是“去噪”可以这样表述：输入图算子$\bm L$和顶点函数$\bm f$，输出一个新的顶点函数，其中小特征值的模态基本保留，大特征值的模态被压低。
+
+音响上的均衡器做的是同一类事：把声音拆成低音、中音、高音几个频段，每个频段单独调大或调小，再合成播放。图上的“频段”就是各个特征值的模态。对每个特征值规定一个倍数，说明该模态的系数保留多少，这个倍数随特征值变化，就是一个定义在特征值上的函数。
+
+\begin{definition}[谱滤波]
+\label{def:graph-spec-spectral-filter}
+给定图算子$\bm L=\bm U\bm\Lambda\bm U^{\top}$、输入$\bm f$和定义在全部特征值上的实函数$g$，称
+\begin{equation}
+ \bm y=g(\bm L)\bm f=\bm U\,g(\bm\Lambda)\,\bm U^{\top}\bm f,\qquad
+ g(\bm\Lambda)=\operatorname{diag}\bigl(g(\lambda_1),\ldots,g(\lambda_n)\bigr)
+ \label{eq:graph-spec-spectral-filter}
+\end{equation}
+为$\bm f$经\term{谱响应}（spectral response）$g$的\term{图滤波}（graph filtering）输出。按谱坐标写，$\widehat y_k=g(\lambda_k)\widehat f_k$。
+\end{definition}
+
+定义中的三个因子分别是换到谱坐标、逐个缩放、换回顶点，$g(\bm L)$正是第~\ref{sec:ls-matrix-functions}节沿特征方向定义的矩阵函数。几种典型响应各有含义：$g\equiv1$时$\bm y=\bm f$，原样输出；$g(0)=1$保证零模不变，在正权支撑连通时就是保持各点的平均值；$g$随$\lambda$递减到接近零，则高频模态被压低，输出比输入平缓，这样的响应称为低通。
+
+$\bm U$不唯一，所以要确认输出不依赖它的选取。式~\eqref{eq:graph-spec-spectral-filter}对同一特征值的各个模态使用同一个数$g(\lambda)$，所以$g(\bm L)=\sum_\lambda g(\lambda)\bm P_\lambda$，其中$\bm P_\lambda$是到特征空间的正交投影，只由$\bm L$决定（第~\ref{sec:ls-matrix-functions}节）。重编号也不改变结果：$\bm P\bm L\bm P^{\top}$的特征向量是$\bm P\bm u_k$，特征值不变，于是$g(\bm P\bm L\bm P^{\top})=\bm Pg(\bm L)\bm P^{\top}$，对重排后的输入$\bm P\bm f$输出$\bm P\bm y$，即输出随顶点一起重排。同一个表达式还说明，$g(\bm L)$只用到$g$在各个特征值上的取值：两个函数只要在全部特征值上相等，就给出同一个滤波算子。
+
+\paragraph{放大界}
+滤波可能把函数放大，放大多少由响应的最大幅度控制。由式~\eqref{eq:graph-spec-parseval}，
+\begin{equation}
+ \begin{gathered}
+ \lVert\bm y\rVert_2^2=\sum_kg(\lambda_k)^2\widehat f_k^{\,2}\leq\Bigl(\max_k|g(\lambda_k)|\Bigr)^2\lVert\bm f\rVert_2^2,\\
+ \bm y^{\top}\bm L\bm y=\sum_k\lambda_kg(\lambda_k)^2\widehat f_k^{\,2}\leq\Bigl(\max_k|g(\lambda_k)|\Bigr)^2\bm f^{\top}\bm L\bm f .
+ \end{gathered}
+ \label{eq:graph-spec-filter-bound}
+\end{equation}
+所以只要在全部特征值上$|g(\lambda_k)|\leq1$，输出的幅值和沿边变化能量都不会超过输入。没有这个条件，就不能断言滤波不增加幅值或能量；例如$g(\lambda)=1+\lambda$会放大高频模态。
+
+\subsection{基于谱分解的滤波}
+\label{sec:graph-spec-eigendecomposition-filter}
+
+\subsubsection{问题与思路}
+
+定义~\ref{def:graph-spec-spectral-filter}已经写明了输出，最直接的算法就照着三个因子计算：先把$\bm f$投影到每个特征向量上得到谱坐标，再把每个坐标乘以响应值，最后用这些新坐标把特征向量重新组合起来。三步中只有特征分解与输入无关，它只依赖图算子；同一张图要处理许多输入时，分解一次就可以反复使用。
+
+\subsubsection{算法实现}
+
+图算子$\bm L$、输入$\bm f$与响应$g$在运行前给定，运行中不变，不算状态。算法维护四项状态：
+\begin{itemize}
+  \item 谱分解$(\bm\Lambda,\bm U)$：特征值与一组标准正交特征向量，首次处理$\bm L$时求出，同一个$\bm L$的后续输入直接复用；
+  \item 谱坐标$\widehat{\bm f}$：$\bm f$在各特征向量上的坐标，由投影写入；
+  \item 缩放后的谱坐标$\widehat{\bm y}$：由$\widehat{\bm f}$逐个乘以响应值得到；
+  \item 输出$\bm y$：初值为零向量，逐个累加各模态的贡献。
+\end{itemize}
+初始化时，若$\bm L$的谱分解尚未求出，就先求出它，并置$\bm y=\bm0$。此后对$k=1,\ldots,n$依次处理第$k$个模态：
+\begin{itemize}
+  \item 投影：$\widehat f_k=\bm u_k^{\top}\bm f$；
+  \item 缩放：$\widehat y_k=g(\lambda_k)\widehat f_k$；
+  \item 累加：$\bm y\gets\bm y+\widehat y_k\bm u_k$。
+\end{itemize}
+处理完全部$n$个模态后停止，此时$\bm y=\bm U\widehat{\bm y}$。用矩阵写，三步就是$\widehat{\bm f}=\bm U^{\top}\bm f$、$\widehat{\bm y}=g(\bm\Lambda)\widehat{\bm f}$与$\bm y=\bm U\widehat{\bm y}$。
+
+\begin{algorithm}[基于谱分解的图滤波]
+\label{alg:graph-spec-eigendecomposition-filter}
+输入：$n\times n$实对称图算子$\bm L$，顶点函数$\bm f$，谱响应$g$。输出：$\bm y=g(\bm L)\bm f$。
+\begin{enumerate}
+ \item 求谱分解$\bm L=\bm U\bm\Lambda\bm U^{\top}$（同一个$\bm L$只需做一次）。
+ \item 投影：$\widehat{\bm f}=\bm U^{\top}\bm f$。
+ \item 逐模态缩放：$\widehat y_k=g(\lambda_k)\widehat f_k$，$k=1,\ldots,n$。
+ \item 重构：$\bm y=\bm U\widehat{\bm y}=\sum_k\widehat y_k\bm u_k$。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在单位权三点路径上取$\bm f=(3,1,2)^{\top}$与低通响应$g(\lambda)=1/(1+\lambda)$。第1步的特征对已在第~\ref{sec:graph-spec-eigenvectors-scales}小节求出：$\lambda_1=0$、$\bm u_1=(1,1,1)^{\top}/\sqrt3$，$\lambda_2=1$、$\bm u_2=(1,0,-1)^{\top}/\sqrt2$，$\lambda_3=3$、$\bm u_3=(1,-2,1)^{\top}/\sqrt6$。投影得到的谱坐标在上一节已经算过，这里按模态与缩放、累加一并列出，表~\ref{tab:graph-spec-eigen-filter-trace}的每一行对应一个模态：
+\begin{itemize}
+  \item 模态$1$：$\widehat f_1=(3+1+2)/\sqrt3=2\sqrt3$，$g(0)=1$，贡献$\widehat y_1\bm u_1=(2,2,2)^{\top}$，即$\bm f$的平均值原样保留；
+  \item 模态$2$：$\widehat f_2=(3-2)/\sqrt2=\tfrac1{\sqrt2}$，$g(1)=\tfrac12$，贡献$(\tfrac14,0,-\tfrac14)^{\top}$，两端的高低差减半；
+  \item 模态$3$：$\widehat f_3=(3-2+2)/\sqrt6=\tfrac{\sqrt6}2$，$g(3)=\tfrac14$，贡献$(\tfrac18,-\tfrac14,\tfrac18)^{\top}$，中间顶点相对两端的起伏只剩四分之一。
+\end{itemize}
+三项贡献相加即为输出：
+\[
+ \bm y=\begin{bmatrix}2\\2\\2\end{bmatrix}+\frac14\begin{bmatrix}1\\0\\-1\end{bmatrix}+\frac18\begin{bmatrix}1\\-2\\1\end{bmatrix}
+ =\begin{bmatrix}19/8\\7/4\\15/8\end{bmatrix}.
+\]
+图~\ref{fig:graph-spec-spectral-filter-steps}把同一过程画成柱状图：左列三行相加恢复$\bm f$，右列是缩放后的三行，相加得到$\bm y$。
+
+\begin{table}[!htb]
+  \centering
+  \caption{算法~\ref{alg:graph-spec-eigendecomposition-filter}在三点路径上的执行，$\bm f=(3,1,2)^{\top}$，$g(\lambda)=1/(1+\lambda)$。每行对应一个模态：投影给出$\widehat f_k$，乘以$g(\lambda_k)$得$\widehat y_k$，再把$\widehat y_k\bm u_k$累加进输出。}
+  \label{tab:graph-spec-eigen-filter-trace}
+  \small
+  \begin{tabular}{@{}cccccc@{}}
+    \toprule
+    $k$ & $\lambda_k$ & $\widehat f_k$ & $g(\lambda_k)$ & $\widehat y_k$ & $\widehat y_k\bm u_k$ \\
+    \midrule
+    $1$ & $0$ & $2\sqrt3$ & $1$ & $2\sqrt3$ & $(2,2,2)$ \\
+    $2$ & $1$ & $\tfrac1{\sqrt2}$ & $\tfrac12$ & $\tfrac1{2\sqrt2}$ & $(\tfrac14,0,-\tfrac14)$ \\
+    $3$ & $3$ & $\tfrac{\sqrt6}2$ & $\tfrac14$ & $\tfrac{\sqrt6}8$ & $(\tfrac18,-\tfrac14,\tfrac18)$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=81.971mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-spectral-filter-steps/figure.pdf}
+  \caption{基于谱分解的滤波在单位权三点路径上的逐模态执行，$\bm f=(3,1,2)^{\top}$，$g(\lambda)=1/(1+\lambda)$。每行是一个模态在三个顶点上的贡献，左列（蓝）为输入的成分$\widehat f_k\bm u_k$，乘以箭头上的响应值得到右列（绿）的输出成分$\widehat y_k\bm u_k$。最下一行按列相加：左边恢复$\bm f$，右边得到$\bm y$。特征值越大，成分被压得越低。}
+  \label{fig:graph-spec-spectral-filter-steps}
+\end{figure}
+
+常量成分原样保留，两个变化成分分别缩小为$\tfrac12$和$\tfrac14$；输出的能量为$(\tfrac58)^2+(\tfrac18)^2=\tfrac{13}{32}$，远小于输入的$5$。这个响应即$g(\bm L)=(\bm I+\bm L)^{-1}$，可以直接核对$(\bm I+\bm L)\bm y=\bm f$。
+
+\subsubsection{算法分析}
+
+\paragraph{正确性}
+四步合起来是$\bm U g(\bm\Lambda)\bm U^{\top}\bm f$，与定义~\ref{def:graph-spec-spectral-filter}逐项相同，所以输出正确。前一小节已说明，这个结果不依赖特征向量的选取。
+
+\paragraph{复杂度}
+开销按第~\ref{sec:graph-spec-spectral-coordinates}小节的分法计：首次分解需要$O(n^3)$时间，存储$\bm U$需要$O(n^2)$空间；此后每个输入的投影和重构各是一次稠密矩阵乘向量，共$O(n^2)$。算子固定、输入很多时，分解的代价分摊到各个输入上。若为省时只求前若干模态、把其余模态的响应当作零，计算的就是另一种截断滤波，需另行说明误差。
+
+\subsection{多项式滤波}
+\label{sec:graph-spec-polynomial-filter}
+
+\subsubsection{问题与思路}
+
+谱分解的代价主要花在求$\bm U$上。若响应是多项式，就可以完全绕开特征向量。设$g(\lambda)=\sum_{r=0}^K\alpha_r\lambda^r$，由$\bm L^r=\bm U\bm\Lambda^r\bm U^{\top}$，
+\begin{equation}
+ g(\bm L)\bm f=\sum_{r=0}^K\alpha_r\bm L^r\bm f ,
+ \label{eq:graph-spec-polynomial-filter}
+\end{equation}
+右端只需要反复用$\bm L$乘向量，每得到一项就乘以系数累加。按这种方式计算谱滤波称为\term{多项式图滤波}（polynomial graph filtering）。
+
+一次$\bm L$乘向量的计算很便宜：$(\bm L\bm v)_i=d_iv_i-\sum_jw_{i,j}v_j$只读取顶点$i$自己和它的邻居。所以每乘一次$\bm L$，相当于每个顶点向邻居各读一次数值；$K$次乘法之后，信息最多沿边传出$K$步。
+
+\subsubsection{算法实现}
+
+以正权边邻接表存储的$\bm L$（含加权度$d_i$）、输入$\bm f$与系数$\alpha_0,\ldots,\alpha_K$在运行前给定，运行中不变，不算状态。算法维护四项状态：
+\begin{itemize}
+  \item 当前幂次向量$\bm v$：存放$\bm L^r\bm f$，初值为$\bm f$；
+  \item 写入缓冲区$\bm v'$：存放本轮乘法的结果，与$\bm v$分开存储；
+  \item 累加向量$\bm y$：存放部分和$\sum_{s\leq r}\alpha_s\bm L^s\bm f$，初值为$\alpha_0\bm f$；
+  \item 轮次$r$：已完成的乘法次数，初值为$0$。
+\end{itemize}
+每一轮依次做三件事：
+\begin{itemize}
+  \item 乘法：对每个顶点$i$，从完整的旧向量$\bm v$读取，计算$v'_i=d_iv_i-\sum_jw_{i,j}v_j$，写入缓冲区；
+  \item 交换：缓冲区写完后令$\bm v\gets\bm v'$、$r\gets r+1$，此时$\bm v=\bm L^r\bm f$；
+  \item 累加：$\bm y\gets\bm y+\alpha_r\bm v$。
+\end{itemize}
+$r=K$时停止，输出$\bm y$。读取与写入分开，理由与第~\ref{sec:graph-spec-neighborhood-aggregation}小节相同：若在$\bm v$上就地写入，后处理的顶点会读到本轮的新值，算出的就不是$\bm L\bm v$。
+
+\begin{algorithm}[多项式图滤波]
+\label{alg:graph-spec-polynomial-filter}
+输入：以正权边邻接表存储的$\bm L$，顶点函数$\bm f$，系数$\alpha_0,\ldots,\alpha_K$。输出：$\bm y=\sum_r\alpha_r\bm L^r\bm f$。
+\begin{enumerate}
+ \item 置$\bm v=\bm f$，$\bm y=\alpha_0\bm f$，$r=0$。
+ \item 若$r=K$，转第4步。否则从完整的旧向量$\bm v$读取，对每个顶点$i$按$v'_i=d_iv_i-\sum_jw_{i,j}v_j$写入缓冲区$\bm v'$；写完后令$\bm v\gets\bm v'$，$r\gets r+1$。
+ \item 令$\bm y\gets\bm y+\alpha_r\bm v$，回到第2步。
+ \item 输出$\bm y$。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+回到上一小节的例子。$g(\lambda)=1/(1+\lambda)$不是多项式，但定义~\ref{def:graph-spec-spectral-filter}只用到$g$在特征值上的取值。取$p(\lambda)=1-\tfrac58\lambda+\tfrac18\lambda^2$，代入得$p(0)=1$、$p(1)=1-\tfrac58+\tfrac18=\tfrac12$、$p(3)=1-\tfrac{15}8+\tfrac98=\tfrac14$，与$g$在$0,1,3$上相同，所以$p(\bm L)=g(\bm L)$。于是可以用$K=2$、$\alpha_0=1$、$\alpha_1=-\tfrac58$、$\alpha_2=\tfrac18$运行算法~\ref{alg:graph-spec-polynomial-filter}，状态变化见表~\ref{tab:graph-spec-poly-filter-trace}：
+\begin{itemize}
+  \item 初始化：$\bm v=(3,1,2)^{\top}$，$\bm y=\alpha_0\bm f=(3,1,2)^{\top}$。
+  \item 第$1$轮：从$(3,1,2)^{\top}$读取，三个顶点分别得$3-1=2$、$2\cdot1-3-2=-3$、$2-1=1$，$\bm v=(2,-3,1)^{\top}$；累加$-\tfrac58\bm v$，$\bm y=(\tfrac74,\tfrac{23}8,\tfrac{11}8)^{\top}$。
+  \item 第$2$轮：从$(2,-3,1)^{\top}$读取，三个顶点分别得$2-(-3)=5$、$2\cdot(-3)-2-1=-9$、$1-(-3)=4$，$\bm v=(5,-9,4)^{\top}$；累加$\tfrac18\bm v$，$\bm y=(\tfrac{19}8,\tfrac74,\tfrac{15}8)^{\top}$。此时$r=K$，停止。
+\end{itemize}
+最终输出与表~\ref{tab:graph-spec-eigen-filter-trace}完全一致，而没有用到任何特征向量。中间的$\bm y$只是部分和，第$1$轮后的$(\tfrac74,\tfrac{23}8,\tfrac{11}8)^{\top}$不是一个较弱的滤波输出。
+
+\begin{table}[!htb]
+  \centering
+  \caption{算法~\ref{alg:graph-spec-polynomial-filter}在三点路径上的执行，$\bm f=(3,1,2)^{\top}$，$p(\lambda)=1-\tfrac58\lambda+\tfrac18\lambda^2$。每轮先由旧的$\bm v$乘一次$\bm L$得到新的$\bm v$，再把$\alpha_r\bm v$加入累加向量。}
+  \label{tab:graph-spec-poly-filter-trace}
+  \small
+  \begin{tabular}{@{}cccc@{}}
+    \toprule
+    轮次$r$ & $\alpha_r$ & $\bm v=\bm L^r\bm f$ & 累加向量$\bm y$ \\
+    \midrule
+    $0$（初始） & $1$ & $(3,1,2)$ & $(3,1,2)$ \\
+    $1$ & $-\tfrac58$ & $(2,-3,1)$ & $(\tfrac74,\tfrac{23}8,\tfrac{11}8)$ \\
+    $2$ & $\tfrac18$ & $(5,-9,4)$ & $(\tfrac{19}8,\tfrac74,\tfrac{15}8)$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{算法分析}
+
+\paragraph{正确性}
+按归纳，第$r$轮结束时$\bm v=\bm L^r\bm f$，$\bm y=\sum_{s\leq r}\alpha_s\bm L^s\bm f$：初始化给出$r=0$的情形；若第$r-1$轮结束时成立，第$r$轮从完整的$\bm L^{r-1}\bm f$读取，乘法写出$\bm L^r\bm f$，累加补上$\alpha_r\bm L^r\bm f$。所以$K$轮后输出式~\eqref{eq:graph-spec-polynomial-filter}。这一步依赖每轮读到完整的旧向量。
+
+\paragraph{复杂度}
+以邻接表存储正权边，一次$\bm L$乘向量要访问每个顶点和每条正权边常数次，需要$O(n+m_+)$次运算；$K$轮共$O(K(n+m_+))$。除了图本身，只需保存旧向量、缓冲区和累加向量，额外空间为$O(n)$。
+
+\paragraph{依赖范围}
+多项式滤波的输出只依赖附近的顶点。一次乘法中，$(\bm L\bm v)_i$只读取$v_i$与正权邻居的值。归纳可得，$(\bm L^r\bm v)_i$只依赖在正权支撑图中与$i$相距至多$r$步的顶点：第$r$轮读取的邻居值本身只依赖再远$r-1$步以内的顶点。所以$K$次多项式滤波在顶点$i$的输出，只依赖$i$的$K$跳邻域。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=110.046mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-polynomial-locality/figure.pdf}
+  \caption{单位权三点路径上多项式滤波的依赖范围，$\bm H=\bm I-\bm L/3$，蓝色数字为各顶点的输出。从$\bm f=\bm e_1$出发，一次作用只到达一跳邻居（绿色），两次作用才到达两跳外的顶点$3$。最后一行$(\bm L^2-3\bm L)\bm e_1$中，顶点$2$位于范围内，但贡献相消为零（红色虚线）。}
+  \label{fig:graph-spec-polynomial-locality}
+\end{figure}
+
+图~\ref{fig:graph-spec-polynomial-locality}用一次多项式$\bm H=\bm I-\bm L/3$展示范围怎样扩大。只在顶点$1$放一个单位的输入，就能看出它的影响每轮传多远。从$\bm e_1$出发，$\bm L\bm e_1=(1,-1,0)^{\top}$，$\bm L(\tfrac23,\tfrac13,0)^{\top}=(\tfrac13,0,-\tfrac13)^{\top}$，所以
+\[
+ \begin{aligned}
+ \bm H\bm e_1&=\bm e_1-\tfrac13(1,-1,0)^{\top}=\bigl(\tfrac23,\tfrac13,0\bigr)^{\top},\\
+ \bm H^2\bm e_1&=\bigl(\tfrac23,\tfrac13,0\bigr)^{\top}-\tfrac13\bigl(\tfrac13,0,-\tfrac13\bigr)^{\top}=\bigl(\tfrac59,\tfrac13,\tfrac19\bigr)^{\top}.
+ \end{aligned}
+\]
+第一轮只有顶点$1$、$2$非零，第二轮才到达顶点$3$。从谱的角度看，$\bm H$的响应$1-\lambda/3$在特征值$0,1,3$上取$1,\tfrac23,0$：常量模态保留，最高频模态被完全消去。
+
+这是范围的上界，不是说范围内的每个顶点都一定产生非零贡献。单位权三点路径上，$(\bm L^2-3\bm L)\bm e_1=(2,-3,1)^{\top}-3(1,-1,0)^{\top}=(-1,0,1)^{\top}$：顶点$2$与顶点$1$只隔一条边，但两项贡献恰好相消，输出为零。
+
+与此相对，基于谱分解的滤波一般没有这样的范围限制。上一小节的$(\bm I+\bm L)^{-1}$把$\bm e_1$映到一个三个分量都非零的向量；在更长的路径上，它的每个输出分量也都依赖全部顶点。
+
+\subsubsection{一般响应的多项式近似}
+\label{sec:graph-spec-polynomial-approximation}
+
+多项式能表示的响应有限，一般的响应$g$只能近似。设多项式$p$在一个包含全部特征值的区间上满足$|g(\lambda)-p(\lambda)|\leq\varepsilon$。对差$g-p$使用放大界~\eqref{eq:graph-spec-filter-bound}，得
+\[
+ \lVert g(\bm L)\bm f-p(\bm L)\bm f\rVert_2\leq\varepsilon\lVert\bm f\rVert_2 .
+\]
+所以只要知道谱落在哪个区间，就能把标量函数的逼近误差转成输出误差。对$\bm L_{\mathrm{sym}}$，定理~\ref{thm:graph-spec-normalized-bound}给出区间$[0,2]$；对$\bm L$可用$[0,2d_{\max}]$。图~\ref{fig:graph-spec-filter-responses}(b)在$[0,2]$上逼近低通响应$1/(1+3\lambda)$：用Chebyshev节点插值，$K=2$时最大误差约$0.18$，$K=4$时约$0.038$。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=98.005mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-filter-responses/figure.pdf}
+  \caption{谱响应与多项式。(a)~三点路径的谱为$\{0,1,3\}$：蓝色为目标$g(\lambda)=1/(1+\lambda)$，绿色虚线为在三个特征值上与$g$相等的二次多项式$p(\lambda)=1-\tfrac58\lambda+\tfrac18\lambda^2$，二者只在圆点处重合；黄色点划线为$h(\lambda)=1-\lambda/3$，方点是它在特征值上的取值。(b)~区间$[0,2]$上目标$1/(1+3\lambda)$及其$K=2$、$K=4$次Chebyshev节点插值，最大误差约为$0.18$和$0.038$。}
+  \label{fig:graph-spec-filter-responses}
+\end{figure}
+
+若已知全部互不相同的特征值，则可以精确匹配。有限集合上的任意函数都可以用插值多项式表示，$s$个不同的特征值需要至多$s-1$次。执行过程中用到的$p$就是这样得到的：它是过$(0,1)$、$(1,\tfrac12)$、$(3,\tfrac14)$三点的二次插值多项式，于是$p(\bm L)=g(\bm L)$，尽管$p$与$g$作为函数并不相同，见图~\ref{fig:graph-spec-filter-responses}(a)。这种精确匹配要求事先知道特征值，在大图上通常做不到。
+
+\subsection{方法比较与结果检验}
+\label{sec:graph-spec-filter-comparison}
+
+比较两种实现时，要固定同一个图算子、同一个输入和同一个目标响应，只比较计算方式。表~\ref{tab:graph-spec-filter-comparison}列出主要差别。
+
+\begin{table}[!htb]
+  \centering\small
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    & 基于谱分解（算法~\ref{alg:graph-spec-eigendecomposition-filter}） & 多项式滤波（算法~\ref{alg:graph-spec-polynomial-filter}）\\
+    \midrule
+    预处理 & 稠密特征分解，$O(n^3)$ & 无；逼近一般响应时需要谱区间 \\
+    单个输入 & $O(n^2)$ & $O(K(n+m_+))$ \\
+    额外存储 & $\bm U$，$O(n^2)$ & 三个向量，$O(n)$ \\
+    依赖范围 & 一般每个输出依赖全部顶点 & 至多$K$跳邻域 \\
+    适用响应 & 任意$g$，精确 & 多项式精确；一般$g$有误差$\varepsilon\lVert\bm f\rVert_2$ \\
+    \bottomrule
+  \end{tabularx}
+  \caption{同一图算子、输入和目标响应下两种滤波实现的比较。$n$为顶点数，$m_+$为正权边数，$K$为多项式次数。}
+  \label{tab:graph-spec-filter-comparison}
+\end{table}
+
+表中最后一行包含两种不同的差别。多项式响应可以用两种方法实现同一个算子，两张执行表给出同一个输出；用多项式逼近一般响应，则改变了目标本身，多出一项近似误差。
+
+本节的滤波只依赖有限维谱分解，没有引入时间。连续的热扩散及其时间离散会给出特定的响应族，它们在后续过程与信号部分建立。
+
+\paragraph{结果检验}
+小图上可以用两种实现互相核对，还可以检查必然成立的性质：放大界要求$\lVert\bm y\rVert_2^2\leq\lVert\bm f\rVert_2^2$，实际$\tfrac{782}{64}\approx12.2\leq14$；$g(0)=1$且图连通，分量和应保持为$6$；重编号后输出应随之重排。这些检查只能发现错误，不能代替正确性论证。

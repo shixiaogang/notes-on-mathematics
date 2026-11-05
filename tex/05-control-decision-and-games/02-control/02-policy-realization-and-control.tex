@@ -1,0 +1,1725 @@
+\chapter{策略的实现与轨迹控制}
+\label{chap:control-theory}
+\label{chap:policy-realization-and-control}
+
+加热量已经给定时，温度模型用来预测后继温度；希望温度保持在设定值时，
+问题的方向改变了：现在要根据读数选择加热量。
+\BookChapterRef{chap:action-and-state}{第~\ref{chap:action-and-state}章}已经说明状态怎样演化、怎样判断稳定与估计隐状态。
+本章在这些结论上设计控制器，让它依据可用信息修正状态偏差。
+把运行结果送回控制器以决定后续动作，称为\term{反馈}（feedback）。
+反馈会改变状态递推，原系统的轨迹结论因此要在新的闭环中重新核验。
+
+本章沿用温度教学模型
+\begin{equation}
+  \begin{aligned}
+    x_{t+1}&=0.8x_t+u_t+w_{t+1},\\
+    y_t&=x_t+v_t.
+  \end{aligned}
+  \label{eq:control-temperature-model}
+\end{equation}
+其中$x_t$是相对于环境温度的温差，$u_t$是归一化加热量，$y_t$是传感器读数。
+除明确讨论随机扰动的段落外，先取$w_{t+1}=v_t=0$，并允许任意实数输入。
+需要随机例子时，采用相互独立的$w_t\sim\mathcal N(0,0.04)$、
+$v_t\sim\mathcal N(0,0.09)$，两族噪声也相互独立并独立于初态；
+需要硬安全约束时再明确改用无噪声或有界扰动，而不把高斯噪声当成有界扰动。
+状态时间均以下标表示，策略学习若有更新轮次则用带括号上标，与系统时间区分。
+
+控制目标可以要求有限时间到达某状态，也可以要求误差逐渐消失、跟随运动参考，
+或在整个运行期间保持安全。这些要求不能相互代替。
+执行器能改变哪些方向、传感器能分辨哪些状态，决定设计是否可能；
+选定反馈以后，才由闭环规律判断偏差会不会衰减。
+非零目标还需要维持输入，运动参考需要随时间变化的前馈，安全约束则限制每一步允许的动作。
+这些关系构成本章的主线。二次成本提供一种可以直接计算反馈的选择准则，
+一般累计价值的比较留到第~\ref{chap:decision-theory-and-dynamic-risk}章。
+
+\section{策略的实现与可达轨迹}
+\label{sec:control-feedback-structure}
+
+控制器必须用实际可得的信息选择动作，动作也必须由执行器实现。
+因此，设计反馈之前要回答两项结构问题：允许动作能把状态带到哪里，
+允许观测能否区分需要纠正的状态。下面在同一个线性系统中分别检查行动能力与观测能力。
+
+\subsection{开环策略与反馈策略}
+考虑离散时间线性时不变系统
+\begin{equation}
+  \begin{aligned}
+    \bm{x}_{t+1}&=\bm{A}\bm{x}_t+\bm{B}\bm{u}_t,\\
+    \bm{y}_t&=\bm{C}\bm{x}_t,
+  \end{aligned}
+  \label{eq:control-state-space}
+\end{equation}
+其中$\bm{x}_t\in\mathbb R^n$、$\bm{u}_t\in\mathbb R^m$和$\bm{y}_t\in\mathbb R^p$
+分别是状态、输入和输出；$\bm A,\bm B,\bm C$的维度依次为
+$n\times n,n\times m,p\times n$。这里取直接传递矩阵为零：时刻$t$的状态先产生
+读数，控制器再计算$\bm u_t$，输入随后推动系统到$t+1$。
+若使用$\bm y_t=\bm C\bm x_t+\bm D\bm u_t$，又让当前动作依赖当前读数，
+两式便形成代数环，必须证明联立方程有唯一解；只使用截至$t-1$的读数是另一种无环约定。
+
+策略（policy）是一套从允许信息到动作的规则；这里最根本的区别在于：动作是在系统运行之前就排定的，还是允许根据运行中实际发生的情况临时调整。前者像按一份固定时间表开关暖气，无论房间实际冷热都照表执行；后者像一个看温度计行事的恒温器，读数偏冷就多加热、偏热就少加热。后者能用运行结果纠正建模误差和意外扰动，这正是“反馈”相对于“预设计划”的价值。预先给定动作与随读数修正动作，
+所使用的信息不同。
+\begin{definition}[开环控制与反馈控制]
+\label{def:control-open-loop-state-output-feedback}
+若输入序列$\bm u_0,\bm u_1,\ldots$事先指定，不根据运行中实际出现的状态修正，
+称为\term{开环控制}（open-loop control）。状态可直接取得时，规则
+\[
+  \bm u_t=\kappa_t(\bm x_t)
+\]
+称为状态反馈（state feedback）。仅有观测和已执行动作可用时，规则
+\[
+  \bm u_t=\mu_t(\bm y_0,\ldots,\bm y_t;\bm u_0,\ldots,\bm u_{t-1})
+\]
+称为输出反馈（output feedback），初始控制历史按空序列处理。
+随机系统中，动作必须对这些允许信息可测，不能使用尚未产生的噪声。
+\end{definition}
+
+在温度例中，始终取$u_t=0.4$是一条开环策略；若直接测得状态，则可以根据
+$x_t-2$修正输入。若只有带噪声的$y_t$，把$x_t$写进控制公式并不会使真实状态
+变得可用，必须说明怎样从读数构造估计。
+在本章需要$y_0$的输出反馈设定中，将它作为初始先验之后的第一次观测明确纳入信息，
+而不把先验与已经用过$y_0$的后验混用。
+
+把反馈代回状态方程后，需要确认给定初态与外部输入后，闭环轨迹存在、唯一，
+并覆盖任务所需时域；随机情形还要固定噪声实现。这就是适定性问题。
+离散时间要求每一步反馈有定义且动作允许；连续时间常用闭环右端的局部Lipschitz条件保证局部解唯一，
+再检查解能否延拓到任务所需时域。
+不连续的切换反馈可能需要其他解概念，其轨迹结论应在相应概念下陈述。
+
+\subsection{目标状态的可达与可控}
+在设计任何反馈之前，先得回答一个更基本的可行性问题：执行器到底有没有能力把系统带到目标状态？如果加热器功率太小，无论多聪明的反馈都无法把房间加热到设定温度；反之若执行器能影响系统的每一个方向，剩下的才是“怎么调”的问题。
+要判断一个终态能否由动作实现，可以把前$N$次输入对终态的贡献集中写出。
+反复代入式~\eqref{eq:control-state-space}，得到
+\begin{equation}
+  \bm x_N=\bm A^N\bm x_0+
+  \sum_{t=0}^{N-1}\bm A^{N-1-t}\bm B\bm u_t.
+  \label{eq:control-reachability-unrolling}
+\end{equation}
+固定初态时，受控终态增量属于
+$\operatorname{col}[\bm B,\bm A\bm B,\ldots,\bm A^{N-1}\bm B]$。
+这些列表示输入经过不同步数的传播后能够产生的状态方向；它们张成的空间就是相应
+时域的可达子空间（reachable subspace）。
+
+\begin{definition}[可控性]
+\label{def:control-controllability}
+对式~\eqref{eq:control-state-space}，若任意初态$\bm x_0$和任意目标$\bm x_{\mathrm f}$
+之间都存在有限时刻$N$及无幅值限制的输入序列，使$\bm x_N=\bm x_{\mathrm f}$，
+称$(\bm A,\bm B)$可控（controllable）。
+\end{definition}
+
+一次到达某个目标只要求式~\eqref{eq:control-reachability-unrolling}对该目标可解；
+可控性要求任意初态和任意目标之间均可解。在线性时不变系统中，从零到任意终态与上述
+定义等价，因为自由响应可以移到目标一侧。它们都蕴含任意初态可在有限时间驱动到零，
+但这个较弱的\term{零可控性}（null controllability）一般不能反推可控性：
+$A=B=0$会在一步后把任意初态变成零，却无法从零到达非零状态。
+若$\bm A$可逆，则零可控性也能反推出这里的可控性。这是一个充分条件，并非具体系统可控的必要条件：$A=0,B=1$虽有奇异的$A$，仍可在一步用输入到达任意目标。
+
+\begin{theorem}[Kalman可控性秩判据]
+\label{thm:control-controllability-rank}
+定义可控性矩阵
+\begin{equation}
+  \mathcal C(\bm A,\bm B)
+  =[\bm B\ \bm A\bm B\ \cdots\ \bm A^{n-1}\bm B].
+  \label{eq:control-controllability-matrix}
+\end{equation}
+系统可控当且仅当$\operatorname{rank}\mathcal C(\bm A,\bm B)=n$。
+\end{theorem}
+\begin{proof}
+取$N=n$，把输入按逆时间顺序堆叠，受控增量为
+\[
+  \mathcal C(\bm A,\bm B)
+  \begin{bmatrix}\bm u_{n-1}\\ \bm u_{n-2}\\ \vdots\\ \bm u_0\end{bmatrix}.
+\]
+若矩阵满行秩，它的列张成$\mathbb R^n$，所以对任意
+$\bm x_{\mathrm f}-\bm A^n\bm x_0$都能找到输入。
+反之，若列空间是真子空间，Cayley--Hamilton定理使$\bm A^n$成为
+$\bm I,\bm A,\ldots,\bm A^{n-1}$的线性组合。继续乘$\bm A$，每个
+$\bm A^k\bm B$（$k\geq n$）仍在同一列空间中。延长时域无法增加可达方向，
+从零出发便不能到达该空间之外的状态。
+\end{proof}
+
+标量积分系统$x_{t+1}=x_t+u_t$只需$u_0=x_{\mathrm f}-x_0$便能一步到达目标。
+温度模型则取$u_0=x_{\mathrm f}-0.8x_0$；这里允许任意实数输入，
+不能据此断言只能加热且功率有限的执行器也能一步实现任意目标。
+再看二维系统
+\[
+  \bm A=\begin{bmatrix}1&1\\0&1\end{bmatrix},
+  \qquad \bm B=\begin{bmatrix}0\\1\end{bmatrix},
+  \qquad
+  [\bm B\ \bm A\bm B]=\begin{bmatrix}0&1\\1&1\end{bmatrix}.
+\]
+当前输入先改变第二个坐标，再经传播影响第一个坐标；矩阵满秩，两坐标均可达。
+若改为$\bm A=\bm I,\bm B=(1,0)^\top$，输入始终只能改变第一个坐标。
+
+图~\ref{fig:control-reachable-directions}保留上述二维例，暂加
+$|u_0|,|u_1|\leq1$以画出有限区域。从零出发，
+$\bm x_2=(u_0,u_0+u_1)^\top$形成平行四边形；解除幅值限制后，
+两个独立方向才张成整个平面。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/tikz/control-reachable-directions/figure.pdf}
+  \caption{教学系统$\bm A=\left[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right]$、
+  $\bm B=(0,1)^\top$从零出发。蓝色线段为$|u_0|\leq1$的一步可达集合，
+  绿色区域为$|u_0|,|u_1|\leq1$的两步可达集合；箭头为$\bm B$与$\bm A\bm B$。
+  幅值限制用于显示可达区域，不属于无约束可控性秩判据的假设。}
+  \label{fig:control-reachable-directions}
+\end{figure}
+
+连续时间系统$\dot{\bm x}_t=\bm A\bm x_t+\bm B\bm u_t$在固定$T>0$上的终态为
+\[
+  \bm x_T=e^{\bm A T}\bm x_0+
+  \int_0^T e^{\bm A(T-s)}\bm B\bm u_s\,\mathrm ds.
+\]
+这里允许$\bm u\in L^2([0,T];\mathbb R^m)$，不加幅值限制。
+输入通过积分累积，对应的\term{可控Gram矩阵}（controllability Gramian）为
+\begin{equation}
+  \bm W_{\mathrm c}(T)=
+  \int_0^T e^{\bm A s}\bm B\bm B^\top e^{\bm A^\top s}\,\mathrm ds.
+  \label{eq:control-controllability-gramian}
+\end{equation}
+系统在$[0,T]$可控当且仅当$\bm W_{\mathrm c}(T)\succ\bm0$。为验证必要性与充分性，注意
+\[
+  \bm q^\top\bm W_{\mathrm c}(T)\bm q
+  =\int_0^T\|\bm B^\top e^{\bm A^\top s}\bm q\|_2^2\,\mathrm ds.
+\]
+若矩阵奇异，某个非零$\bm q$使连续的非负被积函数恒为零，于是该方向与全部受控
+终态增量正交。若矩阵正定，对$\bm d=\bm x_{\mathrm f}-e^{\bm A T}\bm x_0$取
+\[
+  \bm u_s=\bm B^\top e^{\bm A^\top(T-s)}\bm W_{\mathrm c}(T)^{-1}\bm d,
+\]
+代回便得到终态增量$\bm d$。再把Gram判据与前面的秩判据比较。在Gram矩阵奇异的情形中，前述非零$\bm q$使平方积分为零，因而
+$\bm B^\top e^{\bm A^\top s}\bm q$恒为零；
+对这个向量函数在$s=0$逐阶求导，得到$\bm q^\top\bm A^k\bm B=0$。
+反向由矩阵指数级数成立；再结合Cayley--Hamilton定理，
+可知连续系统同样由式~\eqref{eq:control-controllability-matrix}判定。
+离散情形的对应Gram矩阵为
+$\sum_{j=0}^{N-1}\bm A^j\bm B\bm B^\top(\bm A^\top)^j$。
+这些结论依赖线性结构，不能用一点的线性化代替非线性系统的全局可控性。
+
+秩判据给出全部方向的答案。如果还想定位哪个演化模式无法受控，
+可以寻找与输入方向正交的左特征向量：在该方向上投影后，输入项消失，只留下自由演化。
+\begin{theorem}[Popov--Belevitch--Hautus（PBH）可控性判据]
+\label{thm:control-pbh-controllability}
+矩阵对$(\bm A,\bm B)$可控，当且仅当对每个复特征值$\lambda\in\sigma(\bm A)$，
+\begin{equation}
+  \operatorname{rank}[\lambda\bm I-\bm A\ \bm B]=n.
+  \label{eq:control-pbh-controllability}
+\end{equation}
+等价地，不存在非零左特征向量$\bm q^\ast$同时满足
+$\bm q^\ast\bm A=\lambda\bm q^\ast$和$\bm q^\ast\bm B=\bm0$。
+\end{theorem}
+\begin{proof}
+若存在这样的向量，则
+$\bm q^\ast\bm A^k\bm B=\lambda^k\bm q^\ast\bm B=\bm0$对所有$k\geq0$成立，
+所以可控性矩阵不可能满行秩。
+反之，其列空间$\bm R_{\mathrm{reach}}$若不满维，便是一个真$\bm A$不变子空间。
+正交补$\bm R_{\mathrm{reach}}^{\perp}$在$\bm A^\ast$下不变。在复数域上，
+这个非零有限维不变子空间包含$\bm A^\ast$的一个特征向量$\bm q$。
+它正交于$\bm B$的每一列，因此对应的左特征向量满足
+$\bm q^\ast\bm B=\bm0$，PBH矩阵在相应特征值处不满秩。
+\end{proof}
+
+终点可控仍不保证任意指定的中间状态都能实现。给定整条参考$\bm r_t$，
+离散系统要求每一步$\bm r_{t+1}-\bm A\bm r_t\in\operatorname{col}(\bm B)$，
+并且解出的输入位于允许集合；连续系统则要求参考绝对连续且
+$\dot{\bm r}_t-\bm A\bm r_t=\bm B\bm u_t^r$几乎处处成立。
+终点可达回答“能否到那里”，逐时可实现回答“能否按这条路走”。
+
+\subsection{观测条件下的状态可区分性}
+执行器一侧要问“能不能把状态推到任意方向”，传感器一侧则要问相反的问题：仅凭读数，能不能判断系统究竟处在哪个状态？这决定了基于观测的反馈到底有没有足够信息可依。如果两个不同的隐藏状态在任何时刻都产生完全相同的读数序列，控制器就无法区分它们，也就不可能对二者采取有针对性的不同纠正。
+同一动作序列可能从不同初态产生不同读数。要检查读数是否足以区分初态，
+先从观测中扣除已知动作的贡献，留下只由初态产生的自由响应。
+在下面的堆叠公式中，仍用$\bm y_t$表示扣除已知动作贡献后的输出；它也等于把输入置零时的自由输出。这些输出的前$n$项可以堆叠为
+\begin{equation}
+  \begin{bmatrix}\bm y_0\\\bm y_1\\\vdots\\\bm y_{n-1}\end{bmatrix}
+  =
+  \underbrace{\begin{bmatrix}
+    \bm C\\\bm C\bm A\\\vdots\\\bm C\bm A^{n-1}
+  \end{bmatrix}}_{\mathcal O(\bm C,\bm A)}\bm x_0.
+  \label{eq:control-observability-matrix}
+\end{equation}
+\begin{definition}[可观测性]
+\label{def:control-observability-detectability}
+若同一已知输入下的输出序列能够区分任意两个不同初态，称$(\bm C,\bm A)$
+可观测（observable）。对上述线性时不变系统，这等价于
+$\mathcal O(\bm C,\bm A)$满列秩。
+\end{definition}
+
+满列秩使式~\eqref{eq:control-observability-matrix}对初态至多有一个解。
+反之，若秩不足，存在$\bm v\neq\bm0$满足$\mathcal O\bm v=\bm0$，
+初态$\bm x_0$与$\bm x_0+\bm v$的前$n$次输出便相同。
+Cayley--Hamilton定理使以后所有$\bm C\bm A^k\bm v$也是前$n$项的线性组合，
+延长观测仍无法区分两者。这同时证明了定义中的等价关系。
+
+单个时刻的读数相同，还不足以断言两个状态永远不可区分。图~\ref{fig:reader-observability-output-traces}取无输入、无噪声的二维教学系统，令$\bm C=(1,1)$。当$\bm A=\operatorname{diag}(0.8,0.3)$时，初态$(1,0)^\top$与$(0,1)^\top$都给出$y_0=1$，但后续读数分别为$0.8^t$与$0.3^t$。前两次观测对应
+\[
+  \mathcal O=\begin{bmatrix}1&1\\0.8&0.3\end{bmatrix},
+  \qquad \det\mathcal O=-0.5\neq0,
+\]
+所以这两个时刻已能恢复任意初态。若改为$\bm A=0.8\bm I$，输出始终只是$0.8^t(x_{0,1}+x_{0,2})$，只保留两个初始坐标之和；向初态加上$(1,-1)^\top$不会改变任何时刻的读数。这时增加观测时长仍不能补回被遗漏的方向。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=107mm]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/reader-observability-output-traces/figure.pdf}
+  \caption{相同初始读数能否由后续观测区分。两面板均取$\bm C=(1,1)$、零输入、无噪声，并比较初态$(1,0)^\top$（蓝实线）与$(0,1)^\top$（绿虚线及空心圆）。左侧$\bm A=\operatorname{diag}(0.8,0.3)$使两条读数随后分开；右侧$\bm A=0.8\bm I$使两条读数完全重合。可观测性考察整个允许观测序列，而不只考察一次读数。}
+  \label{fig:reader-observability-output-traces}
+\end{figure}
+
+对可控性PBH判据取转置，得到可观测性条件
+\begin{equation}
+  \operatorname{rank}\begin{bmatrix}\lambda\bm I-\bm A\\\bm C\end{bmatrix}=n
+  \quad\text{对每个 }\lambda\in\sigma(\bm A).
+  \label{eq:control-pbh-observability}
+\end{equation}
+连续时间在任意固定正时长、无噪声的完整输出上也有相同秩条件；
+等价的观测Gram矩阵是
+$\int_0^T e^{\bm A^\top s}\bm C^\top\bm C e^{\bm A s}\,\mathrm ds$。
+
+温度模型的$C=1$使无噪声当前读数就能区分状态。有噪声时，同一个读数可能来自
+多个状态，结构可观测性并不提供单次误差上界。
+\BookChapterRef{chap:state-space-estimation}{“基于状态模型的信号估计”章}建立的预测、滤波和平滑还需初态分布与
+噪声规律才能计算估计精度。本章接下来使用较弱的可检测条件，判断哪些看不见的误差
+仍能自行衰减，而不要求把所有状态都精确恢复。
+
+\section{策略的轨迹收敛与稳定}
+\label{sec:control-closed-loop-stability}
+
+终态可达只说明存在合适的动作序列，尚未说明一个固定反馈的长期行为。
+本节改为选定反馈，再检查闭环误差是否衰减。
+平衡点稳定、渐近稳定与指数稳定的区别沿用\BookSectionRef{sec:dynamical-stability-sensitivity}{第~\ref{sec:dynamical-stability-sensitivity}节}。
+在线性定常系统中，以下“稳定矩阵”统一指离散时间特征值模小于$1$，
+或连续时间特征值实部小于$0$；它们都给出齐次系统的指数衰减。
+有持续噪声时，所讨论的是齐次初始误差衰减和受迫二阶矩有界，不能称为每条路径趋零。
+
+\subsection{不可控与不可观测模式的稳定条件}
+为什么要用状态反馈？因为最直接的稳定办法就是“反着偏差用力”：状态偏正就施加反向输入把它拉回来，偏得越多拉得越猛，这就是线性反馈\(\bm u=-\bm K\bm x\)。代入状态方程后，系统的自然矩阵\(\bm A\)被改造成\(\bm A-\bm{BK}\)，反馈设计因此等价于“挑选增益\(\bm K\)，让新矩阵的所有特征模态都衰减”。
+反馈$\bm u=-\bm K\bm x$把状态矩阵改为$\bm A-\bm B\bm K$。
+这个矩阵的特征值称为闭环极点（closed-loop poles），它们决定线性齐次响应的衰减或增长。
+稳定化只要求把不衰减的模式安排进稳定区域，已经自行衰减的方向可以保留。
+\begin{definition}[可稳定性]
+\label{def:control-stabilizability}
+若存在$\bm K$使$\bm A-\bm B\bm K$稳定，称矩阵对$(\bm A,\bm B)$
+可稳定（stabilizable）。稳定区域按系统采用的离散或连续时间确定。
+\end{definition}
+
+从可控性走到固定反馈的存在性，还要用到极点配置定理：对实可控对
+$(\bm A_{\mathrm c},\bm B_{\mathrm c})$，任给次数等于其状态维数的实首一多项式，
+都存在实增益$\bm K_{\mathrm c}$，使该多项式成为
+$\bm A_{\mathrm c}-\bm B_{\mathrm c}\bm K_{\mathrm c}$的特征多项式。
+因此可以选择全部根位于单位圆内，或在连续时间选择全部根位于左半平面。
+这里引用这一标准存在定理；它不是仅由“有限时间可以到达任意终点”一句话直接推出的结论\scite{math-khalil2002nonlinear}
+
+在前面的二维传播例中，取
+$\bm A=\left[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right]$、
+$\bm B=(0,1)^\top$和$\bm K=(k_1,k_2)$，可直接算得
+\[
+ \det(\lambda\bm I-\bm A+\bm B\bm K)
+ =\lambda^2+(k_2-2)\lambda+1-k_2+k_1.
+\]
+希望闭环根为$0.2,0.5$时，将系数与
+$(\lambda-0.2)(\lambda-0.5)=\lambda^2-0.7\lambda+0.1$比较，
+得到$k_2=1.3,k_1=0.4$。这个例子展示怎样用固定增益安排谱，而不再逐时刻另选输入序列。
+
+令$\bm R_{\mathrm{reach}}$为可控性矩阵的列空间，选取以其一组基为前若干列的可逆矩阵$\bm T$。
+由于$\bm A\bm R_{\mathrm{reach}}\subseteq\bm R_{\mathrm{reach}}$且
+$\operatorname{col}(\bm B)\subseteq\bm R_{\mathrm{reach}}$，坐标$\bm z_t=\bm T^{-1}\bm x_t$给出
+\[
+  \bm T^{-1}\bm A\bm T=
+  \begin{bmatrix}\bm A_{\mathrm c}&\bm A_{1,2}\\
+                  \bm0&\bm A_{\mathrm{uc}}\end{bmatrix},
+  \qquad
+  \bm T^{-1}\bm B=\begin{bmatrix}\bm B_{\mathrm c}\\\bm0\end{bmatrix},
+\]
+其中$(\bm A_{\mathrm c},\bm B_{\mathrm c})$可控。这是可控分解：上块接收输入，
+下块只能自行演化。把$\bm K\bm T$写成$[\bm K_{\mathrm c}\ \bm K_{\mathrm{uc}}]$，
+闭环矩阵成为
+\[
+  \begin{bmatrix}
+    \bm A_{\mathrm c}-\bm B_{\mathrm c}\bm K_{\mathrm c}
+      &\bm A_{1,2}-\bm B_{\mathrm c}\bm K_{\mathrm{uc}}\\
+    \bm0&\bm A_{\mathrm{uc}}
+  \end{bmatrix}.
+\]
+可控块可以用极点配置选择稳定特征值，不可控块的特征值却不受反馈影响。
+因此可稳定当且仅当不可控块本身稳定，PBH形式为
+\begin{equation}
+  \operatorname{rank}[\lambda\bm I-\bm A\ \bm B]=n
+  \quad\text{对每个 }|\lambda|\geq1.
+  \label{eq:control-pbh-stabilizability}
+\end{equation}
+只需检查$\bm A$的特征值，其余$\lambda$自动满足秩条件；
+连续时间把$|\lambda|\geq1$换成$\operatorname{Re}\lambda\geq0$。
+
+\begin{example}[不可控但可稳定的系统]
+\label{ex:control-stabilizable-not-controllable}
+取
+\[
+  \bm A=\begin{bmatrix}1.2&0\\0&0.5\end{bmatrix},
+  \qquad \bm B=\begin{bmatrix}1\\0\end{bmatrix}.
+\]
+可控性矩阵$[\bm B\ \bm A\bm B]
+=\left[\begin{smallmatrix}1&1.2\\0&0\end{smallmatrix}\right]$仅有秩$1$。
+第二个模式不可控，但其特征值$0.5$已经稳定。取$\bm K=(1,0)$，
+闭环特征值为$0.2,0.5$，所以系统可稳定。若交换$\bm B$的两个分量，
+输入只能作用到$0.5$模式，$1.2$模式不可控，系统便不可稳定。
+\end{example}
+
+传感器一侧有对应的问题：无法识别的初始误差，能否不经校正就逐渐消失？
+若观测校正采用增益\(\bm L\)，线性估计误差的齐次部分会按\(\bm A-\bm L\bm C\)传播。于是这里寻找的不是恢复全部初态的能力，而是某个观测校正能否让剩余误差衰减；稍后的观测器公式将直接推导这项误差递推。
+\begin{definition}[可检测性]
+\label{def:control-detectability}
+若存在$\bm L$使$\bm A-\bm L\bm C$稳定，称$(\bm C,\bm A)$
+可检测（detectable）。
+\end{definition}
+它不要求每个初态都可恢复，只要求不可观测的模式自行稳定。其离散PBH条件为
+\begin{equation}
+  \operatorname{rank}
+  \begin{bmatrix}\lambda\bm I-\bm A\\\bm C\end{bmatrix}=n
+  \quad\text{对每个 }|\lambda|\geq1.
+  \label{eq:control-pbh-detectability}
+\end{equation}
+这一等价关系来自转置对偶：$(\bm A^\top,\bm C^\top)$的可控性矩阵的转置，
+正是$(\bm C,\bm A)$的观测矩阵。对矩阵对$(\bm A^\top,\bm C^\top)$作可控分解，其不可控块对应原系统的
+不可观测模式，又有
+$\bm A^\top-\bm C^\top\bm L^\top=(\bm A-\bm L\bm C)^\top$。
+因此，不可观测块稳定时可配置其余误差模式；存在不可观测的非衰减模式时，
+任何$\bm L$都无法移动它。连续时间同样用闭右半平面替换单位圆外。
+
+继续取示例~\ref{ex:control-stabilizable-not-controllable}的$\bm A$。
+$\bm C=(1,0)$看得见$1.2$模式，看不见但无需纠正$0.5$模式，所以不可观测却可检测。
+改用$\bm C=(0,1)$便看不到危险模式，任何估计器的确定性初始误差都不能依靠输出
+把该方向统一消除。表~\ref{tab:control-structural-properties}汇总四种条件；
+“全方向可处理”与“足以长期稳定”不是同一个要求。
+\begin{table*}[htbp]
+  \centering
+  \begin{tabularx}{\linewidth}{lXXX}
+    \toprule
+    性质 & 所比较的对象 & 哪些方向必须处理 & 二维例的判断\\
+    \midrule
+    可控 & 输入与终态 & 全部状态方向 & 否，输入无法改变第二坐标\\
+    可稳定 & 反馈与闭环谱 & 不稳定及临界模式 & 是，$1.2$模式受控\\
+    可观测 & 初态与输出序列 & 全部状态方向 & 否，输出不含第二坐标\\
+    可检测 & 观测器与误差谱 & 不稳定及临界模式 & 是，$1.2$模式可见\\
+    \bottomrule
+  \end{tabularx}
+  \caption{固定$\bm A=\operatorname{diag}(1.2,0.5)$、
+  $\bm B=(1,0)^\top$、$\bm C=(1,0)$比较四种结构条件。
+  第二模式虽不可控、不可观测，却自行衰减；若把其特征值改为$1.1$，
+  可稳定与可检测也会失败。连续时间按实部判断危险模式。}
+  \label{tab:control-structural-properties}
+  \label{tab:control-structural-comparison}
+\end{table*}
+
+\subsection{状态反馈下的闭环稳定}
+\label{sec:control-state-feedback-stability}
+可稳定性保证某个增益能够稳定系统；实际设计仍要给出增益，并检验相应闭环。
+取线性状态反馈后，动作与状态递推为
+\begin{equation}
+  \bm u_t=-\bm K\bm x_t,
+  \qquad \bm x_{t+1}=(\bm A-\bm B\bm K)\bm x_t.
+  \label{eq:control-state-feedback}
+\end{equation}
+负号只是增益约定。按\BookTheoremRef{thm:dynamical-discrete-spectral-stability}{定理~\ref{thm:dynamical-discrete-spectral-stability}}，
+闭环渐近稳定当且仅当$\rho(\bm A-\bm B\bm K)<1$。
+也可以按\BookTheoremRef{thm:dynamical-discrete-lyapunov-equation}{定理~\ref{thm:dynamical-discrete-lyapunov-equation}}找$\bm P\succ\bm0$，
+使$\bm P-\bm F^\top\bm P\bm F\succ\bm0$，其中$\bm F=\bm A-\bm B\bm K$。
+连续时间则检查$\bm F$的特征值实部或
+$\bm F^\top\bm P+\bm P\bm F\prec\bm0$。
+
+不同稳定增益并不产生同样的响应。在无约束、无噪声的温度模型中先以零为目标，
+取$u_t=-kx_t$，有$x_t=(0.8-k)^t x_0$。增益$k=0.3$使系数为$0.5$，
+$k=0.7$使系数为$0.1$；对相同初态，后者每步收缩更多，却把初始输入幅值
+从$0.3|x_0|$提高到$0.7|x_0|$。取$k=1.4$则得到$-0.6$，
+状态交替过零，收敛反而比$0.5$慢。稳定范围是$-0.2<k<1.8$，
+不是增益越大越快；有饱和时这些线性计算也不再直接适用。
+
+多维系统还要区分渐近速度与瞬态放大。比较
+\[
+  \bm F_1=0.5\bm I,\qquad
+  \bm F_2=\begin{bmatrix}0.5&4\\0&0.5\end{bmatrix}.
+\]
+二者特征值均为$0.5$，但从$(0,1)^\top$出发，第一步的状态范数分别为
+$0.5$和$\sqrt{16.25}>4$。事实上
+\[
+  \bm F_2^t=
+  \begin{bmatrix}0.5^t&4t\,0.5^{t-1}\\0&0.5^t\end{bmatrix}
+  \quad(t\geq1).
+\]
+非对角耦合先放大误差，随后才被指数衰减压低。两者都可以在$\bm A=\bm B=\bm I$
+的系统中由$\bm K_i=\bm I-\bm F_i$实现，第二种增益也引入较强的交叉输入。
+因此评价反馈时应共同看$\|\bm F^t\|_2$、输入$\|\bm K\bm x_t\|_2$与长期衰减，
+而不是仅比较最大特征值。二次成本在下一小节把状态偏差与输入用力纳入同一准则，
+但“稳定”本身并没有选定这一偏好。
+
+非线性系统在不同状态处具有不同的变化方向，固定矩阵的谱一般不足以判断整个区域。
+可以改用一个随状态变化的标量$V$衡量偏离，再要求所选动作使它沿轨迹下降。
+控制Lyapunov方法把反馈设计写成这种下降条件。
+\begin{definition}[控制Lyapunov函数条件]
+\label{def:control-clf}
+考虑$\dot{\bm x}_t=\bm f(\bm x_t)+\bm G(\bm x_t)\bm u_t$，目标为原点，
+输入属于$U$，其中$\bm f,\bm G$在原点的某邻域内局部Lipschitz。
+若该邻域内的$C^1$函数$V$满足$V(\bm0)=0$、
+$V(\bm x)>0$（$\bm x\neq\bm0$），且有正定连续函数$W$使
+\[
+  \text{对每个 }\bm x\neq\bm0\text{，存在 }\bm u\in U\text{ 使}
+  \quad\nabla V(\bm x)^\top(\bm f(\bm x)+\bm G(\bm x)\bm u)
+  \leq-W(\bm x),
+\]
+称$V$提供一个\term{控制Lyapunov函数}（control Lyapunov function, CLF）条件：
+每个非零状态至少应能选择一个使偏离量严格下降的动作。
+上述存在量词要求实际动作满足阈值，避免仅用未取到的下确界代替可实施动作。
+\end{definition}
+
+点态存在动作不等于已经构造出适定反馈。还需选出取值于$U$的局部Lipschitz反馈$\kappa$，
+使$\bm f(\bm0)+\bm G(\bm0)\kappa(\bm0)=\bm0$，且沿闭环$\dot V\leq-W$。
+此时模型与反馈的规则性共同保证闭环右端
+$\bm f+\bm G\kappa$局部Lipschitz，因而在原点附近存在唯一的局部解。
+这就补齐了\BookTheoremRef{thm:dynamical-nonlinear-lyapunov}{定理~\ref{thm:dynamical-nonlinear-lyapunov}}对闭环向量场的假设，
+可由该定理得到原点的局部渐近稳定。
+若进一步有$c_1\|\bm x\|_2^2\leq V\leq c_2\|\bm x\|_2^2$和
+$W\geq c_3\|\bm x\|_2^2$，便有
+$V_t\leq e^{-c_3t/c_2}V_0$；全局结论还需全域条件与解的延拓。
+例如$\dot x_t=x_t^3+u_t$取$V(x)=x^2/2$、$u_t=-x_t^3-kx_t$（$k>0$），
+得到$\dot V=-kx_t^2$和$x_t=e^{-kt}x_0$。这个反馈在无界输入下成立；
+若$|u_t|\leq u_{\max}$，大状态处抵消$x_t^3$所需的动作可能不可行，
+只能在经过核验的区域中声明稳定\scite{math-khalil2002nonlinear}
+
+\subsection{二次成本下的稳定化反馈}
+\label{sec:control-lqr-riccati}
+可稳定性只回答是否存在某个稳定化增益，还没有说明怎样从多个可行增益中选择。误差衰减率、瞬态峰值、输入能耗和噪声敏感性是不同的比较量，不能合称“越快越稳”。对本章模型\(x_{t+1}=0.8x_t+u_t\)的零输入平衡点\(x=0\)，反馈\(u_t=-Kx_t\)给出模态\(0.8-K\)：\(K=0.3\)时模态为\(0.5\)，增大到\(K=2\)却变为\(-1.2\)，系统已经不稳定。即使两个增益都稳定，它们的衰减率和输入成本也未必同时改善。要作选择，下面明确累计状态偏差与输入用力的成本，而不只比较增益大小。
+稳定增益通常不唯一：较快纠偏可能需要更大的动作。
+
+图~\ref{fig:reader-feedback-gain-trajectories}从同一初态$x_0=1$画出上述零平衡反馈的轨迹，并增加一个稳定但交替变号的增益$K=1.6$。闭环解为$x_t=(0.8-K)^t$：模态的绝对值决定每步幅值缩放，负号决定相邻时刻是否变号。$K=0.3$时幅值每步减半；$K=1.6$时幅值每步乘$0.8$且交替变号；$K=2$时幅值每步乘$1.2$而发散。这里没有输入限幅和噪声，故差异完全来自反馈代入后的闭环系数。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=107mm]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/reader-feedback-gain-trajectories/figure.pdf}
+  \caption{同一温度模型中三种反馈增益的无噪声解析轨迹。取$x_{t+1}=0.8x_t+u_t$、$u_t=-Kx_t$及$x_0=1$，不设输入幅值约束。$K=0.3$产生单调衰减，$K=1.6$产生交替衰减，$K=2$产生交替发散。比较的是零平衡附近的状态幅值与符号变化，未把增益大小直接当作稳定性指标。}
+  \label{fig:reader-feedback-gain-trajectories}
+\end{figure}
+
+若用二次型分别计量状态偏差与动作幅值，就能把这种选择写成明确的成本最小化问题。
+在线性动态下，配方后的目标仍是二次型，因此可以逐步算出最优反馈；
+所得反馈律对状态仍是线性的，“二次”描述的是成本。
+\begin{definition}[有限时域线性二次调节]
+\label{def:control-finite-horizon-lqr}
+考虑状态完全可见的系统
+\begin{equation}
+  \bm x_{t+1}=\bm A\bm x_t+\bm B\bm u_t+\bm w_{t+1},
+  \qquad t=0,\ldots,T-1,
+  \label{eq:control-lqr-dynamics}
+\end{equation}
+以总成本的期望比较策略：例如确定支付$10$与等概率支付$0$或$20$的期望相同，这个准则会给二者相同评价，尽管其波动不同。这种只按期望排序的选择称为风险中性。相应的期望成本为
+\begin{equation}
+  J=\mathbb E\left[
+  \bm x_T^\top\bm Q_T\bm x_T+
+  \sum_{t=0}^{T-1}
+  (\bm x_t^\top\bm Q\bm x_t+\bm u_t^\top\bm R\bm u_t)\right].
+  \label{eq:control-lqr-cost}
+\end{equation}
+其中$\bm Q,\bm Q_T\succeq\bm0$为$n\times n$对称矩阵，
+$\bm R\succ\bm0$为$m\times m$对称矩阵。输入无幅值限制。
+在非预见的状态反馈策略中最小化$J$，称为\term{线性二次调节}
+（linear-quadratic regulation, LQR）。
+\end{definition}
+
+本小节的$\bm w_t$服从固定但不必高斯的分布，均值为零，协方差为
+$\bm\Sigma_{\mathrm w}$，各时刻独立并独立于初态；初态二阶矩有限。
+动作对截至$t$的状态历史$\mathcal F_t=\sigma(\bm x_0,\ldots,\bm x_t)$可测，
+因而$\bm w_{t+1}$独立于当前状态和动作。状态代价半正定允许某些方向不直接计价，
+控制代价正定保证每一步动作最小化严格凸。
+
+用$\Pi_t$表示从$t$到$T-1$、适应上述状态信息的允许策略，
+以$\mathbb E_{t,\bm x}$表示从时刻$t$的状态$\bm x$开始运行所得的期望。
+最优剩余成本定义为
+\[
+  \begin{aligned}
+  V_t(\bm x)=\inf_{\pi\in\Pi_t}\mathbb E_{t,\bm x}\biggl[
+    &\bm x_T^\top\bm Q_T\bm x_T\\
+    &+\sum_{\tau=t}^{T-1}
+      (\bm x_\tau^\top\bm Q\bm x_\tau+
+       \bm u_\tau^\top\bm R\bm u_\tau)\biggr].
+  \end{aligned}
+\]
+这里的下确界取遍反馈策略而不是预先固定的动作序列；
+终端为$V_T(\bm x)=\bm x^\top\bm Q_T\bm x$。
+将当前阶段与未来分开，条件期望的迭代性质给出
+\begin{equation}
+  \begin{aligned}
+  V_t(\bm x)=\min_{\bm u}\bigl\{&
+    \bm x^\top\bm Q\bm x+\bm u^\top\bm R\bm u\\
+    &+\mathbb E[V_{t+1}(\bm A\bm x+\bm B\bm u+\bm w_{t+1})]\bigr\}.
+  \end{aligned}
+  \label{eq:control-lqr-bellman}
+\end{equation}
+对任意策略，后续成本至少为下一状态的$V_{t+1}$；若下一步的下界可由反馈取得，
+先选当前极小动作，再接上该反馈，就取得等号。下面的反向归纳同时构造这些可取到的
+动作，因此这里不依赖尚未证明的一般最优策略存在性。这一递推的通用形式将在
+第~\ref{chap:decision-theory-and-dynamic-risk}章展开\scite{math-anderson2007lqr}
+
+\begin{theorem}[有限时域LQR与Riccati递推]
+\label{thm:control-finite-horizon-lqr}
+在上述条件下，
+$V_t(\bm x)=\bm x^\top\bm P_t\bm x+c_t$，
+其中$\bm P_T=\bm Q_T$、$c_T=0$。令
+\begin{equation}
+  \begin{aligned}
+    \bm S_t&=\bm R+\bm B^\top\bm P_{t+1}\bm B,\\
+    \bm K_t&=\bm S_t^{-1}\bm B^\top\bm P_{t+1}\bm A,
+  \end{aligned}
+  \label{eq:control-lqr-gain}
+\end{equation}
+则最优动作是$\bm u_t^\ast=-\bm K_t\bm x_t$，矩阵满足
+\begin{equation}
+  \begin{aligned}
+  \bm P_t={}&\bm Q+\bm A^\top\bm P_{t+1}\bm A\\
+       &-\bm A^\top\bm P_{t+1}\bm B\bm S_t^{-1}
+                    \bm B^\top\bm P_{t+1}\bm A,
+  \end{aligned}
+  \label{eq:control-discrete-riccati-recursion}
+\end{equation}
+噪声只进入常数项
+\begin{equation}
+  c_t=c_{t+1}+\operatorname{tr}(\bm P_{t+1}\bm\Sigma_{\mathrm w}).
+  \label{eq:control-lqr-noise-constant}
+\end{equation}
+\end{theorem}
+\begin{proof}
+在终端结论成立。假设$t+1$时刻的表达和最优反馈已构造，
+记$\bm z=\bm A\bm x+\bm B\bm u$。噪声的零均值、协方差与独立性给出
+\[
+  \mathbb E[V_{t+1}(\bm z+\bm w_{t+1})]
+  =\bm z^\top\bm P_{t+1}\bm z+
+    \operatorname{tr}(\bm P_{t+1}\bm\Sigma_{\mathrm w})+c_{t+1}.
+\]
+交叉项条件期望为零。将$\bm z$展开，当前目标为
+\begin{align*}
+  &\bm x^\top(\bm Q+\bm A^\top\bm P_{t+1}\bm A)\bm x
+   +2\bm u^\top\bm B^\top\bm P_{t+1}\bm A\bm x
+   +\bm u^\top\bm S_t\bm u\\
+  &\qquad+\operatorname{tr}(\bm P_{t+1}\bm\Sigma_{\mathrm w})+c_{t+1}.
+\end{align*}
+由$\bm P_{t+1}\succeq\bm0$、$\bm R\succ\bm0$得$\bm S_t\succ\bm0$。
+动作相关项可以完整配方：
+\begin{align*}
+  &\bm u^\top\bm S_t\bm u+
+       2\bm u^\top\bm B^\top\bm P_{t+1}\bm A\bm x\\
+  &\quad=(\bm u+\bm K_t\bm x)^\top\bm S_t(\bm u+\bm K_t\bm x)
+       -\bm x^\top\bm K_t^\top\bm S_t\bm K_t\bm x.
+\end{align*}
+平方项非负且仅在$\bm u=-\bm K_t\bm x$处为零。合并剩余二次项与常数项，
+分别得到式~\eqref{eq:control-discrete-riccati-recursion}和
+式~\eqref{eq:control-lqr-noise-constant}。所得二次型也是
+\[
+  \bm x^\top\bm P_t\bm x
+  =\min_{\bm u}\{
+   \bm x^\top\bm Q\bm x+\bm u^\top\bm R\bm u+
+   (\bm A\bm x+\bm B\bm u)^\top\bm P_{t+1}(\bm A\bm x+\bm B\bm u)\},
+\]
+故$\bm P_t\succeq\bm0$，归纳可以继续。线性极小动作可测，并在有限时域保持二阶矩
+有限；将这些动作依次拼接，取得每一步下界，证明最优值确实可达。
+\end{proof}
+
+Riccati递推能够继续到前一时刻，是因为两次运算保留了二次形式：
+线性状态转移产生状态与动作的联合二次型，动作最小化后又留下状态二次型。
+非线性模型在一个点的线性化只描述局部变化，通常不会保留这一精确闭合关系。
+噪声只影响常数项同样有边界：非零均值通常产生线性项和仿射偏置；
+动作相关噪声、状态相关噪声或尾部风险目标都可能改变增益。
+若权重和噪声协方差是预先给定的逐时量，只需在第$t$步分别用
+$\bm Q_t,\bm R_t,\bm\Sigma_{\mathrm w,t+1}$替换对应矩阵，
+保持$\bm Q_t\succeq\bm0,\bm R_t\succ\bm0$和独立零均值条件，同一反向归纳仍成立。
+
+用一个不同于温度模型的标量算例，观察终端条件怎样影响反馈。
+取$x_{t+1}=1.2x_t+u_t$、$Q=R=1$且无噪声。记下一步系数为$p=P_{t+1}$，
+当前目标的配方为
+\[
+  \begin{aligned}
+  x^2+u^2+p(1.2x+u)^2
+   ={}&(1+p)\left(u+\frac{1.2p}{1+p}x\right)^2\\
+     &+\left(1+1.44p-\frac{1.44p^2}{1+p}\right)x^2.
+  \end{aligned}
+\]
+因此
+\[
+  S_t=1+P_{t+1},\qquad
+  K_t=\frac{1.2P_{t+1}}{1+P_{t+1}},
+  \qquad
+  P_t=1+\frac{1.44P_{t+1}}{1+P_{t+1}}.
+\]
+若$P_T=0$，则$P_{T-1}=1,K_{T-1}=0$；
+最后一个动作之后没有状态代价，故此时不用力。
+再向前一步有$P_{T-2}=1.72,K_{T-2}=0.6$。
+有限时域的最优反馈未必每步都使系统稳定，$K_{T-1}=0$就是反例。
+不能把有限问题中的可配方性当成无限时域稳定解存在性的证明。
+
+为处理长期稳定化，现切换到确定性、时不变、无折扣系统，即
+$\bm w_{t+1}=\bm0$，目标为
+\[
+  J_\infty=\sum_{t=0}^\infty
+  (\bm x_t^\top\bm Q\bm x_t+\bm u_t^\top\bm R\bm u_t).
+\]
+若反馈与二次系数不再随时间变化，递推给出
+\term{离散代数Riccati方程}（discrete algebraic Riccati equation, DARE）：
+\begin{equation}
+  \begin{aligned}
+  \bm P={}&\bm Q+\bm A^\top\bm P\bm A\\
+     &-\bm A^\top\bm P\bm B
+       (\bm R+\bm B^\top\bm P\bm B)^{-1}\bm B^\top\bm P\bm A.
+  \end{aligned}
+  \label{eq:control-dare}
+\end{equation}
+所需的\term{稳定化解}（stabilizing solution）不仅满足$\bm P\succeq\bm0$，
+还要求其增益
+$\bm K=(\bm R+\bm B^\top\bm P\bm B)^{-1}\bm B^\top\bm P\bm A$
+使闭环稳定。
+
+要让成本最优的反馈同时稳定，成本还不能完全漏掉一个不衰减的动态模式。
+令$\bm Q^{1/2}$为$\bm Q$的对称半正定平方根，则
+\[
+  \bm x^\top\bm Q\bm x=\|\bm Q^{1/2}\bm x\|_2^2.
+\]
+因此可以把$\bm Q^{1/2}\bm x$看作成本所见的输出：它非零时，状态就被二次成本计价。
+这个输出描述成本怎样评价状态，传感器输出$\bm C\bm x$描述控制器能获得什么信息，
+两者对应的可检测条件不能替换。
+
+这里所需的$(\bm Q^{1/2},\bm A)$可检测，要求成本输出不可观测的模式自行衰减。
+“不可观测”考察的是整个输出序列，而非某一时刻恰好没有成本：即使
+$\bm Q^{1/2}\bm x=\bm0$，只要$\bm Q^{1/2}\bm A\bm x\neq\bm0$，
+无输入演化的下一状态仍会被成本计价。
+这个结构条件允许$\bm Q$仅半正定，却排除了沿动态始终不被成本看见的不衰减模式。
+它将在下面的证明中把有限成本与状态衰减联系起来。
+
+\begin{theorem}[无限时域LQR的稳定化解]
+\label{thm:control-infinite-horizon-lqr}
+设$\bm Q\succeq\bm0$、$\bm R\succ\bm0$，
+$(\bm A,\bm B)$可稳定且$(\bm Q^{1/2},\bm A)$可检测。
+则式~\eqref{eq:control-dare}存在唯一半正定稳定化解$\bm P$。
+相应反馈使闭环渐近稳定，并在所有允许控制序列中给出无折扣二次总成本的
+最优值$V(\bm x)=\bm x^\top\bm P\bm x$。
+\end{theorem}
+\begin{proof}
+取长度$N$、终端代价为零的有限问题，记其初始价值矩阵为$\bm P^{(N)}$。
+增加一个非负阶段成本不能降低最优成本，故
+$\bm0\preceq\bm P^{(N)}\preceq\bm P^{(N+1)}$。
+可稳定性提供$\overline{\bm K}$使
+$\overline{\bm F}=\bm A-\bm B\overline{\bm K}$稳定。始终用此反馈的成本矩阵为
+\[
+  \overline{\bm P}=\sum_{j=0}^\infty
+  (\overline{\bm F}^\top)^j
+  (\bm Q+\overline{\bm K}^\top\bm R\overline{\bm K})
+  \overline{\bm F}^j,
+\]
+级数由指数衰减收敛，且$\bm P^{(N)}\preceq\overline{\bm P}$。
+每个二次型$\bm x^\top\bm P^{(N)}\bm x$单调有界，
+再用极化恒等式恢复矩阵各元素，得到$\bm P^{(N)}\to\bm P\succeq\bm0$。
+Riccati映射连续，因为待逆矩阵始终不小于$\bm R\succ\bm0$；
+对$\bm P^{(N+1)}=\mathcal R(\bm P^{(N)})$取极限得到DARE。
+
+令$\bm F=\bm A-\bm B\bm K$，DARE按增益改写为
+\begin{equation}
+  \bm P-\bm F^\top\bm P\bm F=\bm Q+\bm K^\top\bm R\bm K.
+  \label{eq:control-dare-lyapunov}
+\end{equation}
+若$\bm F\bm z=\lambda\bm z$且$\bm z\neq\bm0,|\lambda|\geq1$，
+在两侧乘$\bm z^\ast,\bm z$得到
+\[
+  (1-|\lambda|^2)\bm z^\ast\bm P\bm z
+  =\|\bm Q^{1/2}\bm z\|_2^2+\|\bm R^{1/2}\bm K\bm z\|_2^2.
+\]
+左侧非正，右侧非负，所以均为零，特别有
+$\bm Q^{1/2}\bm z=\bm0,\bm K\bm z=\bm0$。
+于是$\bm A\bm z=(\bm F+\bm B\bm K)\bm z=\lambda\bm z$，
+违反$(\bm Q^{1/2},\bm A)$的可检测性。因此$\bm F$稳定。
+
+存在且稳定还不足以完成最优性证明。记$\bm S=\bm R+\bm B^\top\bm P\bm B$，
+对任意控制沿前$N$步累加配方恒等式：
+\begin{align*}
+  &\sum_{t=0}^{N-1}
+    (\bm x_t^\top\bm Q\bm x_t+\bm u_t^\top\bm R\bm u_t)
+    +\bm x_N^\top\bm P\bm x_N\\
+  &\quad=\bm x_0^\top\bm P\bm x_0+
+    \sum_{t=0}^{N-1}
+    (\bm u_t+\bm K\bm x_t)^\top\bm S(\bm u_t+\bm K\bm x_t).
+\end{align*}
+不能直接丢弃左侧终端项。若该控制的总成本有限，非负级数的项趋零，给出
+$\bm Q^{1/2}\bm x_t\to\bm0$及$\bm u_t\to\bm0$，后者使用$\bm R\succ\bm0$。
+可检测性提供$\bm L$使$\bm H=\bm A-\bm L\bm Q^{1/2}$稳定，于是
+\[
+  \bm x_{t+1}=\bm H\bm x_t+
+       \underbrace{\bm B\bm u_t+\bm L\bm Q^{1/2}\bm x_t}_{\bm d_t\to\bm0}.
+\]
+展开为$\bm H^t\bm x_0+\sum_{j=0}^{t-1}\bm H^{t-1-j}\bm d_j$。
+有限个早期输入的贡献随$t$衰减；晚期输入任意小，且
+$\sum_{j\geq0}\|\bm H^j\|_2<\infty$，故卷积尾部也趋零。
+因此$\bm x_t\to\bm0$，终端项趋零。
+
+令$N\to\infty$，任何有限成本控制的成本都是
+$\bm x_0^\top\bm P\bm x_0$加上一串非负平方项。
+采用$\bm u_t=-\bm K\bm x_t$时平方项全为零，闭环稳定保证终端项趋零和总成本有限，
+故达到下界；无限成本控制自然不能优于它。
+若另有半正定稳定化解，同一配方和终端项论证也使它表示全部初态上的同一个最优成本。
+两个对称矩阵的二次型处处相等，矩阵便相等，唯一性得证。
+\end{proof}
+
+在前述$A=1.2,B=1,Q=R=1$例中，
+\[
+  P=1+\frac{1.44P}{1+P},
+  \qquad P^2-1.44P-1=0,
+\]
+半正定根与反馈为
+\[
+  P=\frac{1.44+\sqrt{6.0736}}2\approx1.952,
+  \quad K=\frac{1.2P}{1+P}\approx0.794,
+  \quad 1.2-K\approx0.406.
+\]
+另一个根为负，不表示非负总成本。
+
+若$A=1.2,B=1,Q=0,R=1$，系统可控却不满足成本可检测性。
+DARE有$P=0$与$P=0.44$两个半正定根。前者给$K=0$和不稳定闭环$1.2$，
+后者给稳定闭环$5/6$。原目标只惩罚控制，$u_t=0$以零成本全局最优，
+稳定化反馈反而支付正成本。这个反例说明稳定化与成本最优之间的联系确实依赖假设。
+若恢复持续非零加性噪声，稳定闭环通常有非零稳态协方差，单步期望成本不趋零，
+无折扣总期望成本通常发散；除噪声传播恰好不被成本计价等退化情形，
+应改用有限、折扣或长期平均成本，而不是沿用本定理的确定性总成本。
+
+连续时间也可以直接用代数方程构造稳定反馈，无须先推导有限时域价值。
+对$\dot{\bm x}_t=\bm A\bm x_t+\bm B\bm u_t$，连续代数Riccati方程
+（continuous algebraic Riccati equation, CARE）为
+\begin{equation}
+  \bm0=\bm Q+\bm A^\top\bm P+\bm P\bm A
+       -\bm P\bm B\bm R^{-1}\bm B^\top\bm P.
+  \label{eq:control-care}
+\end{equation}
+当$\bm Q\succeq\bm0,\bm R\succ\bm0$，且连续时间意义下
+$(\bm A,\bm B)$可稳定、$(\bm Q^{1/2},\bm A)$可检测时，CARE有唯一半正定
+稳定化解；这是连续线性二次控制的标准代数结论\scite{math-anderson2007lqr}
+本处使用其存在性，具体闭环性质还可直接核验。
+令$\bm K=\bm R^{-1}\bm B^\top\bm P$、$\bm F=\bm A-\bm B\bm K$，则
+\[
+  \bm F^\top\bm P+\bm P\bm F=-(\bm Q+\bm K^\top\bm R\bm K).
+\]
+若$\bm F\bm z=\lambda\bm z$且$\operatorname{Re}\lambda\geq0$，
+两侧二次型给出
+$2\operatorname{Re}\lambda\,\bm z^\ast\bm P\bm z
+=-\|\bm Q^{1/2}\bm z\|_2^2-\|\bm R^{1/2}\bm K\bm z\|_2^2$。
+同样推出$\bm Q^{1/2}\bm z=\bm K\bm z=\bm0$，与可检测性矛盾。
+所以闭环谱位于左半平面；即使$\bm P$仅半正定，仍可由谱结论另解正定Lyapunov方程。
+连续有限时域微分Riccati及价值最优性在
+第~\ref{chap:decision-theory-and-dynamic-risk}章主讲；本处的稳定核验不以它们为前提。
+
+\subsection{输出反馈下的估计与闭环稳定}
+\label{sec:control-output-feedback-stability}
+状态反馈读取真实状态\(\bm x_t\)，实际传感器却可能只测得它的一部分。先考虑无观测噪声的\(\bm y_t=\bm C\bm x_t\)：控制器用动态模型形成状态估计，再根据实际读数与预测读数的差修正估计。这个差一般是向量，校正由观测器增益\(\bm L\)将其映回状态空间，不能统一说成“残差为正就把状态往高调”。只有在\(C=1\)、增益为正的标量温度例中，正残差才对应向上校正。若测量另有噪声，应写成\(\bm y_t=\bm C\bm x_t+\bm v_t\)，并重新分析误差的随机性；下面先推导确定性观测器的谱分离。
+反馈需要状态，但传感器可能只提供状态的一部分。
+可以先根据模型和已执行动作预测状态，再利用当前读数与预测读数的差纠正估计。
+令$\widehat{\bm x}_t$表示尚未使用当前读数$\bm y_t$的状态估计。本例先按$\widehat{\bm x}_t$确定$\bm u_t$，再用已执行动作和当前读数构造下一时刻的$\widehat{\bm x}_{t+1}$。
+\term{Luenberger观测器}（Luenberger observer）将模型预测与读数残差校正合并为以下估计更新：
+\begin{equation}
+  \widehat{\bm x}_{t+1}
+  =\bm A\widehat{\bm x}_t+\bm B\bm u_t+
+    \bm L(\bm y_t-\bm C\widehat{\bm x}_t).
+  \label{eq:control-luenberger-observer}
+\end{equation}
+无噪声时，误差$\bm e_t^{\mathrm o}=\bm x_t-\widehat{\bm x}_t$满足
+$\bm e_{t+1}^{\mathrm o}=(\bm A-\bm L\bm C)\bm e_t^{\mathrm o}$。
+可检测性恰好允许选出误差衰减的$\bm L$。
+若使用$\bm u_t=-\bm K\widehat{\bm x}_t$，联合系统为
+\begin{equation}
+  \begin{bmatrix}\bm x_{t+1}\\\bm e_{t+1}^{\mathrm o}\end{bmatrix}
+  =
+  \begin{bmatrix}
+    \bm A-\bm B\bm K&\bm B\bm K\\
+    \bm0&\bm A-\bm L\bm C
+  \end{bmatrix}
+  \begin{bmatrix}\bm x_t\\\bm e_t^{\mathrm o}\end{bmatrix}.
+  \label{eq:control-separation-block}
+\end{equation}
+这个\term{分离原理}（separation principle）说的是闭环谱可以分开设计：
+特征行列式等于两个对角块特征行列式之积，故联合谱恰为二者的并集。
+当两块都稳定时，联合矩阵稳定；反过来，任一块的危险特征值也保留在联合谱中。
+因而确定性观测器与状态反馈可以分别作稳定设计；这一论证并未涉及成本最优。
+
+图~\ref{fig:observer-based-output-feedback}把这些计算接成闭环：反馈律使用估计状态，观测器同时接收已执行输入与测量，并根据观测残差修正预测。
+
+\begin{figure*}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/tikz/observer-output-feedback/source.pdf}
+  \caption{离散确定性Luenberger观测器的输出反馈。反馈先按当前估计取$\bm u_t=-\bm K\widehat{\bm x}_t$；
+  观测器再接收已执行的$\bm u_t$与读数$\bm y_t$，
+  用残差$\bm y_t-\bm C\widehat{\bm x}_t$构造下一估计$\widehat{\bm x}_{t+1}$。
+  真实状态进入测量映射，不直接供给反馈律。$\bm K$与$\bm L$分别决定
+  $\bm A-\bm B\bm K$与$\bm A-\bm L\bm C$的特征模态；这里没有随机Kalman增益更新。}
+  \label{fig:observer-based-output-feedback}
+\end{figure*}
+
+
+有噪声时，还需区分预测协方差与观测更新后的协方差。
+在式~\eqref{eq:control-lqr-dynamics}及
+$\bm y_t=\bm C\bm x_t+\bm v_t$中，令$\bm w_t,\bm v_t$分别为独立同分布零均值
+噪声，协方差为$\bm\Sigma_{\mathrm w}\succeq\bm0,\bm\Sigma_{\mathrm v}\succ\bm0$，
+两族与初态相互独立，初态二阶矩有限，估计器从先验均值及协方差初始化。
+若要将Kalman估计解释为精确条件均值，再要求初态和噪声联合高斯；
+非高斯时以下递推仍描述相应线性滤波器的误差矩，不自动描述完整后验。
+
+以$\bm\Pi_t$记看到$\bm y_t$之前的预测误差协方差。高斯情形下，
+$\widehat{\bm x}_{t|t-1}$是给定截至$t-1$的观测及已执行控制后的条件均值。
+在初始时刻，$\bm\Pi_0$由尚未使用$y_0$的先验给出。
+更新增益$\bm M_t$与合并预测增益$\bm L_t$分别为
+\[
+  \bm M_t=\bm\Pi_t\bm C^\top
+       (\bm C\bm\Pi_t\bm C^\top+\bm\Sigma_{\mathrm v})^{-1},
+  \qquad \bm L_t=\bm A\bm M_t.
+\]
+记观测更新后的误差协方差为$\bm P_{t|t}$，由预测误差与独立观测噪声的分解得到
+\[
+  \bm P_{t|t}=(\bm I-\bm M_t\bm C)\bm\Pi_t(\bm I-\bm M_t\bm C)^\top
+    +\bm M_t\bm\Sigma_{\mathrm v}\bm M_t^\top,
+  \qquad
+  \bm\Pi_{t+1}=\bm A\bm P_{t|t}\bm A^\top+\bm\Sigma_{\mathrm w}.
+\]
+前式加入当前观测，后式传播已更新的误差并加上下一步过程噪声。
+先更新再预测，可以写成
+\[
+  \widehat{\bm x}_{t+1|t}
+  =\bm A\widehat{\bm x}_{t|t-1}+\bm B\bm u_t+
+       \bm L_t(\bm y_t-\bm C\widehat{\bm x}_{t|t-1}).
+\]
+所以预测误差的齐次矩阵为$\bm A-\bm L_t\bm C$，不能遗漏增益中的$\bm A$。
+稳态预测协方差满足
+\begin{equation}
+  \begin{aligned}
+  \bm\Pi={}&\bm A\bm\Pi\bm A^\top+\bm\Sigma_{\mathrm w}\\
+     &-\bm A\bm\Pi\bm C^\top
+       (\bm C\bm\Pi\bm C^\top+\bm\Sigma_{\mathrm v})^{-1}
+       \bm C\bm\Pi\bm A^\top.
+  \end{aligned}
+  \label{eq:control-filter-dare}
+\end{equation}
+控制DARE中作$\bm A\mapsto\bm A^\top,\bm B\mapsto\bm C^\top,
+\bm Q\mapsto\bm\Sigma_{\mathrm w},\bm R\mapsto\bm\Sigma_{\mathrm v}$便得到此式。
+公式的转置对偶联系的是两个矩阵计算问题，并不使状态成本与估计协方差具有相同含义。
+
+\begin{theorem}[稳态预测滤波的充分条件]
+\label{thm:control-steady-filter}
+若$(\bm C,\bm A)$可检测、$(\bm A,\bm\Sigma_{\mathrm w}^{1/2})$可稳定，
+且$\bm\Sigma_{\mathrm v}\succ\bm0$，则式~\eqref{eq:control-filter-dare}
+有唯一半正定稳定化解$\bm\Pi$。从任意有限$\bm\Pi_0\succeq\bm0$出发的
+预测协方差递推收敛到$\bm\Pi$，稳态$\bm L=\bm A\bm M$使
+$\bm A-\bm L\bm C$稳定。
+\end{theorem}
+\begin{proof}
+对偶代换把本定理的两个结构条件分别变为无限LQR定理的可稳定、可检测条件，
+故解的存在、唯一与稳定性成立。为说明一般初始协方差的收敛，记滤波Riccati映射为
+$\Phi$。固定任意合并增益$\bm L$，定义
+\[
+  \Psi_{\bm L}(\bm X)
+  =(\bm A-\bm L\bm C)\bm X(\bm A-\bm L\bm C)^\top+
+     \bm\Sigma_{\mathrm w}+\bm L\bm\Sigma_{\mathrm v}\bm L^\top.
+\]
+配方表明$\Phi(\bm X)\preceq\Psi_{\bm L}(\bm X)$，等号在对应Kalman增益处成立。
+又若$\bm X\succeq\bm Y$，每个固定增益下
+$\Psi_{\bm L}(\bm X)\succeq\Psi_{\bm L}(\bm Y)$；
+记在$\bm X$处使配方取等号的增益为$\bm L_{\bm X}$，则
+\[
+  \Phi(\bm X)=\Psi_{\bm L_{\bm X}}(\bm X)
+  \succeq\Psi_{\bm L_{\bm X}}(\bm Y)
+  \succeq\Phi(\bm Y).
+\]
+第一个不等式使用固定增益下的保序性，第二个使用
+$\Phi(\bm Y)\preceq\Psi_{\bm L}(\bm Y)$对任意增益均成立。
+取稳态增益$\bm L$，有$\Psi_{\bm L}(\bm\Pi)=\bm\Pi$，并由单调性归纳得到
+\[
+  \Phi^t(\bm0)\preceq\Phi^t(\bm\Pi_0)
+                     \preceq\Psi_{\bm L}^t(\bm\Pi_0).
+\]
+左端按对偶有限时域构造收敛到$\bm\Pi$；
+右端与$\bm\Pi$之差为
+$(\bm A-\bm L\bm C)^t(\bm\Pi_0-\bm\Pi)
+ [(\bm A-\bm L\bm C)^\top]^t$，也趋零，夹逼得证。
+\end{proof}
+
+稳态滤波误差仍由新噪声持续驱动：
+\[
+  \bm e_{t+1}^{\mathrm p}
+  =(\bm A-\bm L\bm C)\bm e_t^{\mathrm p}
+     +\bm w_{t+1}-\bm L\bm v_t.
+\]
+稳定性使初始误差的影响衰减，协方差趋于有限的$\bm\Pi$，
+并不使噪声消失。温度例取$\Sigma_{\mathrm w}=0.04,\Sigma_{\mathrm v}=0.09$，
+稳态方程为
+$\Pi=0.64\Pi+0.04-0.64\Pi^2/(\Pi+0.09)$，
+即$\Pi^2-0.0076\Pi-0.0036=0$。正根约为$0.06392$，
+$M\approx0.4153,L\approx0.3322$，预测齐次误差系数约为$0.4678$；
+稳态预测误差方差为正，不能称为估计路径趋零。
+
+实际控制可使用当前观测更新后的$\widehat{\bm x}_{t|t}$。
+当前读数先通过残差修正预测均值：
+\[
+  \widehat{\bm x}_{t|t}
+  =\widehat{\bm x}_{t|t-1}
+   +\bm M_t(\bm y_t-\bm C\widehat{\bm x}_{t|t-1}).
+\]
+因而更新误差为
+$\bm x_t-\widehat{\bm x}_{t|t}
+=(\bm I-\bm M_t\bm C)\bm e_t^{\mathrm p}-\bm M_t\bm v_t$，
+其中$\bm e_t^{\mathrm p}=\bm x_t-\widehat{\bm x}_{t|t-1}$是预测误差。
+这与前面先按预测估计控制的约定有所不同：这里先用$\bm y_t$更新，再确定当前动作。
+取$\bm u_t=-\bm K\widehat{\bm x}_{t|t}$，并用预测误差
+$\bm e_t^{\mathrm p}$与真实状态组成联合系统。
+在稳态增益$\bm M$下，齐次联合矩阵变为
+\[
+  \begin{bmatrix}
+    \bm A-\bm B\bm K&\bm B\bm K(\bm I-\bm M\bm C)\\
+    \bm0&\bm A(\bm I-\bm M\bm C)
+  \end{bmatrix}.
+\]
+附加噪声为
+$((\bm w_{t+1}-\bm B\bm K\bm M\bm v_t)^\top,
+  (\bm w_{t+1}-\bm A\bm M\bm v_t)^\top)^\top$，
+两分量相关，但联合协方差仍有限。
+两个对角块稳定时，联合齐次系统稳定；
+用幂级数展开协方差，便得有限初始二阶矩下的二阶矩有界和稳态协方差收敛。
+非零持续噪声下，均值可以趋零而路径不趋零。
+有限时域线性二次高斯控制的期望成本最优性由
+第~\ref{chap:decision-theory-and-dynamic-risk}章另证。
+受控观测、输入约束、非线性或模型错设可能改变信息与误差动态，
+不能从这里的谱分离直接推出稳定，更不能直接推出最优。
+
+\section{策略的调节与跟踪}
+\label{sec:control-regulation-tracking}
+
+原点稳定适合描述误差，却不意味着设备的目标状态必须为零——恒温器的目标是维持 22 度而不是 0 度，机械臂要停在指定位置而不是收回原点。因此实际任务往往是让状态保持在某个非零的设定值，或追随一条不断运动的参考曲线（如让无人机沿预定航线飞行）。
+温度调节要求维持非零设定值，轨迹跟踪要求追随运动参考。
+把实际状态减去目标以后，两类任务都可以研究误差稳定；
+相减之前要先求出维持目标的动作，否则误差方程中会留下参考自身的漂移。
+
+\subsection{固定目标下的轨迹调节}
+\subsubsection{目标平衡与可行输入}
+设定值（setpoint）是希望状态或输出最终保持的常数。\term{调节}（regulation）要求偏离
+该常数的误差趋于零；它不只要求在某一时刻经过目标。
+\begin{definition}[目标平衡与调节误差]
+\label{def:control-regulation-equilibrium}
+对$\bm x_{t+1}=\bm A\bm x_t+\bm B\bm u_t$，
+若状态设定值$\bm r$与常值输入$\bm u^r$满足
+\begin{equation}
+  (\bm I-\bm A)\bm r=\bm B\bm u^r.
+  \label{eq:control-target-equilibrium}
+\end{equation}
+则称$(\bm r,\bm u^r)$构成目标平衡。
+状态调节误差定义为$\bm e_t=\bm x_t-\bm r$。
+若只指定输出设定值$\bm q$，还需寻找平衡状态$\bm r$使
+$\bm C\bm r=\bm q$，输出误差为$\bm e_t^y=\bm C\bm x_t-\bm q$。
+有输入、状态限制时，目标平衡还须满足$\bm u^r\in U,\bm r\in S$。
+\end{definition}
+
+对只指定输出的任务，可解联立方程
+\[
+  \begin{bmatrix}\bm I-\bm A&-\bm B\\\bm C&\bm0\end{bmatrix}
+  \begin{bmatrix}\bm r\\\bm u^r\end{bmatrix}
+  =\begin{bmatrix}\bm0\\\bm q\end{bmatrix}.
+\]
+方程可能无解或有多个解；输出达到设定值也不自动要求所有内部状态相同。
+连续时间的平衡条件相应为$\bm A\bm r+\bm B\bm u^r=\bm0$。
+这些平衡方程是任务可行性的检查，不是稳定性证明。
+
+\begin{example}[非零温度需要维持输入]
+\label{ex:control-temperature-equilibrium}
+在无噪声温度模型中，设定值$r=2$要求
+$2=0.8\times2+u^r$，所以$u^r=0.4$。
+若直接使用$u_t=-0.3(x_t-2)$，在$x_t=2$处输入变成零，
+下一步温差便降为$1.6$，因而$2$不是闭环平衡。
+若执行器要求$0\leq u\leq1$，单从平衡输入看，
+$u^r=0.2r$允许$0\leq r\leq5$；再加状态限制$0\leq x\leq3$，
+则目标必须落在$[0,3]$。$r=2,u^r=0.4$满足这两项必要条件。
+从某个初态走到目标期间是否也满足约束，还需检查整段闭环轨迹。
+\end{example}
+
+\subsubsection{基于误差反馈的轨迹调节}
+这里有一个容易被忽略、但物理上很关键的点：要让房间一直保持在非零温度，加热器不能在到达设定值后就完全关闭。因为房间会持续向环境散热，必须持续施加一定的加热量才能恰好补上散掉的热；这个“维持目标所必需的稳态输入”要先单独求出来。否则误差为零时反馈项消失、输入归零，温度反而又掉下去。
+目标平衡方程给出了在目标处仍需持续施加的输入。
+在这个输入上叠加误差反馈，才使控制器在目标处停止纠偏而继续维持平衡：
+\begin{equation}
+  \bm u_t=\bm u^r-\bm K(\bm x_t-\bm r),
+  \qquad
+  \bm e_{t+1}=(\bm A-\bm B\bm K)\bm e_t.
+  \label{eq:control-regulation-feedback}
+\end{equation}
+第二式由原动态减去平衡方程得到。只要闭环矩阵稳定，
+$\bm e_t\to\bm0$，便有$\bm x_t\to\bm r$与
+$\bm u_t\to\bm u^r$。如果输出目标通过$\bm C\bm r=\bm q$定义，
+也有$\bm e_t^y=\bm C\bm e_t\to\bm0$。
+
+温度反馈的完整计算为
+\begin{equation}
+  u_t=0.4-0.3(x_t-2),
+  \qquad
+  e_{t+1}=0.5e_t,\quad e_t=0.5^t(x_0-2).
+  \label{eq:control-temperature-regulation}
+\end{equation}
+从$x_0=0$出发，状态依次为$0,1,1.5,1.75,\ldots$，
+输入依次为$1,0.7,0.55,0.475,\ldots$。
+状态趋于$2$而输入趋于$0.4$，不是输入也必须趋零。
+
+若改用估计状态$\widehat{\bm x}_t$，令
+$\bm e_t^{\mathrm o}=\bm x_t-\widehat{\bm x}_t$，
+则调节误差成为
+$\bm e_{t+1}=(\bm A-\bm B\bm K)\bm e_t+\bm B\bm K\bm e_t^{\mathrm o}$。
+确定性估计误差趋零、调节闭环稳定时，卷积展开仍给出调节误差趋零；
+估计噪声持续存在时，只能据噪声条件讨论均值、协方差或误差范围。
+对$\bm e_t$与$\bm u_t-\bm u^r$使用LQR也是一种增益选择，
+但权重表达的是任务偏好，怎样比较不同累计代价由
+第~\ref{chap:decision-theory-and-dynamic-risk}章展开。
+达到设定值这一任务本身并未指定哪组权重。
+
+\subsubsection{持续扰动下的轨迹调节}
+平衡输入按名义模型计算。真实系统若多出加性扰动$\bm d_t$，
+它会在每一步重新推动误差，得到
+\begin{equation}
+  \bm e_{t+1}=\bm F\bm e_t+\bm d_t,
+  \qquad \bm F=\bm A-\bm B\bm K.
+  \label{eq:control-regulation-disturbance}
+\end{equation}
+这正是\BookSectionRef{sec:dynamical-stability-sensitivity}{第~\ref{sec:dynamical-stability-sensitivity}节}的受迫响应：
+初始误差按$\bm F^t$衰减，新扰动却在每一步进入。
+若$\|\bm F^j\|\leq M\rho^j$、$0<\rho<1$且$\|\bm d_t\|\leq\bar d$，
+则
+\[
+  \|\bm e_t\|\leq M\rho^t\|\bm e_0\|
+       +\frac{M(1-\rho^t)}{1-\rho}\bar d.
+\]
+常值扰动$\bm d$通常留下$\bm e_\infty=(\bm I-\bm F)^{-1}\bm d$，
+不能靠初始误差衰减消除。温度例为$e_{t+1}=0.5e_t+d$，
+稳态偏差是$2d$。若改为独立高斯$w_{t+1}\sim\mathcal N(0,0.04)$，
+均值误差衰减，但
+$\operatorname{Var}(e_t)\to0.04/(1-0.5^2)=0.053\overline3$；
+二阶矩有界不是样本路径趋于零。
+
+即使有了维持目标的输入，真实系统还可能受到模型没考虑的持续外力：门窗漏风、元件老化带来的恒定偏差等。这些力在每一步都重新推动系统，靠“让初始误差衰减”是消不掉的，于是会留下一个永久性的稳态偏差。一个聪明的补救办法是让控制器“记住”误差是否长期非零——把过去的误差累加起来，只要误差还没归零就持续加大纠正力度，直到把这个顽固偏差顶掉。这就是积分控制的思想。
+对未知常值偏差，可以让控制器记住过去的累计误差。
+\term{积分调节}（integral regulation）正是把这段记忆作为额外状态，使持续偏差无法在
+输出误差非零时保持平衡。对输出误差$\bm C\bm x_t-\bm q=\bm C\bm e_t$取
+\begin{equation}
+  \begin{aligned}
+    \bm z_{t+1}&=\bm z_t+\bm C\bm e_t,\\
+    \bm u_t&=\bm u^r-\bm K_x\bm e_t-\bm K_i\bm z_t.
+  \end{aligned}
+  \label{eq:control-integral-regulation}
+\end{equation}
+其中$\bm z_t\in\mathbb R^p$为积分状态；采样周期不为$1$时，可将周期因子并入积分增益。
+增广误差系统为
+\[
+  \begin{bmatrix}\bm e_{t+1}\\\bm z_{t+1}\end{bmatrix}
+  =
+  \underbrace{\begin{bmatrix}
+    \bm A-\bm B\bm K_x&-\bm B\bm K_i\\
+    \bm C&\bm I
+  \end{bmatrix}}_{\bm F_{\mathrm{aug}}}
+  \begin{bmatrix}\bm e_t\\\bm z_t\end{bmatrix}
+  +\begin{bmatrix}\bm d\\\bm0\end{bmatrix}.
+\]
+若$\bm F_{\mathrm{aug}}$稳定，则在常值$\bm d$下收敛到唯一平衡；
+该平衡的积分方程强制$\bm C\bm e_\infty=\bm0$。
+消除的是指定输出的常值误差，不一定是整个状态误差。
+
+积分器自身带有特征值$1$，不能不经核验就加到控制器上。
+设计增益前应检查增广对
+\[
+  \left(
+   \begin{bmatrix}\bm A&\bm0\\\bm C&\bm I\end{bmatrix},
+   \begin{bmatrix}\bm B\\\bm0\end{bmatrix}\right)
+\]
+可稳定。除原系统的危险模式必须可控外，新加入的$\lambda=1$模式要求
+\[
+  \operatorname{rank}
+  \begin{bmatrix}\bm I-\bm A&-\bm B\\\bm C&\bm0\end{bmatrix}=n+p.
+\]
+这是增广PBH判据在$1$处的展开；对$\lambda\neq1$，积分状态块可消元，
+便回到原系统的判据。受约束时还要检查真实扰动下是否存在允许的平衡输入。
+
+\begin{example}[温度系统的积分增广]
+\label{ex:control-temperature-integral}
+取$e_t=x_t-2$、$z_{t+1}=z_t+e_t$与
+$u_t=0.4-0.3e_t-0.1z_t$。常值扰动$d$下，
+\[
+  \begin{bmatrix}e_{t+1}\\z_{t+1}\end{bmatrix}
+  =\begin{bmatrix}0.5&-0.1\\1&1\end{bmatrix}
+   \begin{bmatrix}e_t\\z_t\end{bmatrix}
+   +\begin{bmatrix}d\\0\end{bmatrix}.
+\]
+特征多项式为$\lambda^2-1.5\lambda+0.6$，两根
+$0.75\pm0.19365\,\mathrm i$的模为$\sqrt{0.6}<1$。
+因而$e_t\to0,z_t\to10d,u_t\to0.4-d$。
+若$0\leq u\leq1$，平衡输入要求$-0.6\leq d\leq0.4$；
+这个条件仍不保证任意初始积分状态的瞬态输入都不饱和。
+\end{example}
+
+输入饱和后，真实误差不再服从上述线性增广方程，积分状态却可能继续累积，
+造成解除饱和后的大幅动作。限制或回退积分累积是常见的抗积分饱和处理，
+但处理后的闭环仍需重新验证。积分器针对常值偏差的消除能力也不能推广为对任意
+有界时变扰动的零误差保证。若增广系统稳定，时变有界扰动仍可通过其卷积获得有界误差；
+若需保证安全，应进一步按第~\ref{sec:control-safety-cbf}节检查实际输入。
+
+\subsection{运动参考下的轨迹跟踪}
+\subsubsection{参考轨迹与可实现条件}
+\term{跟踪}（tracking）以随时间变化的状态$\bm r_t$或输出$\bm q_t$为目标，
+要求$\bm x_t-\bm r_t$或$\bm C\bm x_t-\bm q_t$趋零或保持在规定范围内。
+参考本身可以持续运动，因此不能把跟踪收敛写成状态必须趋于某个固定点。
+\begin{definition}[可实现参考]
+\label{def:control-realizable-reference}
+离散线性系统的参考状态、参考输入为$(\bm r_t,\bm u_t^r)$。
+若每一步满足
+\begin{equation}
+  \bm r_{t+1}=\bm A\bm r_t+\bm B\bm u_t^r,
+  \qquad \bm q_t=\bm C\bm r_t,
+  \label{eq:control-realizable-reference}
+\end{equation}
+且参考状态、输入满足所声明的约束，称它为可实现参考。
+精确从首时刻跟踪还要求$\bm x_0=\bm r_0$。
+连续时间则要求$\bm r_t$绝对连续，并有
+$\dot{\bm r}_t=\bm A\bm r_t+\bm B\bm u_t^r$几乎处处成立。
+\end{definition}
+
+若只给输出曲线，需要先找与其一致的内部状态和输入；不同实现可能具有不同内部行为。
+有输入变化率、采样周期或执行器动态限制时，也必须把这些约束加入可实现性检查。
+离散模型能在一步改变参考，并不表示连续执行器能瞬时跳跃。
+有界参考也未必满足输入限制，例如温度从$r_t=0$要求下一步到$r_{t+1}=2$，
+需$u_t^r=2$，违反$u\leq1$；从$3$要求一步降至$0$则需$u_t^r=-2.4$，
+仅能加热的执行器无法实现。
+
+让$x$持续高于目标和让$x$追随一条起伏的参考曲线，需要的信息不同。前馈这个名字与“反馈”相对：反馈是看到实际偏差后再纠正，前馈则在偏差发生之前，就根据已知的目标运动和系统模型预先把该用的动作算好——相当于“料敌在先”。它的好处是动作及时、不等待误差出现；代价是完全依赖模型和目标预告，一旦初态不对或有扰动，纯前馈不会自行纠正。
+温度参考的前馈输入由系统方程直接给出：
+\begin{equation}
+  u_t^r=r_{t+1}-0.8r_t.
+  \label{eq:control-temperature-reference-input}
+\end{equation}
+\term{前馈}（feedforward）是由已知目标运动与模型预先计算的动作，
+不靠当前误差产生。式中需要$r_{t+1}$，因而假设下一参考已由计划给出；
+若只有当前目标而无预告，不能直接假装拥有这个信息。
+对$r_t=2+0.4\sin(\pi t/8)$，前馈是
+$0.4+0.4[\sin(\pi(t+1)/8)-0.8\sin(\pi t/8)]$。
+其值位于约$[0.239,0.561]$，参考状态位于$[1.6,2.4]$，
+所以参考本身满足$0\leq u\leq1,0\leq x\leq3$。
+但从远离参考的初态出发，纠偏动作仍可能超限。
+
+\subsubsection{基于前馈与反馈的轨迹跟踪}
+前馈按参考轨迹计算，没有使用实际偏差；从错误初态出发时，它不会额外纠偏。
+在可实现参考的前馈上加入状态误差反馈，得到
+\begin{equation}
+  \bm u_t=\bm u_t^r-\bm K\bm e_t,
+  \qquad \bm e_t=\bm x_t-\bm r_t,
+  \qquad \bm e_{t+1}=(\bm A-\bm B\bm K)\bm e_t.
+  \label{eq:control-tracking-feedback}
+\end{equation}
+相减时参考运动被前馈精确抵消，留下与调节相同的误差动态。
+闭环矩阵稳定便保证误差趋零，即使$\bm r_t$一直振荡。
+连续时间取相同形式，则有
+$\dot{\bm e}_t=(\bm A-\bm B\bm K)\bm e_t$。
+
+温度例使用
+$u_t=r_{t+1}-0.8r_t-0.3(x_t-r_t)$，得到$e_{t+1}=0.5e_t$。
+图~\ref{fig:control-temperature-regulation-tracking}固定同一初态$x_0=0$、
+同一增益$0.3$，比较$r_t=2$与上述正弦参考。
+两者误差均为$-2(0.5)^t$，但跟踪输入随参考运动持续变化。
+图中暂不施加输入约束：正弦参考的首个动作约为$1.153$，
+后文将说明安全修正会怎样改变这段误差响应。
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=\linewidth]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/control-temperature-regulation-tracking/figure.pdf}
+  \caption{同一无噪声温度模型、初态$x_0=0$与误差增益$0.3$下的调节和跟踪。
+  左列固定$r_t=2$，右列取$r_t=2+0.4\sin(\pi t/8)$；上排比较参考与实际状态，
+  下排比较维持参考的前馈与完整输入。两种任务的误差均为$e_t=-2(0.5)^t$，
+  但运动参考需要持续变化的前馈。图中输入无幅值限制，右下首个动作超过$1$，
+  因而此图不是受限执行器的安全证明。离散点之间连线仅便于阅读。}
+  \label{fig:control-temperature-regulation-tracking}
+\end{figure*}
+
+误差趋零、误差有界与始终不超过某阈值仍有区别。
+无扰动时，$|e_t|=0.5^t|e_0|$既给出收敛，也给出从首步起的范围；
+一般多维稳定矩阵可能先放大误差，需要使用$M\rho^t$而不能省掉$M$。
+只证明$\sup_t\|\bm e_t\|<\infty$不说明误差是否足够小。
+参考位于安全集内也不保证实际状态安全，必须把参考与误差范围相加后再核对约束。
+
+\subsubsection{扰动与模型偏差下的轨迹跟踪}
+真实动态与参考规划常有偏差。设实际系统为
+$\bm x_{t+1}=(\bm A+\Delta\bm A)\bm x_t+
+(\bm B+\Delta\bm B)\bm u_t+\bm d_t$，
+名义参考的实现残差为
+$\bm\eta_t=\bm A\bm r_t+\bm B\bm u_t^r-\bm r_{t+1}$。
+沿用名义前馈加反馈后，误差的完整方程为
+\begin{equation}
+  \begin{aligned}
+  \bm e_{t+1}
+  ={}&(\bm F+\Delta\bm A-\Delta\bm B\bm K)\bm e_t\\
+     &+\Delta\bm A\bm r_t+\Delta\bm B\bm u_t^r+\bm\eta_t+\bm d_t,
+  \qquad \bm F=\bm A-\bm B\bm K.
+  \end{aligned}
+  \label{eq:control-tracking-model-error}
+\end{equation}
+偏差既改变误差反馈矩阵，也使原先可实现的参考变成受迫误差来源。
+因此只验证名义$\bm F$稳定，还不足以覆盖任意模型误差。
+
+要从上述误差方程得到逐步的大小界，需要先在一种范数下控制名义矩阵的收缩。
+对稳定的$\bm F$，由\BookTheoremRef{thm:dynamical-discrete-lyapunov-equation}{定理~\ref{thm:dynamical-discrete-lyapunov-equation}}可取
+$\bm P_{\mathrm F}\succ\bm0$使
+$\bm P_{\mathrm F}-\bm F^\top\bm P_{\mathrm F}\bm F=\bm I$。
+定义加权范数$\|\bm z\|_{\bm P_{\mathrm F}}
+=(\bm z^\top\bm P_{\mathrm F}\bm z)^{1/2}$，则
+\[
+  \begin{aligned}
+  \|\bm F\bm z\|_{\bm P_{\mathrm F}}^2
+  &=\|\bm z\|_{\bm P_{\mathrm F}}^2-\|\bm z\|_2^2\\
+  &\leq\left(1-\frac1{\lambda_{\max}(\bm P_{\mathrm F})}\right)
+          \|\bm z\|_{\bm P_{\mathrm F}}^2.
+  \end{aligned}
+\]
+Lyapunov方程还给出$\bm P_{\mathrm F}\succeq\bm I$，因此括号内的系数位于$[0,1)$。
+相应诱导矩阵范数便满足$\|\bm F\|_{\bm P_{\mathrm F}}<1$；
+这不要求原来的欧氏范数也满足$\|\bm F\|_2<1$。
+
+固定这样一种向量范数及其诱导矩阵范数后，假设$\|\bm F\|\leq\rho<1$，
+$\|\Delta\bm A-\Delta\bm B\bm K\|\leq\varepsilon$且
+$q:=\rho+\varepsilon<1$。
+偏差界和以下所有大小必须在同一范数下计算，不能混用欧氏范数数值。
+若$\|\bm r_t\|\leq R_0,\|\bm u_t^r\|\leq U_0$，
+且$\|\bm\eta_t\|\leq\bar\eta,\|\bm d_t\|\leq\bar d$，令
+$D=\|\Delta\bm A\|R_0+\|\Delta\bm B\|U_0+\bar\eta+\bar d$，则
+\begin{equation}
+  \|\bm e_t\|\leq q^t\|\bm e_0\|
+         +\frac{1-q^t}{1-q}D.
+  \label{eq:control-tracking-error-bound}
+\end{equation}
+证明只需由式~\eqref{eq:control-tracking-model-error}取范数，
+再展开$\|\bm e_{t+1}\|\leq q\|\bm e_t\|+D$的几何级数。
+若受迫项趋零且齐次误差仍稳定，误差也趋零；若受迫项仅有界，
+一般只能保证$\limsup_t\|\bm e_t\|\leq D/(1-q)$。
+积分器可消除合适模型下的常值输出偏差，不能无条件抵消任意运动参考产生的时变失配。
+
+在精确温度模型中，若$|d_t|\leq0.1$，
+则$|e_t|\leq0.5^t|e_0|+0.2(1-0.5^t)$。
+若希望误差始终位于$[-\delta,\delta]$，应检查
+$|e_0|\leq\delta$及$0.5\delta+0.1\leq\delta$，
+而不只报告最终误差界。对前述正弦参考，选择$\delta=0.6$时，
+实际状态落在$[1.0,3.0]$，输入落在约$[0.059,0.741]$；
+参考范围、误差范围与输入反馈共同给出安全兼容的局部条件。
+图中的$e_0=-2$不在这个范围，不能套用这项保证。
+
+如果安全控制器把名义动作改为
+$\bm u_t=\bm u_t^r-\bm K\bm e_t+\Delta\bm u_t^{\mathrm s}$，
+精确模型的误差方程还多出$\bm B\Delta\bm u_t^{\mathrm s}$。
+修正有界时可并入误差界；修正逐渐消失时可恢复无扰动的渐近跟踪。
+若目标与安全约束冲突，修正可能始终不消失，此时必须保留安全并承认跟踪目标不可实现，
+不能同时宣称两项保证。
+
+\section{策略的约束与安全}
+\label{sec:control-safety-cbf}
+
+前面的控制目标都只看“最终稳不稳”，但很多系统在到达目标前的每一步都不能出事：自动驾驶汽车不能为了最终停稳而中途冲出行道，化工反应釜不能在逼近设定温度时短暂超压。也就是说，最终收敛或长期平均良好，并不保证过程中从不越界。安全控制要约束的是整条轨迹的每一个时刻。
+调节与跟踪已经给出误差的长期行为，安全要求还需约束到达目标以前的每一步。
+固定允许状态和动作范围以后，可以寻找让下一状态仍在范围内的动作，再将一步结论沿时间归纳。
+连续时间则要控制安全函数在整段轨迹上的变化率。
+这些条件确定安全动作集合；在其中尽量接近原调节或跟踪动作，是随后要解决的选择问题。
+
+\subsection{状态约束下的安全区域}
+一个制动系统最终停下，仍可能在停下之前越过位置边界；平均成本很小的随机系统，
+也可能有不可接受的少数路径。安全集合（safe set）直接规定允许出现的状态。
+对确定性离散闭环$\bm x_{t+1}=F_\kappa(\bm x_t)$，集合$S$安全保持的条件为
+\begin{equation}
+  F_\kappa(S)\subseteq S.
+  \label{eq:control-discrete-invariance}
+\end{equation}
+从$\bm x_0\in S$出发，应用一步条件得到$\bm x_1\in S$，
+归纳便有所有$\bm x_t\in S$。反之，若要求$S$内每个初态均不离开$S$，
+特别考察其第一步，就得到上述包含关系。因此它对确定性离散闭环既充分又必要。
+
+例如$x_{t+1}=x_t+u_t$的安全集合为$[0,\infty)$。
+反馈$u_t=-1.5x_t$给$x_{t+1}=-0.5x_t$，虽然幅值趋零，
+却使任意$x_0>0$在第一步越界；$u_t=-0.5x_t$给$x_{t+1}=0.5x_t$，
+既稳定又保持非负。图~\ref{fig:control-stability-safety}保留这一对照，
+应观察整段轨迹，而不只看最终状态。原系统能到达负半轴也只说明可达，
+不说明所选闭环应当到达那里。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/control-stability-safety/figure.pdf}
+  \caption{教学系统$x_{t+1}=x_t+u_t$从$x_0=1$出发。
+  蓝色圆点采用$u_t=-0.5x_t$，保持$x_t\geq0$；
+  红色方点采用$u_t=-1.5x_t$，第一步进入禁止的负半轴后交替衰减。
+  两者都渐近稳定，只有前者保持安全集合。浅蓝区域表示禁止状态。}
+  \label{fig:control-stability-safety}
+\end{figure}
+
+怎样在数学上保证“一旦进入安全区域就永远出不去”？关键直觉是：在安全区域的边界上，系统的运动方向必须朝内或沿边界滑行，而不能指向区域外。连续时间里这等价于要求边界处速度的法向分量不朝外；离散时间里则直接要求“下一状态仍落在集合内”。
+连续时间还需保证两个观测时刻之间也不越界。考虑控制仿射系统
+\begin{equation}
+  \dot{\bm x}_t=\bm f(\bm x_t)+\bm G(\bm x_t)\bm u_t,
+  \qquad \bm u_t\in U,
+  \label{eq:control-affine-system}
+\end{equation}
+其中$\bm x_t\in\mathbb R^n,\bm u_t\in\mathbb R^m$，
+$\bm G(\bm x)\in\mathbb R^{n\times m}$。假设$\bm f,\bm G$局部Lipschitz，
+且所选反馈给出存在且唯一的闭环解。以$C^1$函数$h$表示安全集合
+\begin{equation}
+  S=\{\bm x:h(\bm x)\geq0\}.
+  \label{eq:control-safe-set}
+\end{equation}
+\begin{definition}[正向不变集]
+\label{def:control-forward-invariance}
+若任意$\bm x_0\in S$所产生的闭环解，在其存在的全部未来时刻均位于$S$，
+称$S$对该闭环正向不变（forward invariant）。
+\end{definition}
+这是\BookDefinitionRef{def:dynamical-invariant-limit-sets}{定义~\ref{def:dynamical-invariant-limit-sets}}在可选择输入的系统中的应用：
+本节需要设计使集合保持不变的反馈，而不是只分析已给定规律。
+若要说“所有$t\geq0$”，还必须排除有限时间解爆破。
+
+若边界$\partial S=\{h=0\}$光滑且其上$\nabla h\neq\bm0$，
+内侧对应$h$增大的方向。Nagumo边界条件要求闭环速度指向内侧或与边界相切：
+\begin{equation}
+  \nabla h(\bm x)^\top
+  [\bm f(\bm x)+\bm G(\bm x)\bm u]\geq0
+  \quad\text{当 }h(\bm x)=0.
+  \label{eq:control-nagumo-boundary}
+\end{equation}
+在闭集、正则边界和适定闭环等条件下，它给出正向不变判据。
+
+边界梯度退化时，这个梯度表达式可能丢失方向信息。
+例如$h(x)=x^3$仍给出安全集$S=[0,\infty)$，但$h'(0)=0$。
+在$x=0$处，梯度不等式变成$0\cdot\dot x\geq0$，任何速度都能通过检查；
+实际取负速度却会离开$S$。因此需要直接描述集合本身允许的瞬时运动方向。
+
+对闭集$S$及$\bm x\in S$，\term{切锥}（contingent cone，亦称Bouligand切锥）
+$T_S(\bm x)$记录可以由集合内邻近点逼近的速度方向。
+具体说，$\bm v\in T_S(\bm x)$当且仅当存在正数列$\tau_k\downarrow0$与
+向量列$\bm v_k\to\bm v$，使
+\[
+  \bm x+\tau_k\bm v_k\in S\qquad\text{对每个 }k\text{ 成立}.
+\]
+这里允许逼近方向$\bm v_k$随步长变化，因而能表达曲边界的相切方向，
+并不要求沿固定直线$\bm x+\tau\bm v$前进时始终留在集合中。
+对上面的半轴，$T_S(0)=[0,\infty)$，恰好排除负速度。
+在前述正则边界上，切锥简化为
+\[
+  T_S(\bm x)=\{\bm v:\nabla h(\bm x)^\top\bm v\geq0\}.
+\]
+所以式~\eqref{eq:control-nagumo-boundary}是在正则边界处要求闭环速度属于切锥；
+梯度退化时，应依据集合的切锥核对允许方向，不能机械沿用该半空间表达。
+这项边界限制与下面的比较证明分开处理：后者直接利用沿轨迹的标量微分不等式。
+控制器还需要在接近边界时就限制动作，下面把边界条件扩展到集合附近。
+
+\subsection{安全条件下的可行动作}
+函数$h$只用符号区分安全与否，不必等于几何距离。
+动作是否安全取决于$h$沿速度的变化，链式法则给出
+\[
+  L_{\bm f}h(\bm x)=\nabla h(\bm x)^\top\bm f(\bm x),
+  \qquad
+  L_{\bm G}h(\bm x)=\nabla h(\bm x)^\top\bm G(\bm x).
+\]
+它们称为\term{Lie导数}（Lie derivative），分别表示无控制漂移与控制方向对
+安全函数变化率的贡献。只在边界要求\(\dot h\geq0\)，还没有规定控制器在安全区域内部怎样行动。可用\(\dot h\geq-\gamma h\)、\(\gamma>0\)限制安全余量的下降：内部允许下降，接近\(h=0\)时允许的下降也趋零，边界上恰好恢复原来的非负条件。将线性函数\(\gamma h\)换成保留这些性质的递增函数，就得到下面的通用表达。
+本章的扩展类$\mathcal K$函数指连续、严格递增、
+局部Lipschitz且$\alpha(0)=0$的$\alpha:\mathbb R\to\mathbb R$；
+例如$\alpha(r)=\gamma r,\gamma>0$。局部Lipschitz条件用于标量比较系统的唯一性。
+
+\begin{definition}[零化控制屏障函数]
+\label{def:control-cbf}
+若在包含$S$的开区域$D$中，每个状态都存在$\bm u\in U$使
+$L_{\bm f}h(\bm x)+L_{\bm G}h(\bm x)\bm u\geq-\alpha(h(\bm x))$，
+则称$h$为该区域上的零化控制屏障函数（control barrier function, CBF）。
+其上确界表达为
+\begin{equation}
+  \sup_{\bm u\in U}
+  \{L_{\bm f}h(\bm x)+L_{\bm G}h(\bm x)\bm u\}
+  \geq-\alpha(h(\bm x)),
+  \label{eq:control-cbf-existence}
+\end{equation}
+并要求有实际动作满足该阈值；特别是上确界恰等于阈值时，必须能够取到。
+\end{definition}
+CBF把“留在区域内”变成每个状态可检查的动作不等式。
+当$U$紧且动作函数连续时，上确界可取到，数值不等式就足够；
+对非紧$U$，若上确界严格大于阈值，也能选到满足阈值的动作，
+不必要求无穷大的上确界被取到。真正需要的是以下集合非空：
+\begin{equation}
+  K_{\mathrm{cbf}}(\bm x)=
+  \{\bm u\in U:L_{\bm f}h(\bm x)+L_{\bm G}h(\bm x)\bm u
+                      \geq-\alpha(h(\bm x))\}.
+  \label{eq:control-cbf-action-set}
+\end{equation}
+执行器约束已经通过$\bm u\in U$取交集，不能先忽略输入上限设计动作，
+再默认饱和后的动作仍符合屏障条件\scite{math-ames2017cbf}
+
+\begin{theorem}[CBF条件保证正向不变]
+\label{thm:control-cbf-invariance}
+设式~\eqref{eq:control-affine-system}及安全函数满足上述正则条件。
+若反馈$\bm u=\kappa(\bm x)$局部Lipschitz，并在包含$S$的开区域$D$中始终满足
+$\kappa(\bm x)\in K_{\mathrm{cbf}}(\bm x)$，
+则$S$在相应闭环解存在的时间区间内正向不变。
+\end{theorem}
+\begin{proof}
+沿任意闭环解记$r_t=h(\bm x_t)$，链式法则和CBF约束给出
+$\dot r_t\geq-\alpha(r_t)$。考虑比较系统
+\[
+  \dot z_t=-\alpha(z_t),\qquad z_0=r_0\geq0.
+\]
+$\alpha$局部Lipschitz，比较系统局部解唯一，且$z=0$是平衡解；
+从非负初值出发的解不能穿过零点。又因$\alpha$严格递增且$\alpha(0)=0$，
+$z_t$留在$[0,z_0]$内，所以比较解在任意有限时间存在。
+为验证微分不等式中的$r_t$也不低于$z_t$，在轨迹位于$D$的任一紧时间区间上，
+取$\alpha$在两条标量轨迹值域所在紧区间的Lipschitz常数$L$，并令
+$q_t=\max\{z_t-r_t,0\}$。在$z_t>r_t$处，
+\[
+ \dot q_t=\dot z_t-\dot r_t
+ \leq-\alpha(z_t)+\alpha(r_t)\leq Lq_t.
+\]
+正部函数绝对连续，且在其零集上导数几乎处处为零，故这个不等式几乎处处成立。
+由$q_0=0$可得$q_t\leq L\int_0^tq_s\,\mathrm ds$；
+\BookLemmaRef{lem:action-state-gronwall}{引理~\ref{lem:action-state-gronwall}}遂给出$q_t=0$，即$r_t\geq z_t\geq0$。
+因为$D$是包含$S$的开区域，若轨迹离开$S$，必先在$D$中穿过$h=0$进入$h<0$，
+与比较不等式矛盾。故在闭环解存在的全部时间内，$\bm x_t\in S$。
+
+对$\alpha(r)=\gamma r$还可以直接验证：
+\[
+  \frac{\mathrm d}{\mathrm dt}(e^{\gamma t}r_t)
+  =e^{\gamma t}(\dot r_t+\gamma r_t)\geq0.
+\]
+所以$r_t\geq e^{-\gamma t}r_0\geq0$。
+当$r=0$时约束退化为$\dot r\geq0$，与边界条件一致。
+\end{proof}
+这项证明依赖动作约束始终可行、反馈与动态足够规则，以及动作按连续时间模型实际施加。
+某一个采样点的动作朝内，不能代替这些沿轨迹的条件。
+
+回到离散温度系统，令$S=[0,3],U=[0,1]$且无噪声。
+下一步安全要求$0\leq0.8x+u\leq3$，因此精确的一步安全动作集合为
+\begin{equation}
+  K_{\mathrm{safe}}(x)
+  =[\,\max\{0,-0.8x\},\ \min\{1,3-0.8x\}\,].
+  \label{eq:control-temperature-safe-actions}
+\end{equation}
+对$x\in[0,3]$，下端为$0$，上端至少为$0.6$，所以每个安全状态都有可行动作。
+固定目标反馈$u=0.4-0.3(x-2)=1-0.3x$在该区间取值于$[0.1,1]$，
+下一状态为$1+0.5x\in[1,2.5]$。它不需要修正就同时实现输入可行、状态安全与趋于$2$。
+这个显式包含关系比“反馈稳定”多证明了整个区间的安全保持。
+
+\subsection{可行约束下的反馈修正}
+控制屏障函数（CBF）要解决的工程问题是：当原本用于调节/跟踪的“理想动作”会把系统推出安全边界时，如何在“保证不出界”的前提下，尽量少地改动这个理想动作？做法是给每个状态算出一个“安全允许的动作集合”，再把理想动作投影到这个集合上——既守住安全，又让实际动作尽可能接近原本想要的动作。
+调节或跟踪已经提出名义动作$\bm u_{\mathrm{nom}}$，但该动作可能违反安全条件。
+如果当前安全动作集合非空，可以按指定的二次距离寻找最近的可行动作：
+\begin{equation}
+  \begin{aligned}
+  \bm u^\ast(\bm x)\in\argmin_{\bm u\in U}\quad&
+    \tfrac12(\bm u-\bm u_{\mathrm{nom}})^\top
+              \bm H(\bm u-\bm u_{\mathrm{nom}})\\
+  \text{s.t.}\quad&
+    L_{\bm f}h(\bm x)+L_{\bm G}h(\bm x)\bm u
+       \geq-\alpha(h(\bm x)),
+  \end{aligned}
+  \label{eq:control-cbf-qp}
+\end{equation}
+其中$\bm H\succ\bm0$规定修改各输入分量的代价。
+CBF约束对输入线性；$U$为多面体时这是二次规划（quadratic program, QP），
+一般非空闭凸$U$则给出闭凸约束下的二次优化问题。
+因此可用凸约束优化方法计算当前动作。
+目标只比较当前动作的距离，并不使修正后的整条轨迹保持原LQR成本最优。
+相关工具可参考\BookChapterRef{chap:constrained-optimization}{卷三“约束优化与对偶”章}。
+
+\begin{example}[一维积分器上的安全投影]
+\label{ex:control-cbf-scalar-projection}
+考虑$\dot x_t=u_t$、$S=[0,\infty)$、$h(x)=x$及$\alpha(h)=\gamma h$。
+CBF条件为$u\geq-\gamma x$。若$U=\mathbb R,H=1$，解为
+\begin{equation}
+  u^\ast(x)=\max\{u_{\mathrm{nom}}(x),-\gamma x\}.
+  \label{eq:control-cbf-scalar-projection}
+\end{equation}
+在$x=0.2,\gamma=1$且名义动作恒为$u_{\mathrm{nom}}=-1$时，动作修正为$-0.2$。
+持续应用该反馈，状态按$x_t=0.2e^{-t}$接近零而不穿过边界。
+若执行器另要求$u\leq-0.5$，此处与$u\geq-0.2$冲突，QP不可行；
+安全函数的形式本身不能保证执行器能够提供所需动作。
+\end{example}
+
+固定状态后，正定二次目标随动作范数趋于无穷而趋于无穷，这种性质称为强制性；它阻止最小化序列逃向无穷。若可行域非空且闭，这便保证极小点存在；若可行域还凸，严格凸性便保证动作唯一。可行域保持凸性而缺少闭性时，严格凸只说明已有极小点至多一个，不能保证下确界取到。即使每个状态都有唯一解，映射$\bm x\mapsto\bm u^\ast(\bm x)$
+也未必局部Lipschitz：约束梯度退化、活跃约束切换或可行域突变可能破坏正则性。
+例如参数化问题
+\[
+ \min_{u\in\mathbb R}\frac12u^2\quad\text{使}\quad xu\geq|x|^{3/2}
+\]
+对每个$x$都有唯一解：$u^*(0)=0$，$x\neq0$时$u^*(x)=\operatorname{sgn}(x)\sqrt{|x|}$。
+但是$|u^*(x)-u^*(0)|/|x|=1/\sqrt{|x|}$无界，所以反馈在零处不局部Lipschitz；此处约束对动作的梯度$x$也退化为零。
+应用不变性定理前，还需检查约束资格条件，即约束梯度是否具备相应优化定理所需的非退化性，并据参数化优化结果核验反馈的规则性。逐点唯一性本身不能完成这一步。
+
+\begin{example}[圆形障碍外的安全修正]
+\label{ex:control-cbf-obstacle}
+对平面单积分器$\dot{\bm p}_t=\bm u_t$，
+障碍中心为$\bm c$、半径为$r>0$。取
+$h(\bm p)=\|\bm p-\bm c\|_2^2-r^2$，安全区域是圆外。
+$\alpha(h)=\gamma h$给出
+\begin{equation}
+  2(\bm p-\bm c)^\top\bm u
+  \geq-\gamma(\|\bm p-\bm c\|_2^2-r^2).
+  \label{eq:control-cbf-obstacle-constraint}
+\end{equation}
+在边界$\bm p-\bm c=(r,0)^\top$，名义动作$(-v,0)^\top,v>0$指向障碍内部，
+左侧为$-2rv<0$。无其他输入约束且$\bm H=\bm I$时，
+QP将动作投影到半空间$2(\bm p-\bm c)^\top\bm u\geq0$，
+此处修正为$\bm u^\ast=\bm0$。
+若名义动作含有切向分量，投影保留切向分量，只移除向内的法向分量。
+停在边界是安全的，却未必能够完成绕行任务。
+\end{example}
+
+多个$h_i(\bm x)\geq0$会产生多条动作约束。
+每条单独可行，不代表它们与执行器限制联合可行；障碍、制动能力或转向限制可能相互冲突。
+加入松弛变量使优化器返回数值解，同时也允许原安全条件被违反，
+因而不能再声明原来的硬不变性保证。应明确故障处理、可恢复区域或新的风险口径。
+图~\ref{fig:control-barrier-projection}用$(x,u)$平面显示一维投影：
+每个固定状态的安全动作是一条竖直半直线，修正沿这条半直线寻找最近点。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/control-barrier-projection/figure.pdf}
+  \caption{教学积分器$\dot x_t=u_t$、安全集合$x\geq0$及$\alpha(h)=h$。
+  灰色虚线$u=-x$上方为允许动作；蓝色实线为名义动作$u=-1$，
+  绿色虚线为投影$u^\ast=\max\{-1,-x\}$。
+  $x\geq1$处无需修正，$x=0.2$处修正为$-0.2$。
+  图中没有额外执行器限制，不能据此判断有限输入范围下的联合可行性。}
+  \label{fig:control-barrier-projection}
+\end{figure}
+\FloatBarrier
+
+对无噪声温度模型，先记式~\eqref{eq:control-temperature-safe-actions}中安全动作区间的两端为
+\[
+  \underline u_{\mathrm{safe}}(x)=\max\{0,-0.8x\},
+  \qquad
+  \overline u_{\mathrm{safe}}(x)=\min\{1,3-0.8x\}.
+\]
+它们同时考虑执行器范围与下一状态的安全要求，因此是依赖当前状态的安全动作界。
+在已经核验非空的区间$x\in[0,3]$上，闭区间投影写成
+\[
+  u_t=\min\{\overline u_{\mathrm{safe}}(x_t),
+       \max\{\underline u_{\mathrm{safe}}(x_t),u_{\mathrm{nom},t}\}\}.
+\]
+前述正弦跟踪从$x_0=0$出发，名义首个动作为
+$0.4+0.4\sin(\pi/8)+0.6\approx1.153$，投影改为$u_0=1$。
+于是$x_1=1$，而不是无约束的$1.153$；此时
+$e_1=1-[2+0.4\sin(\pi/8)]\approx-1.153$，不再等于$0.5e_0=-1$。
+由于每步安全动作集合非空，重复投影仍保持$0\leq x_t\leq3$及$0\leq u_t\leq1$，
+但跟踪误差须按增加了修正项的方程重新分析。
+目标参考持续要求超出能力的输入时，不能同时保持精确跟踪；
+安全投影的“最近”也不等于全时域最优。
+
+\subsection{扰动与离散执行下的安全保证}
+上面的安全保证针对的是已知的精确连续模型；真实系统还会遇到两类现实问题：未建模的外力扰动，以及数字控制器并非连续动作、而是每隔\(\Delta\)秒才更新一次。前者可能把本来朝内的运动顶出边界，后者则可能在两次更新之间让状态悄悄越界——采样时刻安全不代表区间内始终安全。二者都要求在设计时额外预留裕量。
+名义屏障条件只计算模型给出的变化率。真实连续动态多出加性扰动时，
+安全函数的导数还多出$\nabla h(\bm x)^\top\bm d_t$。
+在$\|\bm d_t\|_2\leq\delta$下，Cauchy--Schwarz不等式给出这项的下界
+$-\|\nabla h(\bm x)\|_2\delta$。为补偿这个最坏下降，采用充分条件
+\begin{equation}
+  L_{\bm f}h+L_{\bm G}h\,\bm u
+  \geq-\alpha(h)+\|\nabla h\|_2\delta.
+  \label{eq:control-robust-cbf}
+\end{equation}
+有有效上界的模型误差可并入同一裕量。没有经过验证的误差界时，
+任意加一个“安全系数”只是经验缓冲，不能推出鲁棒正向不变性。
+
+离散温度系统若$|w_{t+1}|\leq\delta$，最坏扰动下的安全动作集合为
+\begin{equation}
+  K_{\mathrm{safe}}^\delta(x)
+  =[\,\max\{0,\delta-0.8x\},\
+       \min\{1,3-\delta-0.8x\}\,].
+  \label{eq:control-temperature-robust-actions}
+\end{equation}
+当$0\leq\delta\leq0.6$，该集合对所有$x\in[0,3]$非空：
+下端不超过$1$，未截断区间宽度$3-2\delta$非负，且上端在$x=3$也不小于零。
+若$\delta>0.6$，从$x=3$面对正向最大扰动，即使取最小输入$u=0$也会越界，
+所以整个$[0,3]$不能在这类扰动下保持不变。
+固定目标的名义反馈产生$1+0.5x+w_{t+1}$，对$\delta\leq0.5$已经落在$[0,3]$，
+因而无需修正。高斯噪声没有有限的确定幅值界，不能套用这个逐路径保证；
+概率风险要按第~\ref{chap:decision-theory-and-dynamic-risk}章的风险口径另行定义。
+
+数字控制器每隔$\Delta$更新动作，并在区间内保持不变。
+采样点满足连续CBF约束，不自动保证区间内部满足，因为状态和安全导数仍在变化。
+例如对固定保持动作，若
+$g(\bm x,\bm u)=L_{\bm f}h+L_{\bm G}h\,\bm u+\alpha(h)$
+在已核验区域内对状态的Lipschitz常数为$L_g$，且速度有界$\|\dot{\bm x}\|\leq M$，
+则区间内$g$最多降低$L_gM\Delta$。
+采样时预留这一裕量才可保证区间内$g\geq0$；区域与速度界本身也须有效，
+不能假定在尚未证明安全的区域外仍成立。
+
+也可以直接构造离散屏障条件
+\[
+  h(\bm x_{t+1})-h(\bm x_t)\geq-\alpha_{\mathrm d}(h(\bm x_t)),
+\]
+并要求每个$r\geq0$都有$0\leq\alpha_{\mathrm d}(r)\leq r$。
+这样$h(\bm x_t)\geq0$便推出
+$h(\bm x_{t+1})\geq h(\bm x_t)-\alpha_{\mathrm d}(h(\bm x_t))\geq0$，
+可逐步归纳安全性。常用$\alpha_{\mathrm d}(r)=\gamma r$取$0<\gamma\leq1$。
+若离散模型只是连续系统的采样映射，采样点安全仍不等于区间安全，
+还需检查采样间轨迹；在预测时域中直接验证整段连续轨迹是另一种办法。
+
+一阶屏障条件假设“当下的动作能立刻改变安全函数的变化率”。但在有些系统里动作的影响要隔一层才传到安全量：例如汽车的油门/刹车改变的是加速度，并不直接改变位置，而是先改变速度、再由速度改变位置。这时在边界上单凭当前动作无法立刻扭转位置的外移，必须把速度（制动距离）也纳入安全判断。
+一阶CBF约束还可能没有可调节的动作：若$L_{\bm G}h=\bm0$，
+$\dot h$不含当前输入，便不能直接通过选择动作改变它。
+例如双积分器$\dot p_t=v_t,\dot v_t=u_t$用
+$h(p)=p-p_{\min}$保护位置下界，有$\dot h=v$、$\ddot h=u$，
+输入直到对$h$求二阶导数才第一次显式出现。
+这个首次出现输入的导数阶数称为\term{相对阶}（relative degree），本例的相对阶为$2$。
+此时需要递归控制更高导数，或把速度与制动距离纳入安全函数。
+取$\psi_1=v+k_1h$（$k_1>0$），若再约束
+\[
+  u+k_1v+k_2\psi_1\geq0,\qquad k_2>0,
+\]
+则$\dot\psi_1\geq-k_2\psi_1$。在初态同时满足$h\geq0,\psi_1\geq0$、
+约束始终可行且闭环适定时，比较原理先保证$\psi_1\geq0$，
+再由$\dot h\geq-k_1h$保证$h\geq0$。
+新增的速度条件不可省略，执行器幅值也可能使这条高阶约束不可行。
+
+例如$p-p_{\min}=0.1,v=-1$，最大制动加速度为$2$，
+最快停止距离$v^2/(2u_{\max})=0.25$已超过剩余距离。
+此时位置虽在允许区间，任何允许动作也不能避免后续越界。
+安全初态应同时考虑位置与速度；把一阶公式套到$L_{\bm G}h=0$处，
+只会得到与输入无关的条件。
+
+图~\ref{fig:reader-braking-viability}把位置条件与制动能力放在同一状态平面中。
+记余距$d=p-p_{\min}$，仍取最大制动加速度为$2$，并只保护位置下界。
+当$v<0$时，制动所需距离为$v^2/4$，所以能否保住下界还要检查$d\geq v^2/4$。
+图中两个起点的速度同为$-1$，均满足当前位置允许的$d\geq0$，
+但只有余距为$0.3$的起点能在边界前停下；余距为$0.1$的起点即使用最大制动也会越界。
+这里的曲线由这一简化模型的制动距离求出；具体高阶CBF约束仍须另查其初始条件与可行性。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=107mm]{figures/00-shared/mathematical-preliminaries-lower/02-dynamical-systems-control-decision-and-games/matplotlib/reader-braking-viability/figure.pdf}
+  \caption{双积分器的位置约束与制动可行域。取$\dot d=v$、$\dot v=u$、$|u|\leq2$，
+  仅要求$d\geq0$。绿底表示能够通过制动保住下界的状态；在$v<0$部分，
+  其边界为$v=-\sqrt{4d}$。两条带箭头的曲线均从$v=-1$出发，按$u=2$运行至停止，
+  空心点为停止状态。实线从$d=0.3$停在$d=0.05$；虚线从$d=0.1$出发，
+  在停止前已经越界，最终到达$d=-0.15$。本图为无量纲解析教学例子。}
+  \label{fig:reader-braking-viability}
+\end{figure}
+
+CBF还要求用于计算约束的状态信息可靠。
+若只有估计值，应先给估计误差集合界或概率模型，再收紧安全集合或构造输出反馈屏障。
+把估计均值直接当作真实状态代入，只能验证估计轨迹，
+不能从有界误差协方差自动推出真实轨迹的硬安全。
+
+\section{本章小结}
+\label{sec:control-theory-summary}
+
+一个可实施策略既要遵守信息时序，也要符合执行器能够改变的方向。
+可控、可观测要求处理全部状态方向；可稳定只要求不可控模式自行衰减，
+可检测只要求不可观测模式自行衰减。
+它们为设计提供结构条件，真正的轨迹行为仍由闭环矩阵、误差动态或Lyapunov不等式决定。
+增益还会改变输入用力和瞬态响应，所以不同稳定反馈并非可以不加区别地互换。
+
+在同一温度模型中，固定目标$2$需要平衡输入$0.4$，
+再加误差反馈才得到$e_{t+1}=0.5e_t$。
+运动参考改用$u_t^r=r_{t+1}-0.8r_t$抵消参考变化，
+同一个稳定误差系统便能服务于跟踪。常值扰动、时变扰动和模型偏差改变这一结论：
+合适的积分增广可以消除常值输出偏差，持续一般扰动通常只允许声明误差界，
+非零随机噪声则应区分均值收敛、协方差有界与路径收敛。
+
+Riccati方法在特定二次成本下选择反馈。有限时域的逐步配方保持二次形式；
+确定性无折扣无限时域还需可稳定、成本可检测及权重条件，
+才能同时得到稳定化与成本最优性。输出反馈通过估计连接实际信息，
+其确定性谱分离和随机稳态误差条件各有适用范围，
+不能把它们推广成任意观测、约束或模型失配下的保证。
+
+安全性约束全过程。对无噪声温度系统，固定目标反馈已经保持
+$0\leq u\leq1,0\leq x\leq3$；同一增益的运动参考却可能在初始纠偏时要求过大输入。
+一步安全集合或连续屏障约束可以修正动作，但修正后的调节、跟踪与价值必须重新核验。
+约束不可行、扰动无有效上界、采样间行为未检查或状态估计不可靠时，
+都不能沿用名义安全结论。
+第~\ref{chap:decision-theory-and-dynamic-risk}章将在这些可实施策略之上建立统一的
+收益、风险与价值比较；目标可达、误差收敛、轨迹安全和价值最优仍是需要分别回答的问题。

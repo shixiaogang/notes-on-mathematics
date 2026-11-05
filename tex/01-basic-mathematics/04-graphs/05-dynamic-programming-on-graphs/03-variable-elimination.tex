@@ -1,0 +1,202 @@
+% 第5章第3节：变量消元（问题与思路、算法实现、算法分析、中间函数与填充边、消元次序的影响）。
+
+\section{变量消元}
+\label{sec:graph-variable-elimination}
+
+一般依赖图可能有环，局部函数也可能读取三个以上变量，被汇总的变量可能同时连着多个尚未处理的变量。这时不再有天然的“一侧”，但“汇总一个变量”仍可以写成对局部函数集合的一般操作。它对任意次序都给出正确结果，中间表的大小却随次序变化，这一差别是后面几节的出发点。
+
+\subsection{问题与思路}
+\label{sec:graph-dp-elimination-idea}
+
+输入是一般的局部函数之和，即式~\eqref{eq:graph-dp-local-sum}，依赖结构可以有环，作用域可以含三个以上变量；输出与第~\ref{sec:graph-dp-problem}小节相同，有时还要求保留变量集$Q$上的最小成本表。例子仍是表~\ref{tab:graph-dp-ternary-tables}中的$F=\phi_A+\phi_B$，枚举已得$F^\star=0$、$\bm x^\star=(0,0,1,0)$。
+
+链上的第一步是对$x_1$取最小，因为$x_1$只出现在$\phi_{1,2}$中，其余项与它无关。一般情形下同样处理：要汇总变量$x_i$，先找出当前全部作用域含$i$的函数，记为$\mathcal F_i$；它们的作用域之并去掉$i$，记为$R_i$。不含$i$的函数与$x_i$无关，可以留在最小化之外；含$i$的函数则必须一起处理。于是固定$R_i$中变量的取值后，把$\mathcal F_i$中的函数相加，再对$x_i$取最小，得到一个新函数
+\begin{equation}
+\psi_i(\bm x_{R_i})=\min_{x_i\in\mathcal X_i}\sum_{f\in\mathcal F_i}f .
+\label{eq:graph-dp-elimination-step}
+\end{equation}
+然后从当前函数集合中删去$\mathcal F_i$，加入$\psi_i$；不含$i$的函数保持原样。这一操作称为消去$x_i$，逐个消去变量的方法称为\term{变量消元}（variable elimination）。
+
+消去$x_i$可以理解为替$x_i$提前做好决定。$x_i$的好坏只取决于$R_i$中那些与它同在某个函数里的变量；对这些变量的每一种取值，先算出$x_i$最好取什么、最少付多少，写成一张以$\bm x_{R_i}$为索引的表，此后其余变量只需查这张表，不必再关心$x_i$。$\psi_i$就是以$R_i$为接口的接口表，树上的消息是$R_i$只含父点时的特例。与树上一样，最小化丢掉了达到者，所以计算$\psi_i$时要同时记下回溯表$b_i(\bm x_{R_i})$，即达到最小值的$x_i$。
+
+在四变量例子中消去$x_1$：只有$\phi_A$含$1$，$R_1=\{2,3\}$。对$(x_2,x_3)=(0,0),(0,1),(1,0),(1,1)$，分别比较$x_1=0,1$两行，得到
+\[
+\psi_1(x_2,x_3)=\bigl(\min(1,0),\ \min(0,2),\ \min(2,1),\ \min(+\infty,2)\bigr)=(0,\,0,\,1,\,2),
+\]
+达到最小值的$x_1$依次为$1,0,1,1$。消元后的函数集合是$\{\psi_1,\phi_B\}$。它没有改变剩余变量的最优成本，可以逐项核对：例如取$(x_2,x_3,x_4)=(1,0,1)$，原问题对$x_1$求最小值为$\min\bigl(\phi_A(0,1,0)+\phi_B(1,0,1),\ \phi_A(1,1,0)+\phi_B(1,0,1)\bigr)=\min(2,1)=1$，新集合给出$\psi_1(1,0)+\phi_B(1,0,1)=1+0=1$，两者相同。第~\ref{sec:graph-dp-elimination-analysis}小节将证明这种一致对每个剩余配置、每一步消元都成立。
+
+\subsection{算法实现}
+\label{sec:graph-dp-elimination-algorithm}
+
+\paragraph{函数表的数据结构}
+每个函数存为一个作用域和一张稠密表。作用域是按编号排好的变量列表$(j_1,\ldots,j_r)$；表是长度为$\prod_{t}|\mathcal X_{j_t}|$的数组，按作用域的字典序排列，即$(x_{j_1},\ldots,x_{j_r})$像多位数一样以$x_{j_r}$为最低位递增。给定一组取值，按混合进制算出下标就能读出对应的项，前面统计开销时“读取一项按常数时间计”指的就是这一步。本节例子中的表都按这种次序列出，例如作用域为$\{2,3\}$的表依次对应$(x_2,x_3)=(0,0),(0,1),(1,0),(1,1)$。另外为每个变量维护一张索引，列出当前作用域含它的函数，消去$x_i$时据此直接取出$\mathcal F_i$，不必扫描全部函数。
+
+\paragraph{变量消元的实现}
+变量消元需要事先给定一个\term{消元次序}（elimination order），即全部变量的一个排列。次序与局部函数表一样由输入给定，运行中不变。算法维护三项状态：
+\begin{itemize}
+  \item 当前函数集合$\mathcal F$：每个函数带有作用域和取值表，连同上一段的变量索引；初值为原局部函数集合$\{\phi_a:a\in A\}$；
+  \item 已消去的变量集合$Z$：初值为$\varnothing$；
+  \item 回溯表$b_i(\bm x_{R_i})$：每消去一个变量$x_i$保存一张，记录达到最小值的$x_i$；初始没有。
+\end{itemize}
+每一步按次序取下一个变量$x_i$，做三件事：
+\begin{itemize}
+  \item 收集：由变量索引取出$\mathcal F_i$，把它们的作用域合并后去掉$i$，得到$R_i$；
+  \item 计算：对$\bm x_{R_i}$的每个取值，枚举$x_i$的全部状态，把$\mathcal F_i$中各函数的值相加，取最小值记为$\psi_i(\bm x_{R_i})$，达到它的$x_i$（并列取编号最小者）记为$b_i(\bm x_{R_i})$；
+  \item 替换：从$\mathcal F$中删去$\mathcal F_i$，加入$\psi_i$，同步更新$R_i$中各变量的索引，并把$i$加入$Z$。
+\end{itemize}
+全部变量消去后停止，此时$\mathcal F$中只剩不含变量的函数，即若干常数，它们的和就是最小成本。若它为$+\infty$，报告不可行；否则按消元的逆序恢复配置：轮到$x_i$时令$x_i=b_i(\bm x_{R_i})$。$R_i$中的变量都比$x_i$晚消去，在逆序中排在$x_i$之前，查表时它们已经取定。
+
+\begin{algorithm}[变量消元求最小成本]
+\label{alg:graph-dp-variable-elimination}
+输入：有限状态集合、局部函数表、一个消元次序。输出：最小成本，以及（若需要）一个最优配置。
+\begin{enumerate}
+  \item 按次序取下一个变量$x_i$，找出当前全部含$i$的函数$\mathcal F_i$，确定$R_i$。
+  \item 对$\bm x_{R_i}$的每个取值，枚举$x_i$的全部状态，按式~\eqref{eq:graph-dp-elimination-step}求$\psi_i$；同时把达到最小值的$x_i$（并列取编号最小者）记入回溯表$b_i(\bm x_{R_i})$。
+  \item 用$\psi_i$替换$\mathcal F_i$，重复直到变量全部消去，剩下的常数之和即最小成本。
+  \item 若最小成本为$+\infty$，报告不可行；否则按消元的逆序依次令$x_i=b_i(\bm x_{R_i})$。由于$R_i$中的变量都比$x_i$晚消去，查表时它们已经取定。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在四变量例子上按次序$(1,4,2,3)$消元。表~\ref{tab:graph-dp-elimination-trace}汇总了每一步，图~\ref{fig:graph-dp-elimination-trace}画出了函数集合的变化。逐步看：
+\begin{itemize}
+  \item 消去$x_1$：如上一小节，$\mathcal F_1=\{\phi_A\}$，$R_1=\{2,3\}$，$\psi_1=(0,0,1,2)$，$b_1=(1,0,1,1)$。函数集合变为$\{\psi_1,\phi_B\}$。
+  \item 消去$x_4$：只有$\phi_B$含$4$，$R_4=\{2,3\}$。对$(x_2,x_3)$的四种取值比较$x_4=0,1$：$\min(2,1)$、$\min(0,+\infty)$、$\min(+\infty,0)$、$\min(1,2)$，得$\psi_4=(1,0,0,1)$，$b_4=(1,0,1,0)$。函数集合变为$\{\psi_1,\psi_4\}$。
+  \item 消去$x_2$：$\psi_1$和$\psi_4$都含$2$，要先相加再对$x_2$取最小，$R_2=\{3\}$。$x_3=0$时两个候选为$\psi_1(0,0)+\psi_4(0,0)=1$与$\psi_1(1,0)+\psi_4(1,0)=1$，并列，按约定取$x_2=0$；$x_3=1$时候选为$0+0=0$与$2+1=3$，取$x_2=0$。新函数记为$\psi_2'=(1,0)$，以区别于第~\ref{sec:graph-dp-fill-in}小节先消$x_2$时的$\psi_2$；$b_2=(0,0)$。
+  \item 消去$x_3$：只剩$\psi_2'$，$R_3=\varnothing$，$\min(1,0)=0$在$x_3=1$处达到，$b_3=1$。函数集合只剩常数$0$，即最小成本。
+\end{itemize}
+最小成本有限，按逆序$3,2,4,1$回溯：
+\begin{itemize}
+  \item $x_3=b_3=1$；
+  \item $x_2=b_2(x_3{=}1)=0$；
+  \item $x_4=b_4(x_2{=}0,x_3{=}1)=0$；
+  \item $x_1=b_1(x_2{=}0,x_3{=}1)=0$。
+\end{itemize}
+恢复的配置为$(0,0,1,0)$，代回表~\ref{tab:graph-dp-ternary-tables}得$\phi_A(0,0,1)+\phi_B(0,1,0)=0+0=0$，与枚举结果一致。
+
+\begin{table}[!htb]
+  \centering
+  \caption{按次序$(1,4,2,3)$对四变量例子消元。新函数与回溯表的取值按剩余变量的字典序列出：作用域为$\{2,3\}$时依次对应$(x_2,x_3)=(0,0),(0,1),(1,0),(1,1)$，作用域为$\{3\}$时对应$x_3=0,1$。}
+  \label{tab:graph-dp-elimination-trace}
+  \small
+  \begin{tabular}{@{}cccccc@{}}
+    \toprule
+    消去 & 取出$\mathcal F_i$ & $R_i$ & 新函数$\psi_i$ & 回溯表$b_i$ & 消元后的$\mathcal F$\\
+    \midrule
+    $x_1$ & $\phi_A$ & $\{2,3\}$ & $(0,0,1,2)$ & $(1,0,1,1)$ & $\{\psi_1,\phi_B\}$\\
+    $x_4$ & $\phi_B$ & $\{2,3\}$ & $(1,0,0,1)$ & $(1,0,1,0)$ & $\{\psi_1,\psi_4\}$\\
+    $x_2$ & $\psi_1,\psi_4$ & $\{3\}$ & $(1,0)$ & $(0,0)$ & $\{\psi_2'\}$\\
+    $x_3$ & $\psi_2'$ & $\varnothing$ & $0$ & $1$ & $\{0\}$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=147.581mm]{figures/01-basic-mathematics/04-graphs/tikz/c5-elimination-trace/figure.pdf}
+  \caption{按次序$(1,4,2,3)$消元时函数集合的逐步变化。圆点是变量，方块是当前函数，连线表示函数读取该变量；黄色变量是下一步要消去的变量，绿色方块是刚产生的新函数，虚线圆是已消去的变量。每个面板下方是新函数与回溯表，取值按作用域的字典序列出。底行按消元的逆序查回溯表，恢复最优配置$(0,0,1,0)$。}
+  \label{fig:graph-dp-elimination-trace}
+\end{figure*}
+
+\subsection{算法分析}
+\label{sec:graph-dp-elimination-analysis}
+
+\paragraph{正确性}
+表~\ref{tab:graph-dp-elimination-trace}中的每一步都没有改变剩余变量的最优成本，这不是巧合。设已经按某个次序消去了下标集合$Z$中的变量，把剩余变量的一个配置记为$\bm y=\bm x_{V\setminus Z}$。消元过程保持下面的不变量：
+\begin{equation}
+\sum_{f\in\mathcal F}f(\bm y)=\min_{\bm x_Z}F(\bm x_Z,\bm y)\qquad\text{对每个剩余配置}\ \bm y .
+\label{eq:graph-dp-elimination-invariant}
+\end{equation}
+
+\begin{theorem}[变量消元的正确性]
+\label{thm:graph-dp-elimination}
+设各变量的状态集合有限，总成本由式~\eqref{eq:graph-dp-local-sum}给出。从$\mathcal F=\{\phi_a:a\in A\}$出发，按任意次序反复执行式~\eqref{eq:graph-dp-elimination-step}的消元操作，则每一步之后不变量~\eqref{eq:graph-dp-elimination-invariant}都成立。特别地，消去全部变量后剩下的常数（无变量的函数之和）等于$\min_{\bm x}F(\bm x)$；只消去$V\setminus Q$中的变量时，剩余函数之和是关于$\bm x_Q$的表，在每个$\bm x_Q$处等于$\min_{\bm x_{V\setminus Q}}F(\bm x)$。
+\end{theorem}
+
+\begin{proof}
+开始时$Z=\varnothing$，当前函数之和就是$F$，不变量成立。设消去$x_i$之前不变量对$Z$成立。把当前函数分为含$i$的$\mathcal F_i$与其余部分$\mathcal F_{-i}$。固定$Z\cup\{i\}$以外的变量后，$\mathcal F_{-i}$中各函数的值与$x_i$无关，按式~\eqref{eq:graph-dp-min-rules}可以移出对$x_i$的最小化：
+\[
+\min_{x_i}\Bigl[\sum_{f\in\mathcal F_{-i}}f+\sum_{f\in\mathcal F_i}f\Bigr]
+=\sum_{f\in\mathcal F_{-i}}f+\min_{x_i}\sum_{f\in\mathcal F_i}f
+=\sum_{f\in\mathcal F_{-i}}f+\psi_i .
+\]
+右端正是消元后的函数之和。左端由不变量等于$\min_{x_i}\min_{\bm x_Z}F$，再由式~\eqref{eq:graph-dp-min-rules}的第一条等于$\min_{\bm x_{Z\cup\{i\}}}F$。所以不变量对$Z\cup\{i\}$成立。对消元步数归纳即得结论。
+\end{proof}
+
+逆序回溯的正确性与树上相同：每一步选的$x_i$达到式~\eqref{eq:graph-dp-elimination-step}的最小值，于是按逆序逐步代回不变量，恢复的配置使$F$等于最小成本。若只保存$\psi_i$而不保存回溯表，就无法恢复配置。
+
+\paragraph{复杂度}
+设消去$x_i$时$|R_i|=r_i$，各变量至多$q$个状态。计算$\psi_i$要对$R_i\cup\{i\}$的至多$q^{r_i+1}$种取值，各读取$\mathcal F_i$中每个函数一次，时间约为$|\mathcal F_i|\,q^{r_i+1}$；输出表与回溯表各至多$q^{r_i}$项。每个函数恰好在它的某个变量被消去时被取出一次，原有函数$|A|$个，新函数至多$n$个，所以各步的$|\mathcal F_i|$之和不超过$|A|+n$；按变量维护索引的开销也与函数个数成正比。整个消元的时间由各步之和给出，主导项来自$r_i$最大的那一步，所以变量消元的规模取决于最多同时处理多少个变量，即$\max_i(r_i+1)$。若这个数为$w+1$，总时间为$O\bigl((|A|+n)\,q^{w+1}\bigr)$量级，而枚举为$|A|\,q^n$。
+
+\paragraph{与树上递推的比较}
+树上递推是变量消元的一个特例。把依赖树的一元项和成对项作为局部函数，按后序消去树的非根顶点：轮到$u$时，它的子点都已消去，子点留下的新函数与$\phi_u$、$\phi_{u,p(u)}$是仅有的含$u$的函数，所以$R_u=\{p(u)\}$，新函数$\psi_u$就是消息$m_{u\to p(u)}$，回溯表$b_u$就是$b_{u\to p(u)}$。变量消元去掉了“依赖图是树”的要求，代价是必须自己选择次序；$r_i$由什么决定、怎样随次序变化，是下面两小节的内容。
+
+\subsection{中间函数与填充边}
+\label{sec:graph-dp-fill-in}
+
+消去一个变量时，新函数$\psi_i$的作用域$R_i$由所有含$i$的函数共同决定。在原始图上看，$R_i$恰好是$i$在当前原始图中的邻居集合，因为两个变量相邻当且仅当它们同在某个当前函数的作用域中。新函数读取这些邻居的联合取值，所以消元后的原始图中，这些邻居两两相邻。
+
+在四变量例子中改为先消去$x_2$，就能看到这一点。$\phi_A$与$\phi_B$都含$2$，$R_2=\{1,3\}\cup\{3,4\}=\{1,3,4\}$，新函数
+\[
+\psi_2(x_1,x_3,x_4)=\min_{x_2}\bigl[\phi_A(x_1,x_2,x_3)+\phi_B(x_2,x_3,x_4)\bigr]
+\]
+同时读取$x_1,x_3,x_4$。按$(x_1,x_3,x_4)$的字典序，它的八个值为
+\[
+\psi_2=(3,\,2,\,0,\,+\infty,\,2,\,1,\,2,\,4),
+\]
+例如$(x_1,x_3,x_4)=(0,0,0)$处的两个候选为$\phi_A(000)+\phi_B(000)=3$和$\phi_A(010)+\phi_B(100)=+\infty$。原始图中原来没有边$\{1,4\}$，消元后必须补上，如图~\ref{fig:graph-dp-elimination-step}所示。这样为记录新函数的联合依赖而补入的边称为\term{填充边}（fill-in edge）。
+
+填充边不表示原问题增加了约束，而是把原来经过$x_2$的间接联系直接记下来。看$x_3=1$的情形：$x_1=0$时，$\phi_A(0,1,1)=+\infty$迫使$x_2=0$，而$\phi_B(0,1,1)=+\infty$又禁止$x_4=1$；$x_1=1$时$x_2$可以取$1$，$x_4=1$仍然可行。原问题中$x_1$通过$x_2$牵制$x_4$。消去$x_2$以后，这种牵制只能由$\psi_2$自己记录：上面的值中$\psi_2(0,1,1)=+\infty$，而$\psi_2(0,1,0)=0$、$\psi_2(1,1,1)=4$都有限。若$\psi_2$能拆成一个$(x_1,x_3)$的函数与一个$(x_3,x_4)$的函数之和，固定$x_3=1$后就有$\psi_2(x_1,1,x_4)=g(x_1)+h(x_4)$；由$g(0)+h(1)=+\infty$知$g(0)$或$h(1)$为$+\infty$，与$g(0)+h(0)$、$g(1)+h(1)$都有限矛盾。所以这张表必须同时以$x_1$和$x_4$为索引，填充边$\{1,4\}$反映的正是这一点。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=102.687mm]{figures/01-basic-mathematics/04-graphs/tikz/c5-elimination-step/figure.pdf}
+  \caption{消去$x_2$时的函数更新与图更新。左：消元前，黄色的$x_2$同时属于$\phi_A$与$\phi_B$的作用域，它的邻居是$1,3,4$。右：消元后，两个函数被新函数$\psi_2(x_1,x_3,x_4)$取代，$x_2$及其关联边被删除，邻居$1,3,4$两两相邻，其中绿色虚线$\{1,4\}$是填充边。}
+  \label{fig:graph-dp-elimination-step}
+\end{figure}
+
+\paragraph{消元的图操作}
+一般地，消元在原始图上对应一个纯粹的结构操作：把$i$的当前邻居两两连边，然后删去$i$及其关联边。不含$i$的函数提供的边保持不变；含$i$的函数在剩余变量之间提供的边都落在$R_i$内，已被补成的团覆盖。因此，消元后函数集合的原始图恰好是对原始图执行这一操作的结果。只看这个图操作，就能在不计算任何数值的情况下预先知道每一步的$R_i$。
+
+\paragraph{作用域的结构上界}
+图操作只预测新函数可能同时读取哪些变量，不计算新函数的取值，而对特殊的局部函数，新函数可能仍能进一步分解。例如，若$\phi_A(x_1,x_2,x_3)=g(x_1)+h(x_2,x_3)$，则
+\[
+\psi_2(x_1,x_3,x_4)=g(x_1)+\min_{x_2}\bigl[h(x_2,x_3)+\phi_B(x_2,x_3,x_4)\bigr],
+\]
+它是一个$x_1$的函数与一个$(x_3,x_4)$的函数之和，实际上并不需要同时索引$x_1$与$x_4$。填充边不知道这种数值巧合，所以补边图给出的是通用情形下的作用域上界。后面讨论树分解时只使用这种结构记账，它适用于作用域给定、函数值任意的全部问题；具体函数是否还能化简，要回到数值表本身判断。
+
+\subsection{消元次序的影响}
+\label{sec:graph-dp-elimination-orders}
+
+定理~\ref{thm:graph-dp-elimination}允许任意消元次序，不同次序给出相同的最优值，但中间函数的大小可以相差很多。把执行过程中的次序$(1,4,2,3)$与先消$x_2$的次序$(2,1,3,4)$比较。后者第一步得到上一小节的$8$项表$\psi_2$，其后依次得到$(x_3,x_4)$上的$(2,1,0,4)$、$x_4$上的$(0,1)$和常数$0$，逆序回溯同样恢复出$(0,0,1,0)$。表~\ref{tab:graph-dp-elimination-orders}列出了两种次序每一步的作用域和规模，图~\ref{fig:graph-dp-elimination-orders}画出了对应的图变化。
+
+\begin{table}[!htb]
+  \centering
+  \caption{四变量例子上两种消元次序的逐步规模。“枚举”指计算新函数时要比较的候选组合数，即$R_i\cup\{i\}$上的配置数；“输出”指新函数表的项数，回溯表的项数与之相同。}
+  \label{tab:graph-dp-elimination-orders}
+  \begin{tabular}{cccccccc}
+    \toprule
+    \multicolumn{4}{c}{次序$(1,4,2,3)$} & \multicolumn{4}{c}{次序$(2,1,3,4)$}\\
+    \cmidrule(lr){1-4}\cmidrule(lr){5-8}
+    消去 & 新作用域 & 枚举 & 输出 & 消去 & 新作用域 & 枚举 & 输出\\
+    \midrule
+    $x_1$ & $\{2,3\}$ & $8$ & $4$ & $x_2$ & $\{1,3,4\}$ & $16$ & $8$\\
+    $x_4$ & $\{2,3\}$ & $8$ & $4$ & $x_1$ & $\{3,4\}$ & $8$ & $4$\\
+    $x_2$ & $\{3\}$ & $4$ & $2$ & $x_3$ & $\{4\}$ & $4$ & $2$\\
+    $x_3$ & $\varnothing$ & $2$ & $1$ & $x_4$ & $\varnothing$ & $2$ & $1$\\
+    \midrule
+    合计 & & $22$ & $11$ & 合计 & & $30$ & $15$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=105.004mm]{figures/01-basic-mathematics/04-graphs/tikz/c5-elimination-orders/figure.pdf}
+  \caption{两种消元次序下原始图的变化。上行按$(1,4,2,3)$消元，每一步被消去的黄色顶点的邻居都已两两相邻，不产生填充边，新函数至多读取两个变量。下行按$(2,1,3,4)$消元，消去$2$时要补入填充边$\{1,4\}$（第二个图中的绿色虚线），新函数读取三个变量。每个图下方标出消去黄色顶点后新函数的作用域。}
+  \label{fig:graph-dp-elimination-orders}
+\end{figure}
+
+第一种次序的最大中间表只有$4$项，第二种有$8$项。在这个小例子里差别不大；但若每个变量有$q$个状态，读取$r$个变量的表就有$q^r$项，多读取一个变量意味着表扩大$q$倍。次序选得不好时，即使在树上也会产生大表：在第~\ref{sec:graph-dp-tree-messages}小节的分叉树上先消去中心$3$，它的邻居$1,2,4$两两补边，新函数要读取三个变量；而按后序消元时不产生任何填充边。
+
+变量消元对任何有限状态、任意作用域的局部函数之和都给出精确结果，并且不依赖函数的具体数值。但有限状态并不保证精确消元总是可行：在某些图上，无论怎样排序，都会有一步需要同时处理很多变量。下一节用树分解描述这些同时处理的变量组，并用树宽给出与次序无关的结构度量。

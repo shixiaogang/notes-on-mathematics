@@ -1,0 +1,365 @@
+\section{矩阵映射的微分与扰动}
+\label{sec:multivariable-matrix-perturbation}
+\label{sec:multivariable-matrix-differentiation}
+
+机器学习中的参数常排成矩阵，例如线性层的权重或协方差矩阵。损失是这些矩阵的标量函数，求逆、相乘等运算又产生矩阵输出。原则上可以把矩阵拉直成长向量，再用前面的结论；但保留矩阵形状，乘法次序与迹的结构更清楚，结果也能直接写成矩阵表达式。矩阵空间是有限维线性空间，所以本节不建立新的微分理论，而是把前面的微分与扰动框架用于矩阵，集中处理三件事：矩阵的形状，乘法不交换，以及对称、正定等结构约束。
+
+本节先说明矩阵变量的微分与梯度，再依次处理基本运算、求逆、行列式和对数行列式。每个函数都依次给出定义域与输入输出、微分、一阶响应和可用的误差界，使导数公式和它能够解释的变化放在一起。局部条件数与一般的余项原则直接回用第~\ref{sec:multivariable-differential-perturbation}节；能写出精确增量的运算，就用同一个代数展开既证明可微、又给出具体余项。
+
+\subsection{矩阵变量、微分与梯度}
+\label{sec:multivariable-matrix-variable-gradient}
+
+$m\times n$矩阵输入可以看成$mn$个实数坐标，$r\times s$矩阵输出可以看成$rs$个实数分量。按固定顺序（例如逐列）把矩阵元素排成长向量，矩阵空间就等同于欧氏坐标空间；第~\ref{sec:prelim-matrix-trace}节的Frobenius内积与范数$\langle\bm A,\bm B\rangle_F=\operatorname{tr}(\bm A^\top\bm B)=\sum_{i,j}A_{i,j}B_{i,j}$，正是拉直后向量的欧氏内积与欧氏范数。
+本节的定义域$\mathcal U$都是全矩阵空间$\mathbb R^{m\times n}$中的开集，基点$\bm X\in\mathcal U$，因此全部充分小的同形扰动都可以使用。
+
+设$\Phi:\mathcal U\to\mathbb R^{r\times s}$。若存在矩阵空间之间的线性映射$\mathrm d\Phi_{\bm X}:\mathbb R^{m\times n}\to\mathbb R^{r\times s}$，使
+\[
+ \Phi(\bm X+\bm H)=\Phi(\bm X)+\mathrm d\Phi_{\bm X}(\bm H)+o(\lVert\bm H\rVert_F),
+\]
+余项按输出的Frobenius范数度量，则称$\Phi$在$\bm X$处可微，$\mathrm d\Phi_{\bm X}$为其微分。这就是向量值可微性按矩阵形状重排后的写法，计算时常写$\mathrm d\Phi=\mathrm d\Phi_{\bm X}(\mathrm d\bm X)$。$\mathrm d\Phi_{\bm X}$是从输入扰动空间到输出空间的线性映射，拉直后它的矩阵是$rs\times mn$的Jacobian，一般不能写成一个与$\bm X$同形的矩阵。
+
+还要分清两类“矩阵的函数”。$\bm X\mapsto\bm X^{-1}$、$\bm X\mapsto\bm X^2$这类映射按矩阵运算定义，输出的每个元素一般依赖输入的许多元素；逐元素作用（例如对每个元素分别取指数）则把各元素分别送入一元函数，微分只在对应位置上相乘。第~\ref{sec:ls-matrix-functions}节由标量函数沿谱构造的矩阵函数$f(\bm S)$属于前一类，但只是以矩阵为输入的映射中的一种；它与逐元素作用不能混为一谈，研究$\bm S\mapsto f(\bm S)$的微分时，扰动一般也不保持原来的特征方向。
+
+\paragraph{输入变量决定扰动的形状}
+同一个表达式随所选变量不同，微分的输入也不同。固定$\bm A$时，$\bm x\mapsto\bm A\bm x$是线性映射，微分为$\bm h\mapsto\bm A\bm h$，扰动是向量；固定$\bm x$时，$\bm A\mapsto\bm A\bm x$也是线性映射，微分为$\bm E\mapsto\bm E\bm x$，扰动是矩阵。两者同时变化时，把$(\bm A,\bm x)$看作乘积空间$\mathbb R^{m\times n}\times\mathbb R^n$中的一个输入，取乘积范数$\lVert(\bm E,\bm h)\rVert=(\lVert\bm E\rVert_F^2+\lVert\bm h\rVert_2^2)^{1/2}$。精确增量
+\[
+ (\bm A+\bm E)(\bm x+\bm h)-\bm A\bm x=\bm A\bm h+\bm E\bm x+\bm E\bm h
+\]
+中，$\lVert\bm E\bm h\rVert_2\leq\lVert\bm E\rVert_F\lVert\bm h\rVert_2\leq\tfrac12\lVert(\bm E,\bm h)\rVert^2$，所以联合微分为$(\bm E,\bm h)\mapsto\bm A\bm h+\bm E\bm x$，余项$\bm E\bm h$对联合扰动是二次量。
+
+\paragraph{标量输出与矩阵梯度}
+输出为标量（$r=s=1$）时，$\mathrm df_{\bm X}$是矩阵空间上的线性泛函。矩阵空间取Frobenius内积，由Riesz表示定理（定理~\ref{thm:ls-riesz-representation}），这个泛函可以唯一写成与一个同形矩阵的内积，这个矩阵就是梯度。这与向量情形$\mathrm df_{\bm a}(\bm h)=\nabla f(\bm a)^\top\bm h$完全对应。
+\begin{definition}[矩阵标量函数的梯度]
+\label{def:multivariable-matrix-scalar-gradient}
+设$f:\mathcal U\to\mathbb R$在$\bm X$处可微。唯一满足
+\begin{equation}
+ \mathrm df_{\bm X}(\bm H)=\langle\nabla_{\bm X}f,\bm H\rangle_F
+ =\operatorname{tr}\bigl((\nabla_{\bm X}f)^\top\bm H\bigr)
+\label{eq:analysis-matrix-gradient-definition}
+\end{equation}
+的同形矩阵$\nabla_{\bm X}f\in\mathbb R^{m\times n}$称为矩阵梯度。
+\end{definition}
+取只有第$(i,j)$个元素为$1$的扰动$\bm H$，右侧内积只剩$\nabla_{\bm X}f$的第$(i,j)$个元素，左侧是对$X_{i,j}$的偏导数。所以矩阵梯度的各元素就是对相应矩阵元素的偏导数，唯一性也由此得到。与向量梯度一样，在Frobenius长度下，$\nabla_{\bm X}f$指出使$f$增加最快的扰动方向。
+
+求梯度的一般做法是：先展开微分，再利用迹的循环移位把扰动移到末端，写成$\operatorname{tr}(\bm G^\top\mathrm d\bm X)$的形式，便读出$\nabla_{\bm X}f=\bm G$。乘积形状相容时，
+\[
+ \begin{gathered}
+\operatorname{tr}(\bm A\bm B)=\operatorname{tr}(\bm B\bm A)\\
+\operatorname{tr}(\bm A\bm B\bm C)=\operatorname{tr}(\bm B\bm C\bm A).
+ \end{gathered}
+\]
+这里循环移动的是整个因子，不能任意交换相邻矩阵。标量等于自己的迹，所以任何标量表达式都可以放进迹中再移位。
+\begin{example}[双线性函数的矩阵梯度]
+\label{ex:multivariable-bilinear-matrix-gradient}
+对固定向量$\bm a\in\mathbb R^m$、$\bm b\in\mathbb R^n$，令$f(\bm W)=\bm a^\top\bm W\bm b$。它对$\bm W$线性，微分为$\mathrm df=\bm a^\top(\mathrm d\bm W)\bm b$。把这个标量写成迹并循环移位，
+\[
+ \mathrm df=\operatorname{tr}\bigl(\bm a^\top(\mathrm d\bm W)\bm b\bigr)=\operatorname{tr}\bigl(\bm b\bm a^\top\mathrm d\bm W\bigr)
+ =\operatorname{tr}\bigl((\bm a\bm b^\top)^\top\mathrm d\bm W\bigr),
+\]
+于是$\nabla_{\bm W}f=\bm a\bm b^\top$。逐元素核对：$f=\sum_{k,l}a_kW_{k,l}b_l$，对$W_{i,j}$的偏导数是$a_ib_j$，正是$\bm a\bm b^\top$的第$(i,j)$个元素。
+\end{example}
+
+\paragraph{结构化变量的梯度}
+矩阵梯度的唯一性用到了全部矩阵方向。若变量限制在线性子空间$\mathcal S$中，例如对称矩阵空间，允许的扰动只能取$\mathcal S$中的方向。在$\mathcal S$上沿用Frobenius内积，Riesz表示定理在$\mathcal S$内给出唯一的表示矩阵，称为受限梯度。设$f$在全矩阵空间中有可微的延拓，环境梯度为$\bm G$，记$P_{\mathcal S}$为到$\mathcal S$的正交投影。$\bm G-P_{\mathcal S}\bm G$与$\mathcal S$正交（第~\ref{sec:ls-orthogonal-projection}节），所以对$\bm H\in\mathcal S$有$\langle\bm G,\bm H\rangle_F=\langle P_{\mathcal S}\bm G,\bm H\rangle_F$：受限梯度就是环境梯度的正交投影。对称矩阵空间中，任一矩阵分解为对称部分与反对称部分，二者Frobenius正交，因为对称$\bm S$与反对称$\bm K$满足$\operatorname{tr}(\bm S\bm K)=\operatorname{tr}((\bm S\bm K)^\top)=-\operatorname{tr}(\bm K\bm S)=-\operatorname{tr}(\bm S\bm K)$；因此投影为$(\bm G+\bm G^\top)/2$。若在$\mathcal S$中仍使用环境梯度，满足$\mathrm df(\bm H)=\langle\cdot,\bm H\rangle_F$（$\bm H\in\mathcal S$）的矩阵就不唯一：$\bm G$加上任一与$\mathcal S$正交的矩阵都满足。
+
+对称正定矩阵组成对称矩阵空间中的开集：由第~\ref{chap:linear-analysis}章的Weyl界，对称扰动的谱范数小于最小特征值时正定性保持。所以讨论正定变量时，邻域和扰动方向都在对称子空间内理解。矩阵输出时没有这样的单个梯度矩阵，只能保留线性映射$\mathrm d\Phi_{\bm X}$本身。
+
+\subsection{基本矩阵运算的微分与精确余项}
+\label{sec:multivariable-matrix-basic-operations}
+
+本小节从最简单的矩阵运算开始：线性运算的余项为零；乘法与平方的增量可以直接展开，微分之外剩下的部分就是可以精确写出的余项；迹、Frobenius范数平方与二次型则用来练习读出梯度。
+
+\paragraph{线性运算}
+加法、固定标量的数乘、转置与迹都是线性映射，精确增量就是它们作用于扰动的结果，余项为零，所以微分等于运算本身：
+\[
+ \begin{gathered}
+ \mathrm d(\bm X+\bm Y)=\mathrm d\bm X+\mathrm d\bm Y,\\
+ \mathrm d(c\bm X)=c\,\mathrm d\bm X,\\
+ \mathrm d(\bm X^\top)=(\mathrm d\bm X)^\top,\\
+ \mathrm d\operatorname{tr}\bm X=\operatorname{tr}(\mathrm d\bm X).
+ \end{gathered}
+\]
+固定矩阵从两侧相乘也是线性的：$\mathrm d(\bm A\bm X\bm B)=\bm A(\mathrm d\bm X)\bm B$，扰动夹在中间的位置不能移动。复合运算沿用第~\ref{sec:analysis-vector-chain-matrix-calculus}节的链式法则：先计算内部扰动，再让外部微分作用于它。只要逐步核对每个线性映射的输入、输出形状，就不需要另背一套矩阵求导规则。
+
+线性迹函数的微分已经是式~\eqref{eq:analysis-matrix-gradient-definition}的形式，可以直接读出梯度。对固定的$\bm{A}\in\mathbb{R}^{m\times n}$，令$f(\bm{X})=\operatorname{tr}(\bm{A}^{\top}\bm{X})=\sum_{i,j}A_{i,j}X_{i,j}$。由于$f$线性，$f(\bm X+\bm H)-f(\bm X)=\operatorname{tr}(\bm A^\top\bm H)$，没有余项，所以
+\begin{equation}
+  \nabla_{\bm{X}}\operatorname{tr}(\bm{A}^{\top}\bm{X})
+  =\bm{A}.
+\label{eq:analysis-trace-linear-gradient}
+\end{equation}
+这与向量情形$\nabla_{\bm x}(\bm a^\top\bm x)=\bm a$对应，常用于从迹表达式中读出梯度。
+
+\paragraph{乘积的精确增量}
+两个因子同时变化时，只用分配律就得到
+\begin{equation}
+ (\bm A+\bm E)(\bm B+\bm H)-\bm A\bm B=\bm A\bm H+\bm E\bm B+\bm E\bm H .
+\label{eq:multivariable-product-increment}
+\end{equation}
+这一等式对任意大小的扰动都成立，本身不涉及微分。前两项对$(\bm E,\bm H)$线性，各被另一个因子放大：在满足乘积不等式的矩阵范数下，$\lVert\bm A\bm H+\bm E\bm B\rVert\leq\lVert\bm A\rVert\lVert\bm H\rVert+\lVert\bm E\rVert\lVert\bm B\rVert$。要把它们识别为微分，还须选定联合输入的大小，例如$\lVert(\bm E,\bm H)\rVert=(\lVert\bm E\rVert_F^2+\lVert\bm H\rVert_F^2)^{1/2}$。由Frobenius范数的次乘性，
+\[
+ \lVert\bm E\bm H\rVert_F\leq\lVert\bm E\rVert_F\lVert\bm H\rVert_F\leq\tfrac12\lVert(\bm E,\bm H)\rVert^2 ,
+\]
+交叉项除以联合扰动的大小后趋于零。所以
+\[
+ \mathrm D(\bm A\bm B)[\bm E,\bm H]=\bm A\bm H+\bm E\bm B,
+\]
+而$\bm E\bm H$是可以直接计算的精确余项。只固定一个因子时，乘积对另一个因子线性，交叉项不出现。
+
+令两因子相同，$\Phi(\bm X)=\bm X^2$的精确增量为$(\bm X+\bm E)^2-\bm X^2=\bm X\bm E+\bm E\bm X+\bm E^2$。由$\lVert\bm E^2\rVert_F\leq\lVert\bm E\rVert_F^2$，得到$\mathrm d(\bm X^2)(\bm E)=\bm X\bm E+\bm E\bm X$，余项恰为$\bm E^2$。只有$\bm X$与扰动交换时，才能写成$2\bm X\bm E$。例如
+\[
+ \bm X=\begin{bmatrix}0&1\\0&0\end{bmatrix},\qquad
+ \bm E=\begin{bmatrix}0&0\\1&0\end{bmatrix}
+\]
+时，$\bm X\bm E=\operatorname{diag}(1,0)$、$\bm E\bm X=\operatorname{diag}(0,1)$，正确的一阶项是$\bm I$，而照搬标量规则的$2\bm X\bm E=\operatorname{diag}(2,0)$是错的。直接核对：$(\bm X+t\bm E)^2=t\bm I$，对$t$的导数正是$\bm I$；本例中$\bm E^2=\bm 0$，余项为零。
+
+\paragraph{Frobenius范数平方与二次型}
+标量值运算的微分可以直接读出梯度。双线性形式$\bm a^\top\bm W\bm b$已在示例~\ref{ex:multivariable-bilinear-matrix-gradient}中处理。Frobenius范数平方的精确增量为
+\[
+ \lVert\bm X+\bm E\rVert_F^2-\lVert\bm X\rVert_F^2=2\langle\bm X,\bm E\rangle_F+\lVert\bm E\rVert_F^2 ,
+\]
+所以$\nabla_{\bm X}\lVert\bm X\rVert_F^2=2\bm X$，余项恰为$\lVert\bm E\rVert_F^2$。
+
+同一个数组在固定线性作用和可变输入两种角色下，会产生不同的导数，二次型$\bm x^\top\bm A\bm x$是典型的例子。固定$\bm A$、以$\bm x$为变量时，由式~\eqref{eq:analysis-quadratic-form-gradient}，梯度为$(\bm A+\bm A^\top)\bm x$，是向量；固定$\bm x$、以$\bm A$为变量时，$\bm x^\top\bm E\bm x=\operatorname{tr}(\bm x\bm x^\top\bm E)=\langle\bm x\bm x^\top,\bm E\rangle_F$，梯度为$\bm x\bm x^\top$，是矩阵，且没有余项。两者同时变化时，展开得
+\[
+ \begin{aligned}
+ &(\bm x+\bm h)^\top(\bm A+\bm E)(\bm x+\bm h)-\bm x^\top\bm A\bm x\\
+ &\quad=\bm x^\top(\bm A+\bm A^\top)\bm h+\bm x^\top\bm E\bm x
+ +\bigl(\bm h^\top\bm A\bm h+\bm x^\top\bm E\bm h+\bm h^\top\bm E\bm x+\bm h^\top\bm E\bm h\bigr).
+ \end{aligned}
+\]
+括号中的每一项都至少含两个扰动因子，对联合扰动是高阶量，所以联合微分是两个单独微分之和：$(\bm E,\bm h)\mapsto\bm x^\top(\bm A+\bm A^\top)\bm h+\bm x^\top\bm E\bm x$。
+
+\subsection{求逆的微分与扰动}
+\label{sec:multivariable-inverse-differential}
+
+求逆映射$\operatorname{inv}(\bm A)=\bm A^{-1}$定义在$d\times d$可逆矩阵组成的集合上，输入、输出都是方阵，属于矩阵输出的情形，没有单个梯度矩阵，要直接求微分。逆矩阵与行列式非零的关系已在第~\ref{sec:prelim-inverse-matrices}节及第~\ref{sec:prelim-determinants}节建立。本小节的矩阵范数取由向量范数诱导的矩阵范数，它使$\lVert\bm I\rVert=1$并满足乘积不等式。
+
+\paragraph{由逆差恒等式得到微分}
+设$\bm A$可逆，$\bm B=\bm A+\bm E$，并设$q=\lVert\bm A^{-1}\rVert\lVert\bm E\rVert<1$。于是$\lVert\bm A^{-1}\bm E\rVert\leq q<1$。第~\ref{sec:ls-inverse-sensitivity}节已经证明，这时$\bm B$可逆，逆差满足精确恒等式~\eqref{eq:ch06-inverse-finite-perturbation}，即$\bm B^{-1}-\bm A^{-1}=-\bm B^{-1}\bm E\bm A^{-1}$，并且
+\[
+ \lVert\bm B^{-1}\rVert\leq\frac{\lVert\bm A^{-1}\rVert}{1-q}.
+\]
+特别地，可逆矩阵组成开集。恒等式右端含未知的$\bm B^{-1}$。把$\bm B^{-1}=\bm A^{-1}+(\bm B^{-1}-\bm A^{-1})$代入，再用一次同一恒等式，
+\[
+ \bm B^{-1}-\bm A^{-1}
+ =-\bm A^{-1}\bm E\bm A^{-1}-(\bm B^{-1}-\bm A^{-1})\bm E\bm A^{-1}
+ =-\bm A^{-1}\bm E\bm A^{-1}+\bm B^{-1}\bm E\bm A^{-1}\bm E\bm A^{-1}.
+\]
+第一项对$\bm E$线性；第二项满足
+\begin{equation}
+ \lVert\bm B^{-1}\bm E\bm A^{-1}\bm E\bm A^{-1}\rVert
+ \leq\lVert\bm B^{-1}\rVert\lVert\bm A^{-1}\rVert^2\lVert\bm E\rVert^2
+ \leq\frac{\lVert\bm A^{-1}\rVert^3\lVert\bm E\rVert^2}{1-q},
+\label{eq:multivariable-inverse-remainder-bound}
+\end{equation}
+是$\lVert\bm E\rVert$的二次量。有限维矩阵空间中各种范数等价，所以对Frobenius范数它同样是二次量。因此求逆在每个可逆矩阵处可微，且
+\begin{equation}
+  \mathrm{d}(\bm{X}^{-1})
+  =
+  -\bm{X}^{-1}(\mathrm{d}\bm{X})\bm{X}^{-1}.
+\label{eq:analysis-inverse-differential}
+\end{equation}
+这里先由精确恒等式确认了可微性。随后可以对恒等式$\bm{X}\bm{X}^{-1}=\bm{I}$两侧求微分作交叉核对：左侧用乘积法则，右侧是常矩阵，得到$(\mathrm{d}\bm{X})\bm{X}^{-1}+\bm{X}\,\mathrm{d}(\bm{X}^{-1})=\bm{0}$，左乘$\bm{X}^{-1}$便回到同一公式。这一形式推导以逆映射可微为前提，不能单独承担可微性的证明。
+
+$1\times1$时这就是$(1/x)'=-1/x^2$。两个$\bm{X}^{-1}$位于扰动两侧，不能合并成$-\bm{X}^{-2}\mathrm{d}\bm{X}$，因为$\mathrm{d}\bm{X}$未必与$\bm{X}^{-1}$交换。
+取一个对角矩阵和一个非对角扰动，就能看出两种写法的差别。
+\begin{example}[逆矩阵微分中的乘法次序]
+\label{ex:analysis-noncommuting-inverse-differential}
+取$\bm X=\operatorname{diag}(2,1)$，扰动方向
+\[
+ \bm E=\begin{bmatrix}0&1\\1&0\end{bmatrix}.
+\]
+由式~\eqref{eq:analysis-inverse-differential}，沿$\bm X+t\bm E$求逆矩阵在$t=0$处的导数为
+\[
+ -\bm X^{-1}\bm E\bm X^{-1}
+ =\begin{bmatrix}0&-1/2\\-1/2&0\end{bmatrix}.
+\]
+若照搬标量规则而写成$-\bm X^{-2}\bm E$，会得到
+\[
+ \begin{bmatrix}0&-1/4\\-1&0\end{bmatrix}.
+\]
+直接核对：
+\[
+ (\bm X+t\bm E)^{-1}=\frac1{2-t^2}\begin{bmatrix}1&-t\\-t&2\end{bmatrix},
+\]
+在$t=0$处对$t$求导，非对角元为$-1/2$，对角元导数为$0$，与第一种结果一致。
+\end{example}
+
+错误写法连对称性都丢失了。路径$\bm X+t\bm E$在$t=0$附近由对称可逆矩阵组成，它们的逆也对称，所以导数必须对称。这种结构检查能直接发现错误。
+
+\paragraph{一阶预测的误差}
+式~\eqref{eq:multivariable-inverse-remainder-bound}同时是有限扰动下一阶预测的误差界。对$0\leq t\leq1$，$\lVert\bm A^{-1}(t\bm E)\rVert\leq tq<1$，所以整条扰动线段$\bm A+t\bm E$都由可逆矩阵组成，定义域条件在整段上成立。于是可以比较三个量：实际逆矩阵$(\bm A+\bm E)^{-1}$，一阶预测$\bm A^{-1}-\bm A^{-1}\bm E\bm A^{-1}$，以及二者之差。第~\ref{sec:ls-inverse-sensitivity}节控制的是全变化，$\lVert(\bm A+\bm E)^{-1}-\bm A^{-1}\rVert\leq\lVert\bm A^{-1}\rVert^2\lVert\bm E\rVert/(1-q)$，与$\lVert\bm E\rVert$同阶；本段新增的是从全变化中扣除一阶项之后，近似还差多少，它与$\lVert\bm E\rVert^2$同阶。$q$接近$1$时两种界都变得很大，一阶预测不再可靠。
+\begin{example}[逆矩阵的一阶预测与余项]
+\label{ex:multivariable-inverse-first-order-check}
+取$\bm A=\operatorname{diag}(2,1)$与扰动
+\[
+ \bm E=\begin{bmatrix}0&0.1\\0.1&0\end{bmatrix},
+\]
+采用谱范数，则$\lVert\bm A^{-1}\rVert_2=1$、$\lVert\bm E\rVert_2=0.1$、$q=0.1$。直接求逆，
+\[
+ (\bm A+\bm E)^{-1}=\frac1{1.99}\begin{bmatrix}1&-0.1\\-0.1&2\end{bmatrix},
+\]
+一阶预测为
+\[
+ \bm A^{-1}-\bm A^{-1}\bm E\bm A^{-1}=\begin{bmatrix}0.5&-0.05\\-0.05&1\end{bmatrix}.
+\]
+二者之差为
+\[
+ \frac{0.0005}{1.99}\begin{bmatrix}10&-1\\-1&20\end{bmatrix}\approx\begin{bmatrix}0.00251&-0.00025\\-0.00025&0.00503\end{bmatrix},
+\]
+其谱范数约为$0.00505$。一阶项本身的谱范数为$0.05$，式~\eqref{eq:multivariable-inverse-remainder-bound}给出的余项上界为$0.01/0.9\approx0.0111$。全变化的谱范数约为$0.0540$，第~\ref{sec:ls-inverse-sensitivity}节的全变化界为$0.1/0.9\approx0.111$。
+\end{example}
+一阶预测扣除了全变化中约$0.05$的主要部分，剩下的误差约为扰动大小的平方量级；余项界比实际误差大约两倍，它只保证误差不超过多少。
+
+\paragraph{求逆的条件数}
+在无结构限制的扰动模型下，输入、输出都取谱范数。由乘积不等式，$\lVert\bm A^{-1}\bm E\bm A^{-1}\rVert_2\leq\lVert\bm A^{-1}\rVert_2^2\lVert\bm E\rVert_2$。这个上界可以取到。设$\sigma_d$是$\bm A$的最小奇异值，对应的左、右奇异向量为$\bm u_d,\bm v_d$，即$\bm A\bm v_d=\sigma_d\bm u_d$、$\bm A^\top\bm u_d=\sigma_d\bm v_d$（第~\ref{sec:ls-svd}节）。取$\bm E=\bm u_d\bm v_d^\top$，它的谱范数为$1$。由$\bm A^{-1}\bm u_d=\bm v_d/\sigma_d$与$\bm A^{-\top}\bm v_d=\bm u_d/\sigma_d$，
+\[
+ \bm A^{-1}\bm E\bm A^{-1}=(\bm A^{-1}\bm u_d)(\bm A^{-\top}\bm v_d)^\top=\frac{\bm v_d\bm u_d^\top}{\sigma_d^2},
+\]
+其谱范数为$1/\sigma_d^2=\lVert\bm A^{-1}\rVert_2^2$。由定理~\ref{thm:multivariable-local-condition-number}，求逆映射在$\bm A$处的局部绝对条件数为$\lVert\bm A^{-1}\rVert_2^2$，相对条件数为
+\[
+ \lVert\bm A^{-1}\rVert_2^2\cdot\frac{\lVert\bm A\rVert_2}{\lVert\bm A^{-1}\rVert_2}=\lVert\bm A\rVert_2\lVert\bm A^{-1}\rVert_2=\kappa_2(\bm A).
+\]
+矩阵条件数在这里重新出现，但含义不同：这里输入是矩阵本身，输出是逆矩阵，而第~\ref{sec:ls-matrix-condition-number}节的输入是向量。若限制扰动结构，例如只允许对称扰动，须改用微分在允许子空间上的范数。矩阵沿可微的参数曲线$\bm A(t)$变化时，链式法则给出$\frac{\mathrm d}{\mathrm dt}\bm A(t)^{-1}=-\bm A(t)^{-1}\bm A'(t)\bm A(t)^{-1}$。求解方程的算法及其数值稳定性仍按第~\ref{chap:linear-equations-and-optimization}章处理。
+
+\paragraph{线性方程的解映射}
+求逆与乘法复合，得到线性方程的解映射
+\[
+ \operatorname{sol}(\bm A,\bm b)=\bm A^{-1}\bm b ,
+\]
+它定义在可逆$\bm A$与任意$\bm b$组成的开集上。固定可逆的$\bm A$，记$\bm x=\bm A^{-1}\bm b$；联合输入$(\bm E,\bm f)$取乘积范数$\lVert(\bm E,\bm f)\rVert=(\lVert\bm E\rVert^2+\lVert\bm f\rVert^2)^{1/2}$，其中$\bm f$是右端的增量。第~\ref{sec:ls-equation-sensitivity}节从$(\bm A+\bm E)(\bm x+\Delta\bm x)=\bm b+\bm f$中减去$\bm A\bm x=\bm b$，得到$(\bm A+\bm E)\Delta\bm x=\bm f-\bm E\bm x$。在$q<1$时，这给出精确式
+\[
+ \Delta\bm x=(\bm A+\bm E)^{-1}(\bm f-\bm E\bm x).
+\]
+把$(\bm A+\bm E)^{-1}$拆成$\bm A^{-1}$与逆差，
+\[
+ \Delta\bm x=\bm A^{-1}(\bm f-\bm E\bm x)+\bigl((\bm A+\bm E)^{-1}-\bm A^{-1}\bigr)(\bm f-\bm E\bm x).
+\]
+第一项对$(\bm E,\bm f)$线性。第二项中，逆差的范数不超过$\lVert\bm A^{-1}\rVert^2\lVert\bm E\rVert/(1-q)$，又$\lVert\bm f-\bm E\bm x\rVert\leq\lVert\bm f\rVert+\lVert\bm E\rVert\lVert\bm x\rVert$；二者都不超过联合扰动大小的常数倍，所以第二项是联合扰动的二次量。因此解映射可微，且
+\begin{equation}
+ \mathrm d\operatorname{sol}_{(\bm A,\bm b)}(\bm E,\bm f)=\bm A^{-1}(\bm f-\bm E\bm x).
+\label{eq:multivariable-solution-map-differential}
+\end{equation}
+也可以用链式法则核对：$\operatorname{sol}$是求逆与矩阵—向量乘法的复合，由乘积的联合微分与式~\eqref{eq:analysis-inverse-differential}，一阶项为$(-\bm A^{-1}\bm E\bm A^{-1})\bm b+\bm A^{-1}\bm f=\bm A^{-1}(\bm f-\bm E\bm x)$，结果相同。第~\ref{sec:ls-equation-sensitivity}节的界控制完整的解误差，式~\eqref{eq:multivariable-solution-map-differential}则提取局部的一阶预测，二者回答不同的问题。这个解映射有显式公式，可微性由上面的展开直接得到，无须等到隐函数定理。
+
+\subsection{行列式的微分与扰动}
+\label{sec:multivariable-determinant-differential}
+
+行列式把方阵映为一个实数，它的绝对值是线性映射对体积的缩放倍数（第~\ref{sec:prelim-determinants}节）。按排列展开，$\det\bm A$是各元素的多项式，所以它在全部方阵上连续可微，奇异矩阵处也不例外。本小节先算出微分，再讨论它的条件数与余项。
+
+\paragraph{代数余子式形式}
+行列式对每一列分别线性（第~\ref{sec:prelim-determinants}节）。记$\bm A\in\mathbb R^{d\times d}$的列为$\bm a_1,\ldots,\bm a_d$，扰动$\bm E$的列为$\bm e_1,\ldots,\bm e_d$，逐列展开$\det(\bm a_1+\bm e_1,\ldots,\bm a_d+\bm e_d)$，得到$2^d$项，每一项在每一列取$\bm a_j$或$\bm e_j$。全取$\bm a_j$的一项是$\det\bm A$；恰有第$j$列取$\bm e_j$的一项，按第$j$列展开（第~\ref{sec:ls-det-cofactor-adjugate}节）等于$\sum_iE_{i,j}C_{i,j}$，其中$C_{i,j}$是$\bm A$的代数余子式，它不依赖$\bm A$的第$j$列。其余各项至少含两列扰动，是$\bm E$的元素的多项式，且每个单项至少二次；由$|E_{i,j}|\leq\lVert\bm E\rVert_F$，在$\lVert\bm E\rVert_F\leq1$时它们的和不超过某个常数乘$\lVert\bm E\rVert_F^2$。于是
+\begin{equation}
+ \mathrm d\det_{\bm A}(\bm E)=\sum_{i,j}C_{i,j}E_{i,j}=\langle\bm C,\bm E\rangle_F=\operatorname{tr}\bigl(\operatorname{adj}(\bm A)\bm E\bigr),
+\label{eq:multivariable-determinant-cofactor-differential}
+\end{equation}
+其中$\bm C=[C_{i,j}]$是代数余子式矩阵，$\operatorname{adj}(\bm A)=\bm C^\top$是古典伴随。Frobenius梯度为$\nabla_{\bm A}\det=\bm C$。这个公式在奇异矩阵处同样成立。
+
+$\bm A$可逆时，古典伴随恒等式（定理~\ref{thm:ls-adjugate-identity}）给出$\operatorname{adj}(\bm A)=\det(\bm A)\bm A^{-1}$，代入得到Jacobi公式的一阶形式
+\[
+ \mathrm{d}\det\bm{X}=\det(\bm{X})\operatorname{tr}(\bm{X}^{-1}\mathrm{d}\bm{X}),
+\]
+相应的梯度为$\det(\bm X)\bm X^{-\top}$。它说明有向体积缩放倍数的相对变化为
+\[
+ \frac{\mathrm d\det\bm X}{\det\bm X}=\operatorname{tr}(\bm X^{-1}\mathrm d\bm X).
+\]
+也可以用乘法公式核对：
+\[
+ \det(\bm X+\bm H)=\det(\bm X)\det(\bm I+\bm X^{-1}\bm H),
+\]
+问题化归为单位矩阵附近的一阶变化。奇异处没有$\bm X^{-1}$，只能使用代数余子式或古典伴随的形式。
+
+在最简单的基点$\bm I$处，代数余子式矩阵就是$\bm I$，一阶变化是扰动的迹。
+\begin{example}[单位矩阵附近行列式的一阶变化]
+\label{ex:multivariable-determinant-near-identity}
+取$\bm H=\operatorname{diag}(\varepsilon_1,\varepsilon_2)$，则
+\[
+ \det(\bm I+\bm H)=(1+\varepsilon_1)(1+\varepsilon_2)=1+\varepsilon_1+\varepsilon_2+\varepsilon_1\varepsilon_2,
+\]
+一阶变化是$\varepsilon_1+\varepsilon_2=\operatorname{tr}\bm H$。若扰动只在非对角位置，例如
+\[
+ \bm H=\begin{bmatrix}0&\varepsilon\\0&0\end{bmatrix},
+\]
+则$\det(\bm I+\bm H)=1$，面积不变，而$\operatorname{tr}\bm H=0$。
+\end{example}
+
+两个方向各拉长一点时，面积的相对增量一阶上是两个伸长率之和；剪切扰动不改变面积，迹也为零。两种情形中，一阶变化都等于扰动的迹。
+
+\paragraph{行列式的条件数}
+对给定扰动方向，一阶响应是$\langle\bm C,\bm E\rangle_F$。由定理~\ref{thm:multivariable-local-condition-number}，局部绝对条件数是这个线性泛函在所选输入范数下的大小，即第~\ref{sec:ls-dual-norms}节的对偶范数：
+\[
+ \kappa_{\mathrm{abs}}(\det,\bm A)=\max_{\lVert\bm E\rVert\leq1}|\langle\bm C,\bm E\rangle_F| .
+\]
+输入取Frobenius范数时，由Cauchy--Schwarz不等式，$\bm C\neq\bm0$时最大值在$\bm E=\bm C/\lVert\bm C\rVert_F$处取到，所以$\kappa_{\mathrm{abs}}=\lVert\bm C\rVert_F$，可以直接由代数余子式算出。可逆时还可以比较相对变化：由$\bm C=\det(\bm A)\bm A^{-\top}$，
+\[
+ \kappa_{\mathrm{rel}}(\det,\bm A)=\lVert\bm C\rVert_F\frac{\lVert\bm A\rVert_F}{|\det\bm A|}=\lVert\bm A^{-1}\rVert_F\lVert\bm A\rVert_F .
+\]
+奇异点处$\det\bm A=0$，只有绝对变化有定义，不能除以零行列式。
+
+\paragraph{余项与接近奇异的矩阵}
+在固定的有界邻域内，余项有二次控制。记$K=\{\bm A+\bm F:\lVert\bm F\rVert_F\leq1\}$。行列式的二阶偏导数都是多项式，在闭有界集$K$上有界，所以存在$M$使$\lVert D^2\det_{\bm Z}\rVert\leq M$对$\bm Z\in K$成立。对$\lVert\bm E\rVert_F\leq1$，令$g(t)=\det(\bm A+t\bm E)$，它是$t$的多项式，且$g''(t)=D^2\det_{\bm A+t\bm E}[\bm E,\bm E]$，于是$|g''(t)|\leq M\lVert\bm E\rVert_F^2$。一元Taylor公式给出
+\[
+ \bigl|\det(\bm A+\bm E)-\det\bm A-\langle\bm C,\bm E\rangle_F\bigr|\leq\frac M2\lVert\bm E\rVert_F^2 ,
+\]
+常数$M$依赖所取的邻域。
+
+在相对尺度下，行列式对矩阵变化的反应可以远比矩阵本身的变化剧烈。
+\begin{example}[接近奇异时的行列式]
+\label{ex:ls-determinant-near-singular}
+给定$\bm A=\operatorname{diag}(1,\varepsilon)$，$0<\varepsilon<1$，则$\det\bm A=\varepsilon$。取扰动$\bm E=\operatorname{diag}(0,\delta)$，即把第二个对角元改为$\varepsilon+\delta$。矩阵采用谱范数、标量采用绝对值，矩阵的相对变化为$\lVert\bm E\rVert_2/\lVert\bm A\rVert_2=|\delta|$，行列式变为$\varepsilon+\delta$，相对变化为
+\[
+ \frac{|(\varepsilon+\delta)-\varepsilon|}{\varepsilon}=\frac{|\delta|}{\varepsilon}.
+\]
+微分给出同样的结果：$\det(\bm A)\operatorname{tr}(\bm A^{-1}\bm E)=\varepsilon\cdot\delta/\varepsilon=\delta$。沿这个方向，行列式是$\delta$的一次函数，余项为零。
+
+结论：行列式的相对变化是矩阵相对变化的$1/\varepsilon$倍，矩阵越接近奇异，沿这个方向的相对放大越强。
+\end{example}
+
+但不能仅凭行列式的数值判断求逆是否病态。取$\bm A=\varepsilon\bm I\in\mathbb R^{d\times d}$（$\varepsilon>0$），行列式$\varepsilon^d$可以极小，而由上一小节，求逆的相对条件数是$\kappa_2(\varepsilon\bm I)=1$；行列式本身的相对条件数$\lVert\bm A^{-1}\rVert_F\lVert\bm A\rVert_F=d$也不随$\varepsilon$变大。行列式与逆矩阵是两个不同的输出，绝对与相对又是两种尺度，必须分别判断。
+
+\subsection{对数行列式的微分与扰动}
+\label{sec:multivariable-logdet-differential}
+
+实值的$\log\det\bm A$要求$\det\bm A>0$。行列式连续，满足这一条件的方阵组成开集，对数在其上与行列式复合。对行列式的微分应用标量对数的链式法则$\mathrm d\log u=\mathrm du/u$，得到
+\begin{equation}
+\begin{gathered}
+\mathrm{d}\log\det\bm{X}
+  =
+  \operatorname{tr}(\bm{X}^{-1}\mathrm{d}\bm{X})\\
+\nabla_{\bm{X}}\log\det\bm{X}
+  =
+  \bm{X}^{-\top}.
+\end{gathered}
+\label{eq:analysis-logdet-gradient}
+\end{equation}
+第二式由$\operatorname{tr}(\bm X^{-1}\mathrm d\bm X)=\operatorname{tr}\bigl((\bm X^{-\top})^\top\mathrm d\bm X\bigr)$对照式~\eqref{eq:analysis-matrix-gradient-definition}读出。
+若$\bm X$还对称，则$\bm{X}^{-\top}=\bm{X}^{-1}$；一般情形应保留转置。$1\times1$时它回到$(\log x)'=1/x$。
+
+这个微分同时给出一阶变化：
+\[
+ \log\det(\bm A+\bm E)-\log\det\bm A
+ =\operatorname{tr}(\bm A^{-1}\bm E)+o(\lVert\bm E\rVert_F).
+\]
+相应的局部绝对条件数是线性泛函$\bm E\mapsto\langle\bm A^{-\top},\bm E\rangle_F$在所选输入范数下的对偶范数，Frobenius范数下为$\lVert\bm A^{-1}\rVert_F$。对数行列式可以为零或接近零，这时以它为分母的相对误差没有意义，应直接比较绝对变化。
+
+\paragraph{对称正定变量}
+统计与优化中常见的是对称正定矩阵上的$\log\det$。这时变量在对称矩阵子空间中，只允许对称扰动。由第~\ref{sec:multivariable-matrix-variable-gradient}节，受限梯度是环境梯度$\bm A^{-\top}=\bm A^{-1}$在对称子空间上的投影；它本身已对称，所以梯度就是$\bm A^{-1}$。
+
+这里有两个不同的定义域：$\det>0$的方阵组成全矩阵空间中的开集，$\log\det$在其上已有定义；对称正定矩阵组成对称子空间中的开集，是前者与对称子空间之交的一部分。一般情形，由行列式的连续性，总可以选足够小的邻域，使整条线段$\bm A+t\bm E$仍满足$\det>0$，但这不给出邻域的具体大小。正定情形则可以用第~\ref{chap:linear-analysis}章的最小特征值界明确检查整条线段保持正定，下面的余项界就基于这一检查。
+
+\paragraph{二次余项界}
+设$\bm A$对称正定，最小特征值为$m>0$，$\bm E$对称且$\lVert\bm E\rVert_2<m$。对任意单位向量$\bm x$和$0\leq t\leq1$，
+$\bm x^\top(\bm A+t\bm E)\bm x\geq m-\lVert\bm E\rVert_2>0$，所以整条线段保持正定，而且最小特征值有统一的正下界。令$g(t)=\log\det(\bm A+t\bm E)$。由式~\eqref{eq:analysis-logdet-gradient}与链式法则，$g'(t)=\operatorname{tr}\bigl((\bm A+t\bm E)^{-1}\bm E\bigr)$；再用沿参数曲线的求逆公式，
+\[
+ g''(t)=-\operatorname{tr}\!\left((\bm A+t\bm E)^{-1}\bm E
+ (\bm A+t\bm E)^{-1}\bm E\right).
+\]
+逆矩阵的谱范数至多为$(m-\lVert\bm E\rVert_2)^{-1}$。由Frobenius内积的Cauchy--Schwarz不等式与混合乘积界~\eqref{eq:matrix-analysis-mixed-submultiplicativity}，
+$|g''(t)|\leq\lVert(\bm A+t\bm E)^{-1}\bm E\rVert_F^2\leq\lVert\bm E\rVert_F^2/(m-\lVert\bm E\rVert_2)^2$。于是一元Taylor公式给出
+\[
+ \left|\log\det(\bm A+\bm E)-\log\det\bm A
+ -\operatorname{tr}(\bm A^{-1}\bm E)\right|
+ \leq\frac{\lVert\bm E\rVert_F^2}{2(m-\lVert\bm E\rVert_2)^2}.
+\]
+
+例如$\bm A=\operatorname{diag}(2,1)$，$\bm E=\operatorname{diag}(0.1,0)$时，一阶预测为$0.05$，实际变化为$\log(1.05)\approx0.04879$。此时$m=1$，上述上界约为$0.00618$，大于实际误差约$0.00121$。这个界只保证误差不超过多少，不表示误差会接近上界。导数给出变化的方向与大小，正定线段给出估计的有效范围，余项界说明预测的可靠程度，三者要一起使用。正定条件是这一显式估计的条件，不是一般正行列式矩阵上$\log\det$的定义条件。

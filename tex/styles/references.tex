@@ -1,0 +1,112 @@
+% Tufte 的可选参数包装隐藏了脚注正文；为 biblatex 提供可探测的颜色分组。
+% 委托原实现，保留原有边注定位和可选垂直偏移接口。
+\makeatletter
+\let\book@tufte@footnotetext\@footnotetext
+\def\@footnotetext{\color@begingroup\book@footnote@dispatch}
+\newcommand{\book@footnote@dispatch}[2][0pt]{%
+  \book@tufte@footnotetext[#1]{#2}\color@endgroup}
+\makeatother
+\usepackage[backend=biber,style=authortitle,giveninits=true,
+  maxnames=99,minnames=99,uniquename=false,dashed=false,doi=false,url=false,isbn=false]{biblatex}
+\addbibresource{tex/references.bib}
+% Allow long English titles to wrap without changing their wording.
+\AtBeginBibliography{\emergencystretch=4em}
+\DeclareNameAlias{author}{given-family}
+\DeclareNameAlias{editor}{given-family}
+\DeclareDelimFormat{multinamedelim}{\addcomma\space}
+\DeclareDelimFormat{finalnamedelim}{\addcomma\space}
+\DeclareFieldFormat[book,article,inproceedings]{title}{\mkbibemph{#1}}
+\DeclareFieldFormat[article]{journaltitle}{#1}
+\DeclareFieldFormat[inproceedings]{booktitle}{#1}
+\DeclareFieldFormat[book]{edition}{\mkbibordedition{#1}\addspace ed.}
+\DeclareFieldFormat[article]{volume}{vol.\addspace #1}
+\DeclareFieldFormat[article]{number}{no.\addspace #1}
+\DeclareFieldFormat[article,inproceedings]{pages}{pp.\addspace #1}
+\renewcommand{\newunitpunct}{\addcomma\space}
+\newbibmacro*{book:author-title}{%
+  \ifnameundef{author}{%
+    \ifnameundef{editor}{}{%
+      \printnames{editor}\setunit{\addcomma\space}\printtext{eds.}}%
+  }{\printnames{author}}%
+  \newunit\printfield{title}}
+\DeclareBibliographyDriver{book}{%
+  \usebibmacro{book:author-title}\newunit\printlist{publisher}
+  \newunit\printfield{year}\newunit\printfield{edition}\usebibmacro{finentry}}
+\DeclareBibliographyDriver{article}{%
+  \usebibmacro{book:author-title}\setunit{\addspace}
+  \printtext{In\addspace}\printfield{journaltitle}
+  \newunit\printfield{year}\newunit\printfield{volume}
+  \newunit\printfield{number}\newunit
+  \iffieldundef{pages}{\printfield{eid}}{\printfield{pages}}\usebibmacro{finentry}}
+\DeclareBibliographyDriver{inproceedings}{%
+  \usebibmacro{book:author-title}\setunit{\addspace}
+  \printtext{In\addspace}\printfield{booktitle}
+  \newunit\printfield{year}\newunit\printfield{pages}\usebibmacro{finentry}}
+% 无排序压缩；每篇文献使用独立编号和边注，可带前注和定位信息。
+% \sidecite[参见][第 3 章]{bishop2006}；\cite 使用完全相同的接口。
+\makeatletter
+\ExplSyntaxOn
+\cs_new_protected:Npn \book_sidecite_note:n #1
+  {
+    \stepcounter\@mpfn
+    \protected@xdef\@thefnmark{\thempfn}
+    \@footnotemark
+    \book@tufte@footnotetext[0pt]
+      {\color@begingroup\booknotefont #1\color@endgroup}
+  }
+\cs_new_protected:Npn \book_sidecite_separator:
+  {
+    \nobreak
+    \hbox{\@textsuperscript{\normalfont\footnotesize\multfootsep}}
+    \nobreak
+  }
+\bool_new:N \l_book_sidecite_first_bool
+\cs_new_protected:Npn \book_sidecite_one:nnn #1#2#3
+  {
+    \book_sidecite_note:n
+      {%
+        \IfNoValueTF{#1}
+          {\fullcite{#3}}
+          {
+            \IfNoValueTF{#2}
+              {\fullcite[#1]{#3}}
+              {\fullcite[#1][#2]{#3}}
+          }
+      }%
+  }
+\cs_new_protected:Npn \book_sidecite_each:nnn #1#2#3
+  {
+    \unskip\nobreak
+    \bool_set_true:N \l_book_sidecite_first_bool
+    \clist_map_inline:nn {#3}
+      {
+        \bool_if:NTF \l_book_sidecite_first_bool
+          {\bool_set_false:N \l_book_sidecite_first_bool}
+          {\book_sidecite_separator:}
+        \book_sidecite_one:nnn {#1} {#2} {##1}
+      }
+  }
+\cs_new_protected:Npn \book_scite_each:n #1
+  {
+    \unskip\nobreak
+    \bool_set_true:N \l_book_sidecite_first_bool
+    \clist_map_inline:nn {#1}
+      {
+        \bool_if:NTF \l_book_sidecite_first_bool
+          {\bool_set_false:N \l_book_sidecite_first_bool}
+          {\book_sidecite_separator:}
+        \book_sidecite_note:n {\fullcite{##1}}
+      }
+  }
+\NewDocumentCommand{\sidecite}{o o m}
+  {\book_sidecite_each:nnn {#1} {#2} {#3}\ignorespaces}
+\RenewDocumentCommand{\cite}{o o m}
+  {\book_sidecite_each:nnn {#1} {#2} {#3}\ignorespaces}
+% 句末引用把相邻标记和中文句号连续输出；源码中已有句号时将其吸收。
+\NewDocumentCommand{\scite}{m t。}
+  {
+    \book_scite_each:n {#1}
+    \nobreak。\ignorespaces
+  }
+\ExplSyntaxOff
+\makeatother

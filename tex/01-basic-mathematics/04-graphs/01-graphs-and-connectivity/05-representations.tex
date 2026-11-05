@@ -1,0 +1,164 @@
+\section{图的表示}
+\label{sec:graph-representations}
+
+要让计算机处理一张图，还得决定怎样存储它。不同的算法反复执行的操作不同：有的逐条扫描所有边，有的反复列出一个顶点的邻居，有的查询两个顶点之间是否有边，还有的做矩阵运算。选择记录方式时，要让这些反复执行的操作既正确又便宜。本节介绍的四种常用表示各为一类操作而设计，比较时既看存储与访问的代价，也计入相互转换的代价；邻接矩阵还把行走计数变成矩阵乘法。代价用第~\ref{sec:comb-growth-scales}小节的记号$O(\cdot)$表示。图~\ref{fig:graph-conn-four-representations}把贯穿图的四种表示放在一起。从矩阵出发构造图上的算子并研究其谱，集中在第~\ref{chap:graph-spectral}章。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=89.524mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-four-representations/figure.pdf}
+  \caption{贯穿图的四种表示。(a)边列表逐条记录边的编号和端点；(b)邻接表为每个顶点（蓝色方框）列出邻居，每条无向边在两端各出现一次；(c)邻接矩阵按顶点次序记录每对顶点是否相邻，蓝色为$1$；(d)关联矩阵的每列对应一条边，按“小编号指向大编号”的记录方向，起点处为$1$（蓝色）、终点处为$-1$（绿色）。}
+  \label{fig:graph-conn-four-representations}
+\end{figure}
+
+\subsection{边列表}
+\label{sec:graph-conn-edge-list}
+
+最直接的做法是把边一条条记下来。\term{边表}（edge list），也称边列表，为每条边保存一条记录：边的编号、两个端点，以及长度、容量等所需的属性。有向图的记录必须保存端点的次序。贯穿图的边列表见图~\ref{fig:graph-conn-four-representations}(a)，编号为$e_1=\{1,2\}$、$e_2=\{1,3\}$、$e_3=\{2,3\}$、$e_4=\{2,4\}$、$e_5=\{3,4\}$。有平行边时，两条边端点相同，只能靠编号区分。
+
+边列表除顶点集外只需$O(m)$的存储，适合逐条处理全部边的算法，例如按边权排序（第~\ref{sec:graph-minimum-spanning-tree}节），或每一轮把每条边都检查一遍（第~\ref{sec:graph-shortest-paths}节）；求全部顶点的度也只需扫描一遍，即表~\ref{tab:graph-conn-degree-trace}的做法。它的弱点是查询局部信息：没有额外索引时，列出顶点$2$的邻居或判断$\{1,4\}$是否为边，都要扫描全部$m$条记录。
+
+\subsection{邻接表}
+\label{sec:graph-conn-adjacency-list}
+
+遍历一张图时最频繁的操作是“列出当前顶点的全部邻居”，在边列表上每次都要扫描全部记录。\term{邻接表}（adjacency list）预先给每个顶点保存一个列表，列出它的邻居，需要时连同边的属性。无向边$\{i,j\}$在$i$和$j$的列表中各出现一次；有向图的邻接表默认只保存出邻居。
+
+由边列表构造邻接表时，建立$n$个空列表，按编号扫描边列表：遇到无向边$\{i,j\}$，在$i$与$j$的列表末尾各追加对方；遇到弧$(i,j)$，只把$j$追加到$i$的列表。表~\ref{tab:graph-conn-adjacency-list-trace}是贯穿图上的构造过程，最后一行就是图~\ref{fig:graph-conn-four-representations}(b)。建表用$O(n)$时间，每条边追加两次，总共$O(n+m)$。列表中邻居的次序取决于读边次序，第~\ref{chap:graph-traversal}章的遍历按列表次序读取邻居，所以执行过程会说明采用的次序。有向图若还要列出能一步到达$j$的顶点，就在读到$(i,j)$时再把$i$追加到$j$的入邻居列表，即反向图的出邻居表，存储增加$O(m)$。
+
+\begin{table}[!htb]
+  \centering
+  \caption{由贯穿图的边列表构造邻接表。每读一条边，在两个端点的列表末尾各追加一项；最后一行即邻接表，各列表的长度依次是度$2,3,3,2$。}
+  \label{tab:graph-conn-adjacency-list-trace}
+  \small
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    已读入的边 & 顶点$1$ & 顶点$2$ & 顶点$3$ & 顶点$4$ & 列表项总数\\
+    \midrule
+    初始 & 空 & 空 & 空 & 空 & $0$\\
+    $e_1=\{1,2\}$ & $2$ & $1$ & 空 & 空 & $2$\\
+    $e_2=\{1,3\}$ & $2,3$ & $1$ & $1$ & 空 & $4$\\
+    $e_3=\{2,3\}$ & $2,3$ & $1,3$ & $1,2$ & 空 & $6$\\
+    $e_4=\{2,4\}$ & $2,3$ & $1,3,4$ & $1,2$ & $2$ & $8$\\
+    $e_5=\{3,4\}$ & $2,3$ & $1,3,4$ & $1,2,4$ & $2,3$ & $10$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+邻接表有$n$个列表头，无向图的列表项共$\sum_i d_i=2m$个（式\eqref{eq:graph-conn-handshake}），有向图的出邻居表共$m$个，所以存储量为$O(n+m)$。列出顶点$i$的邻居只需读它自己的列表，时间与$d_i$成正比；判断$\{i,j\}$是否为边则要在列表中查找，最坏需要$O(d_i)$时间。若一个算法对每个顶点恰好列出一次邻居，总工作量是$\sum_i(1+d_i)=n+2m$；第~\ref{chap:graph-traversal}章正是这样累计遍历的开销。
+
+\subsection{邻接矩阵}
+\label{sec:graph-conn-adjacency-matrix}
+
+查询“$i,j$是否相邻”时，邻接表要在列表里查找。若预先给每一对顶点留一个位置，这个查询就能一步完成，代价是更多的存储；把这些位置排成方阵，还能直接使用矩阵运算。
+
+固定顶点次序$1,\ldots,n$。无权图的\term{邻接矩阵}（adjacency matrix）$\bm A\in\mathbb R^{n\times n}$定义为
+\[
+a_{i,j}=
+\begin{cases}
+1, & \{i,j\}\in E\ \text{（有向图中为}\ (i,j)\in E\text{）},\\
+0, & \text{其他情形}.
+\end{cases}
+\]
+带权时把有边位置的$1$换成边权$w_{i,j}$，记作$\bm W$。有向图采用“行是起点、列是终点”的约定。无向图的$\bm A$对称，有向图的邻接矩阵一般不对称。
+
+构造时在全零矩阵上逐条填入边：无向边$\{i,j\}$令$a_{i,j}=a_{j,i}=1$，弧$(i,j)$只令$a_{i,j}=1$。贯穿图得到
+\begin{equation}
+\bm A=
+\begin{bmatrix}
+0&1&1&0\\
+1&0&1&1\\
+1&1&0&1\\
+0&1&1&0
+\end{bmatrix},
+\label{eq:graph-conn-running-adjacency}
+\end{equation}
+第$i$行中为$1$的列号就是$N(i)$，行和就是度$2,3,3,2$，对角元为$0$对应没有自环。有向图中行和是出度、列和是入度：$1\to2\leftarrow3$的邻接矩阵只有$a_{1,2}=a_{3,2}=1$，第$2$列读出$N^-(2)=\{1,3\}$，第$2$行全为$0$。
+
+\paragraph{零权边与结构掩码}
+在权矩阵$\bm W$中，零权边与无边都存成$0$，单看$\bm W$无法区分图~\ref{fig:graph-conn-zero-weight}(a)与(b)。允许零权边时要另存结构掩码$\bm M\in\{0,1\}^{n\times n}$，有边处为$1$。“是否相邻”查$\bm M$，“沿边累计多少”查$\bm W$；使用矩阵的算法应当说明它读的是哪一个。
+
+\paragraph{稠密存储与稀疏存储}
+存下全部$n^2$个条目称为稠密存储，查询一对顶点只需$O(1)$时间，列出一个顶点的邻居却要扫描整行，需要$O(n)$时间。很多实际的图$m$远小于$n^2$：一个有$10^5$个路口的道路网，边数只是几十万量级，稠密邻接矩阵却需要$10^{10}$个条目。稀疏存储只保存非零条目，存储量为$O(n+m)$，按行访问时与邻接表相当。所以说一个算法的代价时必须同时说明存储方式：邻接表上为$O(n+m)$的遍历，搬到稠密矩阵上就变成$O(n^2)$。
+
+\subsection{邻接矩阵的幂与行走计数}
+\label{sec:graph-conn-adjacency-powers}
+
+从$1$到$4$走两步有几种走法？走三步回到原处有几种？这类计数在传播过程中反复出现，逐条列举很快变得繁琐。图写成矩阵后，它们可以用第~\ref{sec:ls-matrix-operations}小节的矩阵乘法回答。按乘法定义，$(\bm A^2)_{i,j}=\sum_{\ell}a_{i,\ell}a_{\ell,j}$，而$a_{i,\ell}a_{\ell,j}=1$当且仅当$(i,\ell,j)$是一条长度为$2$的行走。所以对中间顶点$\ell$求和，数出的正是从$i$到$j$长度为$2$的行走条数。这一观察可以推广到任意长度。
+
+\begin{theorem}[邻接矩阵的幂计数行走]
+\label{thm:graph-conn-adjacency-powers}
+设$\bm A$是无权图（无向或有向）的邻接矩阵，$k\geq0$为整数。则$(\bm A^k)_{i,j}$等于从$i$到$j$长度为$k$的行走条数。
+\end{theorem}
+
+\begin{proof}
+对$k$归纳。$k=0$时$\bm A^0=\bm I$，长度为零的行走只有停在原地的$(i)$。设结论对$k$成立。从$i$到$j$长度为$k+1$的行走按倒数第二个顶点$\ell$分类：它由一条从$i$到$\ell$长度为$k$的行走接上一步$\ell\to j$组成，这一步存在当且仅当$a_{\ell,j}=1$。每条行走恰好落入一类，所以
+\[
+\#\{\text{从}\ i\ \text{到}\ j\ \text{长度为}\ k+1\ \text{的行走}\}
+=\sum_{\ell=1}^{n}(\bm A^k)_{i,\ell}\,a_{\ell,j}
+=(\bm A^{k+1})_{i,j}.
+\]
+\end{proof}
+
+无向图中$(\bm A^2)_{i,j}$就是$i$与$j$的公共邻居个数（$i=j$时是$i$的度）。贯穿图得到
+\[
+\bm A^2=
+\begin{bmatrix}
+2&1&1&2\\
+1&3&2&1\\
+1&2&3&1\\
+2&1&1&2
+\end{bmatrix}.
+\]
+图~\ref{fig:graph-conn-adjacency-square}说明$(\bm A^2)_{1,4}=a_{1,2}a_{2,4}+a_{1,3}a_{3,4}=2$，对应$(1,2,4)$与$(1,3,4)$。对角元$d_i$数的是走到一个邻居再立刻返回的闭行走，它们不是环。再乘一次$\bm A$可以数三角形：$(\bm A^3)_{i,i}=\sum_j(\bm A^2)_{i,j}a_{j,i}$，即对$i$的邻居$j$累加$(\bm A^2)_{i,j}$，得对角元$2,4,4,2$，迹为$12$。长度为$3$的闭行走中三个顶点两两相邻，恰好组成一个三角形，而每个三角形可以从$3$个顶点出发、沿$2$个方向绕行，所以三角形个数为$12/6=2$。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=110.352mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-adjacency-square-walks/figure.pdf}
+  \caption{邻接矩阵的平方计数长度为$2$的行走。(a)从$1$到$4$的两条行走$(1,2,4)$（蓝色）与$(1,3,4)$（绿色），中间顶点分别是$2$和$3$；(b)贯穿图的$\bm A^2$，黄色条目$(\bm A^2)_{1,4}=2$按中间顶点$\ell$求和，只有$\ell=2,3$的两项非零。}
+  \label{fig:graph-conn-adjacency-square}
+\end{figure}
+
+\paragraph{计数的范围与代价}
+这个计数包含重复顶点的行走，不能直接当作路径数或环数；更长的闭行走会混入往返与重复绕行，不能像三角形那样简单换算。由引理~\ref{lem:graph-conn-walk-contains-path}，$j$从$i$可达当且仅当$\bm I+\bm A+\cdots+\bm A^{n-1}$的第$(i,j)$个条目为正，但每次稠密乘法要$n^3$次乘加，远高于遍历的$O(n+m)$；矩阵幂的价值在于计数和代数性质。带权时$(\bm W^k)_{i,j}$是行走上边权乘积之和，既不是条数也不是长度之和；沿路线相加再取最小，需要把乘法换成加法、求和换成取最小，属于第~\ref{sec:graph-shortest-paths}节。
+
+\subsection{关联矩阵}
+\label{sec:graph-conn-incidence-matrix}
+
+邻接矩阵以顶点对为单位，看不出“第几条边”。以边为单位的计算，例如对每条边比较两个端点上的数值，需要行对应顶点、列对应边的矩阵。把边编号为$e_1,\ldots,e_m$，给每条无向边任选一个记录方向，例如把$e_k=\{i,j\}$记为从$i$到$j$。\term{关联矩阵}（incidence matrix）$\bm B\in\mathbb R^{n\times m}$的第$k$列在起点$i$处为$1$、终点$j$处为$-1$，其余为$0$；有向图直接用弧的方向。
+
+构造时按编号读边列表，在第$k$列的起点行写$1$、终点行写$-1$。贯穿图取“小编号指向大编号”的记录方向，得到
+\begin{equation}
+\bm B=
+\begin{bmatrix}
+1&1&0&0&0\\
+-1&0&1&1&0\\
+0&-1&-1&0&1\\
+0&0&0&-1&-1
+\end{bmatrix},
+\label{eq:graph-conn-running-incidence}
+\end{equation}
+即图~\ref{fig:graph-conn-four-representations}(d)。每列恰有两个非零元且和为$0$，第$i$行的非零元个数等于度$d_i$；不满足这两条的列就是记错的边。
+
+对无向图，记录方向只是一种约定。反转第$k$条边的记录方向，第$k$列整列变号，相当于右乘一个对角元为$\pm1$的对角矩阵，图本身没有改变，所以反映图性质的计算不应依赖这一选择。有向图的弧方向则是数据的一部分。关联矩阵怎样计算每条边两端数值的差，以及它与拉普拉斯矩阵的关系，在第~\ref{sec:graph-vertex-edge-functions}节和第~\ref{sec:graph-laplacian}节展开。
+
+\subsection{四种表示的比较}
+\label{sec:graph-conn-representation-comparison}
+
+表~\ref{tab:graph-conn-representation-costs}汇总了前面各小节的分析。没有一种表示在所有操作上都最好：逐边处理用边列表，逐点列邻居用邻接表，频繁查询顶点对或做矩阵运算用邻接矩阵，以边为单位的线性计算用关联矩阵。
+
+\begin{table}[!htb]
+  \centering\small
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    表示 & 存储 & 扫描全部边 & 列出$i$的邻居 & 查询$\{i,j\}$是否为边\\
+    \midrule
+    边列表 & $O(n+m)$ & $O(m)$ & $O(m)$ & $O(m)$\\
+    邻接表 & $O(n+m)$ & $O(n+m)$ & $O(d_i)$ & $O(d_i)$\\
+    稠密邻接矩阵 & $O(n^2)$ & $O(n^2)$ & $O(n)$ & $O(1)$\\
+    稠密关联矩阵 & $O(nm)$ & $O(nm)$ & $O(m+d_in)$ & $O(m)$\\
+    \bottomrule
+  \end{tabular}
+  \caption{四种表示的存储与三种基本访问的时间代价，$n$为顶点数，$m$为边数，$d_i$为顶点$i$的度。边列表、邻接表不附加索引；稠密关联矩阵列出邻居时先扫描第$i$行找出$d_i$条邻边，再在每条边的列中找另一个端点。关联矩阵若改用按行、按列都可访问的稀疏存储，存储降为$O(n+m)$，列出邻居的代价与邻接表相当。}
+  \label{tab:graph-conn-representation-costs}
+\end{table}
+
+算法所需的表示往往与输入不同，转换的代价也应计入：边列表与邻接表互转用$O(n+m)$时间；由边列表建稠密邻接矩阵要$O(n^2+m)$，由稠密邻接矩阵建邻接表要读遍$n^2$个条目；建稠密关联矩阵仅置零就要$O(nm)$。选择表示时，先列出算法反复执行的操作，再按表估计总代价并计入转换与存储：第~\ref{chap:graph-traversal}章的遍历用邻接表，第~\ref{sec:graph-minimum-spanning-tree}节按边权排序用边列表，第~\ref{chap:graph-spectral}章用邻接矩阵与关联矩阵。实际程序常同时保存两种表示，额外的存储也应计入。

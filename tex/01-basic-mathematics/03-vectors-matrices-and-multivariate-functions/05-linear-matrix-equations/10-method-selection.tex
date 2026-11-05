@@ -1,0 +1,127 @@
+\section{在同一求解目标下选择方法}
+\label{sec:ls-method-selection}
+
+求解目标、算法与误差标准都已建立，本节把前面的方法放回同一组问题中比较。先确认目标是精确求解、普通或加权最小二乘、最小范数还是正则化，再按矩阵结构、数据访问、资源和精度选择计算路线。比较的是达到相同要求的总成本；正则化与截断（第~\ref{sec:ls-truncated-svd-ridge}节）已经改变了目标，它们的系数较小、成本较低，不能直接视为把原问题解得更准确。
+
+\subsection{求解目标与方法适用性}
+\label{sec:ls-method-selection-goals}
+
+三个目标要分开：相容方程$\bm A\bm x=\bm b$，一般最小二乘$\min_{\bm x}\lVert\bm A\bm x-\bm b\rVert_2$，以及在多个解中选出最小范数解。相容方程的最小二乘最优残差为零，两者在这里重合；不相容时最小二乘要求的是$\bm A^\top\bm r=\bm0$，原残差停在一个正的长度上，所以不能把所有算法都按$\lVert\bm r\rVert\to0$判断。最小范数还要求解不含$\ker\bm A$的分量，这是第~\ref{sec:ls-select-among-solutions}节的额外选解条件。
+
+满列秩时，最小二乘解是正规方程$\bm A^\top\bm A\bm x=\bm A^\top\bm b$的唯一解，而$\bm A^\top\bm A$对称正定，于是矩形问题可以转成对称正定方程，调用Cholesky、CG或满足收敛条件的定常迭代。显式形成$\bm A^\top\bm A$时，稀疏矩阵可能产生大量填充，条件数变为$\kappa_2(\bm A)^2$，形成过程的舍入还可能丢掉有用的信息（第~\ref{sec:ls-ls-regularization-sensitivity}节）；不显式形成时，每次作用$\bm A^\top\bm A$仍需一次$\bm A$乘法和一次$\bm A^\top$乘法。秩亏时正规矩阵只是半正定，正定算法的唯一性与收敛保证不能照搬。
+
+另一种转换保留残差作为未知量：把$\bm r+\bm A\bm x=\bm b$与$\bm A^\top\bm r=\bm0$合写成一个方阵方程。它的性质决定了能用哪些方法求解。
+
+\begin{theorem}[最小二乘的增广方程]
+\label{thm:ls-augmented-kkt-system}
+设$\bm A\in\mathbb R^{m\times d}$满列秩，则方程
+\[
+ \begin{bmatrix}\bm I_m&\bm A\\ \bm A^\top&\bm0\end{bmatrix}
+ \begin{bmatrix}\bm r\\ \bm x\end{bmatrix}
+ =\begin{bmatrix}\bm b\\ \bm0\end{bmatrix}
+\]
+有唯一解，$\bm x$为最小二乘解，$\bm r$为相应残差；其系数矩阵对称、可逆且不定。
+\end{theorem}
+\begin{proof}
+第一块行给出$\bm r=\bm b-\bm A\bm x$，第二块行就是正规方程$\bm A^\top(\bm b-\bm A\bm x)=\bm0$，所以解与最小二乘解一一对应。对称性显然。若系数矩阵作用于$(\bm r;\bm x)$得零，则$\bm r=-\bm A\bm x$且$\bm A^\top\bm A\bm x=\bm0$，满列秩时只能$\bm x=\bm0$、$\bm r=\bm0$，故可逆。取$(\bm u;\bm0)$，$\bm u\ne\bm0$，二次型为$\lVert\bm u\rVert_2^2>0$；取$(-\bm A\bm x;\bm x)$，$\bm x\ne\bm0$，二次型为$-\lVert\bm A\bm x\rVert_2^2<0$，故不定。
+\end{proof}
+
+因此满列秩最小二乘也可以用分块$\mathrm{LDL}^\top$（第~\ref{sec:ls-ldlt}节）或MINRES（第~\ref{sec:ls-minres}节）处理，但不能用Cholesky或CG。这一转换保留了$\bm A$的稀疏结构，代价是未知量从$d$个增加到$m+d$个，存储和预条件都要按新的分块结构设计，并非免费的计算步骤。
+
+下文用三种说法区分方法与目标的关系。“直接适用”指方法使用原问题的目标和数据，例如QR、SVD与LSQR直接处理矩形最小二乘。“需转换”指先改变方程的表示，例如经正规方程或增广方程变成方阵方程。“需扩展版本”指要修改算法本身才能处理秩亏、不相容或最小范数的要求，例如扩展Kaczmarz相对标准Kaczmarz。能写出一种迭代公式，不等于已经满足了它的收敛条件。
+
+\subsection{矩阵条件}
+\label{sec:ls-method-selection-matrix}
+
+目标确定以后再看矩阵：方阵还是长方矩阵，是否对称、正定，秩是否完全，稠密还是稀疏，能否取得$\bm A^\top\bm u$或单独一行。表~\ref{tab:ls-method-applicability}按这些条件核对每种方法需要什么输入。表中的迭代法按本章建立的基本版本比较，不能从某一行的限制推出所有同名算法的扩展都不适用。
+
+表中“需转换”时，要重新检查转换后系统的结构、条件数、零空间和误差度量；“直接”也不意味着可以省去预条件、停止检验或退化处理。
+
+\begin{BookLongTable}{@{}>{\RaggedRight\arraybackslash}p{20mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-20mm-6\tabcolsep)/3\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-20mm-6\tabcolsep)/3\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-20mm-6\tabcolsep)/3\relax}@{}}
+\toprule
+方法 & 直接求解线性方程的主要条件 & 对一般不相容最小二乘的适用方式 & 需要特别核对的条件\\
+\midrule
+\endfirsthead
+\multicolumn{4}{@{}l}{\small 表~\thetable（续）}\\
+\toprule
+方法 & 直接求解线性方程的主要条件 & 对一般不相容最小二乘的适用方式 & 需要特别核对的条件\\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r@{}}{\small 续下页}\\
+\endfoot
+\bottomrule
+\caption{各方法的矩阵条件与适用方式。方法名后括号内为所在小节。}
+\label{tab:ls-method-applicability}\\
+\endlastfoot
+LU（\ref{sec:ls-lu}） & 非奇异方阵，采用适当主元策略 & 需构造相应方程；普通消元不自动保留原残差的最小二乘目标 & 填充、主元增长与分解复用\\
+Cholesky（\ref{sec:ls-cholesky}） & 实对称正定方阵 & 满列秩时可用于正规方程 & 正规矩阵的条件数、秩亏和形成误差\\
+分块$\mathrm{LDL}^\top$（\ref{sec:ls-ldlt}） & 实对称非奇异方阵，可含不定性 & 可用于满足可解条件的对称增广方程 & 对称主元块、增广规模与预条件\\
+Schur补（\ref{sec:ls-block-elimination}） & 被消去的块可逆，约化系统满足相应可解条件 & 可用于已有分块系统，不自动定义原始最小二乘目标 & 被消块与Schur补的条件、形成成本和回代\\
+Woodbury（\ref{sec:ls-woodbury}） & 已有可复用的可逆基矩阵求解器，更新秩较低，小系统可逆 & 可更新符合相应条件的方程，不直接处理任意不相容矩形问题 & 基矩阵分解复用、小系统敏感性与更新后的原残差\\
+正规方程法（\ref{sec:ls-normal-equations-method}） & 相容方程可转为$\bm A^\top\bm A\bm x=\bm A^\top\bm b$，但可能舍弃原有的有利结构 & 满列秩时采用Cholesky；秩亏须改变求解路线 & Gram矩阵的形成成本、条件数平方和正定性\\
+QR（\ref{sec:ls-qr-method}） & 相容问题按秩与形状选取QR或转置QR路线 & 直接适用；满列秩时得到唯一解 & 秩亏时需秩揭示与额外处理，基本QR不自动给最小范数解\\
+SVD（\ref{sec:ls-svd-solve}） & 可处理任意形状与秩的相容方程 & 直接适用，并可选取最小范数解 & 分解代价及小奇异值的误差放大\\
+Richardson（\ref{sec:ls-richardson}） & 固定步长使$\rho(\bm I-\alpha\bm A)<1$；正定情形有明确的步长区间 & 需转换，并重新选择步长 & 谱界、缩放及达到目标精度的总成本\\
+Jacobi（\ref{sec:ls-jacobi}） & 对角元非零且迭代矩阵谱半径小于$1$ & 需转换，并重新检查收敛 & 对称正定本身不保证普通Jacobi收敛\\
+Gauss--Seidel、SOR（\ref{sec:ls-gauss-seidel}、\ref{sec:ls-sor}） & 对角元非零与各自的收敛条件；正定情形另有充分保证 & 需转换，并检查参数与结构 & 更新顺序、松弛参数和并行性\\
+SSOR（\ref{sec:ls-ssor}） & 本章采用实对称正定矩阵且$0<\omega<2$ & 需转换；满列秩的正规方程满足正定结构 & 每轮双向扫掠，不能与单向方法只按轮数比较\\
+CG（\ref{sec:ls-conjugate-gradient}） & 实对称正定方阵 & 可经正规方程使用，不是直接的矩形算法 & 正定性、条件数，以及预条件是否保持内积结构\\
+MINRES（\ref{sec:ls-minres}） & 本章以实对称非奇异方阵为主，允许不定 & 不是通用矩形算法；可经合适的对称系统转换 & 对称结构与停止条件；奇异时的最小范数问题需另论\\
+GMRES（\ref{sec:ls-gmres}） & 一般非奇异方阵，无需对称 & 可经方阵系统转换，标准版本不直接处理长方矩阵 & 重启停滞、基的存储和预条件后的残差\\
+BiCG（\ref{sec:ls-bicg}） & 一般非奇异方阵，能施加$\bm A$和$\bm A^\top$ & 需转换，不是通用的矩形算法 & 双正交关系和递推失效\\
+BiCGSTAB（\ref{sec:ls-bicgstab}） & 一般非奇异方阵，通常只需施加$\bm A$ & 需转换，不是通用的矩形算法 & 递推分母、局部稳定步骤与不规则收敛\\
+LSQR（\ref{sec:ls-lsqr}） & 可直接用于相容方程，允许长方或秩亏 & 直接适用，需能计算$\bm A\bm v$与$\bm A^\top\bm u$ & 初值、基的正交性、停止条件及最小范数要求\\
+LSMR（\ref{sec:ls-lsmr}） & 可直接用于相容方程，允许长方或秩亏 & 直接适用，重点控制正规残差 & 同时检查原残差与$\bm A^\top\bm r$，不以某一个量概括全部误差\\
+标准Kaczmarz（\ref{sec:ls-kaczmarz}） & 相容系统及满足要求的行访问规则 & 不保证求出不相容问题的最小二乘解 & 零行、行的选择、初值的零空间分量与循环现象\\
+扩展Kaczmarz（\ref{sec:ls-extended-kaczmarz}） & 可用于相容系统 & 经行列校正处理不相容最小二乘 & 需要列访问或对应的校正操作，额外成本与初值条件\\
+\end{BookLongTable}
+
+\subsection{计算开销与收敛速度}
+\label{sec:ls-method-selection-cost}
+
+总开销拆成准备、每步计算、迭代步数、额外存储和通信五部分。设$\bm A$有$q$个非零元素，一次矩阵向量积通常需要$O(q)$次算术运算，向量的内积与线性组合需要与维数同阶的运算。Kaczmarz的一步只访问一行，不能把它的步数与一次完整矩阵向量积的步数直接比较，应同时报告遍历全部数据的次数或总算术量。
+
+对稠密$d$阶方阵，LU的分解约需$\tfrac23d^3$次运算，Cholesky与分块$\mathrm{LDL}^\top$利用对称性约为它的一半；分解之后，每个右端只需两次三角求解，约$2d^2$次运算，所以多右端问题应复用分解。对$m\geq d$的稠密矩形矩阵，Householder QR约需$2md^2-\tfrac23d^3$次运算，经济型SVD也是$O(md^2)$量级，但常数更大、需要迭代，换来奇异值、数值秩与最小范数解等信息；正规方程法形成$\bm A^\top\bm A$约需$md^2$次，再加$\tfrac13d^3$的Cholesky。稀疏分解的成本由填充决定，而填充又依赖非零元的排列顺序，不能直接套用稠密估计。
+
+不计预条件的标准迭代实现，每步开销如表~\ref{tab:ls-iterative-cost}所示。短递推方法只需固定个数的工作向量，GMRES则要保存全部基向量，第$k$步的正交化约需$4kd$次运算，所以存储与正交化成本随步数增长；重启和再正交化的成本须另计。
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}p{0.24\linewidth}p{0.36\linewidth}p{0.3\linewidth}@{}}
+\toprule
+方法 & 每步的矩阵作用 & 工作存储\\
+\midrule
+CG、MINRES & 一次$\bm A$ & 固定个数的向量\\
+GMRES & 一次$\bm A$，外加对已有基的正交化 & 随步数增长的基\\
+BiCG & 一次$\bm A$与一次$\bm A^\top$ & 固定个数的向量\\
+BiCGSTAB & 通常两次$\bm A$ & 固定个数的向量\\
+LSQR、LSMR & 一次$\bm A$与一次$\bm A^\top$ & 固定个数的向量\\
+\bottomrule
+\end{tabular}
+\caption{Krylov方法的每步开销（不计预条件）。}
+\label{tab:ls-iterative-cost}
+\end{table}
+
+步数由各自的收敛机制决定。定常迭代看迭代矩阵的谱半径，接近$1$时需要很多轮。CG使误差的$\bm A$范数在Krylov子空间中最小，步数取决于$\sqrt{\kappa_2(\bm A)}$与特征值的分布，特征值聚成少数几簇时可以很少。GMRES最小化残差，对非正规矩阵只看特征值不足以判断收敛，重启还可能使残差停滞。LSQR、LSMR的收敛由$\bm A$的奇异值分布决定，相当于对$\bm A^\top\bm A$用CG。Kaczmarz的收缩由各行法向之间的夹角和访问顺序决定，两行接近平行时交替投影走成锯齿。所以比较应在同一问题、同一停止要求下按总成本进行，不能只以单步便宜、条件数较小或某次算例步数少，就宣布一种方法普遍更快。
+
+\subsection{数值稳定性}
+\label{sec:ls-method-selection-stability}
+
+比较稳定性时，先区分三种误差来源：问题本身的病态，有限精度下的算法行为，以及迭代提前停止留下的误差。第一种与算法无关。对满列秩长方矩阵，$\kappa_2(\bm A)=\sigma_{\max}(\bm A)/\sigma_{\min}(\bm A)$，正规方程的条件数是它的平方（式~\eqref{eq:matrix-analysis-normal-equation-condition-square}）；比较计算路线时，用第~\ref{sec:ls-numerical-stability}节的残差、前向误差与后向误差作标准。LSQR、LSMR不显式形成正规矩阵，改善的是计算路线，并不消除原问题的小奇异值或病态。
+
+核验要按目标进行。相容方程检查原残差及按数据尺度化的容差；不相容最小二乘检查原残差与正规残差$\bm A^\top\bm r$；需要最小范数解时，还要检查初值和零空间的处理，例如Krylov方法与Kaczmarz从零初值出发时，迭代量留在$\operatorname{range}\bm A^\top$中。有限精度下，递推更新的残差可能逐渐偏离重新计算的$\bm b-\bm A\bm x_k$，预条件后的残差范数也可能与原问题的不同，所以最后应回到原数据重新计算残差。
+
+各种风险出现在不同的算法步骤上，处理办法也不同。直接分解的风险在主元：LU与$\mathrm{LDL}^\top$要监测增长因子，必要时改用正交分解。Krylov递推的风险在基失去正交，可以再正交化，或接受损失并以真实残差核验。BiCG、BiCGSTAB以及用于非正定矩阵的CG可能遇到过小的递推分母，要区分已收敛与失效，再重启或改用GMRES、MINRES。重启GMRES可能停滞，可以增大重启长度或改进预条件。标准Kaczmarz用于不相容系统时会在各行之间循环，应改用扩展Kaczmarz或LSQR。这些偏差各有来源，不宜统称为“不稳定”。
+
+预条件还要核对是否仍在解同一个问题（第~\ref{sec:ls-preconditioning}节）。在相容方程上，左右预条件都不改变解。对不相容最小二乘，左乘可逆矩阵$\bm M^{-1}$以后最小化的是$(\bm b-\bm A\bm x)^\top(\bm M\bm M^\top)^{-1}(\bm b-\bm A\bm x)$，即以$(\bm M\bm M^\top)^{-1}$为权的加权最小二乘（第~\ref{sec:ls-weighted-ls}节），解一般不同于原问题。对秩亏问题，右换元$\bm x=\bm N^{-1}\bm y$后在$\bm y$中取最小范数，对应的是使$\lVert\bm N\bm x\rVert_2$最小的$\bm x$，一般不是原坐标中的最小范数解。所以比较预条件要结合第~\ref{sec:ls-solution-selection}节的目标与选解准则，不能仅凭变换后更容易计算，就认定它仍解决同一个问题。
+
+\subsection{典型场景中的取舍}
+\label{sec:ls-method-selection-scenarios}
+
+能保存并分解矩阵的中小型问题，或者有多个右端时，先比较直接分解的总成本：对称正定用Cholesky，对称不定用分块$\mathrm{LDL}^\top$，一般方阵用部分主元LU，已有分解而矩阵只作低秩修改时用Woodbury更新。大型稀疏方程按结构比较：对称正定用CG，对称不定用MINRES，一般非对称用GMRES或BiCGSTAB，并配合可用的预条件。定常迭代作为独立求解器往往较慢，但准备成本低、更新是局部的、容易实现，常被用作Krylov方法的预条件或其他算法中的平滑步骤，价值不只在于单独求解。
+
+大型稀疏、长方或不相容的最小二乘，用LSQR或LSMR：它们只用$\bm A\bm v$和$\bm A^\top\bm u$，保留原始的矩形问题，并以有限的向量存储迭代。它们也能有效求解线性方程，不能笼统断言在方阵上效率更低。但当原方阵可以直接用CG、MINRES等结构化方法时，后者每步只需一次矩阵作用，收敛由$\bm A$本身的谱决定；LSQR、LSMR每步两次乘法，收敛由等效正规方程的谱决定，专用的方程方法通常更有优势。实际取舍还取决于预条件、矩阵访问的成本和目标精度。
+
+只能逐行读取、观测按行到达或矩阵的行非常稀疏时，Kaczmarz的单步成本最低，但全局收敛可能很慢，应按遍历全部数据的次数比较。标准Kaczmarz首先是相容方程的行投影方法，处理一般不相容最小二乘要用扩展版本，并计入列校正的附加成本，不能把“按行处理方便”等同于“适合所有最小二乘”。所有这些比较最终都回到第~\ref{sec:ls-solution-selection}节确定的求解目标与选解准则，以及第~\ref{sec:ls-numerical-sensitivity}节的误差要求。

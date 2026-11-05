@@ -1,0 +1,41 @@
+% 双层优化的复合结构与两种超梯度计算路线。
+% 上行：外层参数 theta 决定内层问题，选解得到 x(theta)，外层评价得到 J(theta)。
+% 左下：迭代展开把 T 步内层更新当作复合映射，前向保存轨迹、反向累计伴随向量。
+% 右下：隐式微分在驻点方程处线性化，解一个伴随线性系统。
+\begin{tikzpicture}[node distance=6mm,
+  box/.style={draw=#1,fill=#1Fill,rounded corners=1.8pt,inner sep=3.5pt,align=center,minimum height=8mm},
+  box/.default=FigureBlue,
+  flow/.style={-{Stealth[length=4.5pt]},FigureStroke,line width=.75pt},
+  back/.style={-{Stealth[length=4.5pt]},FigureRed,line width=.75pt,dashed},
+  note/.style={font=\FigureNoteFont\fontsize{7.5}{9}\selectfont,text=FigureMuted,align=center}]
+  % top row
+  \node[box=FigureYellow] (th) {外层参数\\$\bm\theta$};
+  \node[box,right=8mm of th] (inner) {内层问题\\$\min_{\bm x}L_{\mathrm{in}}(\bm x,\bm\theta)$};
+  \node[box=FigureGreen,right=8mm of inner] (sel) {选解\\$\bm x^\star(\bm\theta)$};
+  \node[box=FigurePurple,right=8mm of sel] (out) {外层评价\\$L_{\mathrm{out}}(\bm x,\bm\theta)$};
+  \node[box=FigureYellow,right=8mm of out] (J) {外层目标\\$J(\bm\theta)$};
+  \draw[flow] (th)--(inner); \draw[flow] (inner)--(sel); \draw[flow] (sel)--(out); \draw[flow] (out)--(J);
+  \draw[flow] (th.north) -- ++(0,4mm) -| (out.north);
+  % bottom-left: unrolling
+  \begin{scope}[yshift=-24mm]
+    \node[box,minimum height=6mm] (x0) {$\bm x^{(0)}$};
+    \node[box,minimum height=6mm,right=7mm of x0] (x1) {$\bm x^{(1)}$};
+    \node[right=5mm of x1] (dots) {$\cdots$};
+    \node[box,minimum height=6mm,right=5mm of dots] (xT) {$\bm x^{(T)}$};
+    \node[box=FigurePurple,minimum height=6mm,right=7mm of xT] (LT) {$L_{\mathrm{out}}$};
+    \draw[flow] (x0)--node[above,font=\fontsize{7}{8}\selectfont]{$\Phi$}(x1);
+    \draw[flow] (x1)--(dots); \draw[flow] (dots)--(xT); \draw[flow] (xT)--(LT);
+    \node[box=FigureYellow,minimum height=6mm,above=5mm of dots] (thu) {$\bm\theta$};
+    \draw[flow] (thu.west) -| (x1.north);
+    \draw[flow] (thu.east) -| (xT.north);
+    \draw[back] (LT.south) -- ++(0,-3mm) -| (x0.south);
+    \node[note,below=8mm of dots] {迭代展开：对 $T$ 步复合映射求导，目标是 $J_T$\\虚线：伴随向量反向回传，需保存或重算轨迹};
+  \end{scope}
+  % bottom-right: implicit
+  \begin{scope}[xshift=96mm,yshift=-27mm]
+    \node[box=FigureGreen,minimum height=6mm] (st) {驻点方程\\$\nabla_{\bm x}L_{\mathrm{in}}(\hat{\bm x},\bm\theta)=\bm 0$};
+    \node[box=FigureRed,minimum height=6mm,right=6mm of st] (adj) {伴随方程\\$\bm H\bm v=\nabla_{\bm x}L_{\mathrm{out}}$};
+    \draw[flow] (st)--(adj);
+    \node[note,below=8mm of $(st)!.5!(adj)$] {隐式微分：在所选解点线性化驻点方程\\要求 $\bm H=\nabla^2_{\bm x\bm x}L_{\mathrm{in}}$ 可逆};
+  \end{scope}
+\end{tikzpicture}

@@ -1,0 +1,131 @@
+% 第6章第2节：图拉普拉斯（邻域汇总、组合拉普拉斯、二次型与沿边变化能量）。
+
+\section{图拉普拉斯}
+\label{sec:graph-laplacian}
+
+章首的第一个问题是顶点函数沿边变化多少。回答它需要一个在每个顶点比较本点与邻居的算子；这个算子既可以直接读取邻居得到，也可以由上一节的边差经缩放、汇总得到，两条路线给出同一个组合拉普拉斯，而它的二次型正好累计各边差值的平方。
+
+\subsection{邻域汇总}
+\label{sec:graph-spec-neighborhood-aggregation}
+
+比较本点与邻居之前，先要在每个顶点按边权汇总邻居的值。用权矩阵$\bm W$左乘顶点函数，
+\[
+ (\bm W\bm f)_i=\sum_{j=1}^nw_{i,j}f_j ,
+\]
+第$i$个输出把各邻居的值按边权加权求和，非邻居的$w_{i,j}=0$，不参与计算。与之相伴的量是顶点$i$的\term{加权度}（weighted degree）
+\[
+ d_i=\sum_{j=1}^nw_{i,j},\qquad \bm D=\operatorname{diag}(d_1,\ldots,d_n),
+\]
+它累计与$i$相连的全部边权。第~\ref{sec:graph-adjacency-paths}节的度数的是邻居个数，加权度数的是连接强度，只有每条边权都为$1$时二者才相等。本章后文所说的度一律指加权度。
+
+$\bm W\bm f$是加权和，不是平均。在单位权三点路径上取$\bm f=(3,1,2)^{\top}$：顶点$1$只有邻居$2$，得$f_2=1$；顶点$2$有邻居$1$和$3$，得$f_1+f_3=5$；顶点$3$只有邻居$2$，得$1$。于是$\bm W\bm f=(1,5,1)^{\top}$：中间顶点读到两个邻居之和$5$，比任何一个邻居的值都大。要得到邻居的平均，还须除以加权度。
+
+实现时要注意，“作用一次”指所有顶点都从同一份旧向量读取，结果写入新数组。若在原数组上按$1,2,3$的次序就地更新，顶点$2$读到的是本轮新值$v_1=1$而不是$3$，最终得到$(1,3,3)^{\top}$而不是$(1,5,1)^{\top}$，实现的是另一个与次序有关的映射。本章所说的算子作用都指同步读取，是一次线性映射，不涉及随时间的演化。
+
+\subsection{组合拉普拉斯}
+\label{sec:graph-spec-combinatorial-laplacian}
+
+邻域汇总给出了邻居的加权和，衡量变化还要把本点值与邻居值相比较。对每个邻居取差$f_i-f_j$，再按边权求和，得到
+\[
+ \sum_{j=1}^nw_{i,j}(f_i-f_j)=d_if_i-(\bm W\bm f)_i .
+\]
+右端对每个$i$成立，所以这一运算可以写成矩阵$\bm D-\bm W$。
+
+\begin{definition}[组合拉普拉斯]
+\label{def:graph-spec-combinatorial-laplacian}
+设$\mathcal G=(V,E)$为有限无向图，边权对称非负、无自环，$\bm W$与$\bm D$分别为权矩阵与加权度矩阵。称
+\begin{equation}
+ \bm L=\bm D-\bm W
+ \label{eq:graph-spec-laplacian}
+\end{equation}
+为$\mathcal G$的\term{组合图拉普拉斯}（combinatorial graph Laplacian），它逐点作用为$(\bm L\bm f)_i=\sum_jw_{i,j}(f_i-f_j)$。
+\end{definition}
+
+$\bm L$的对角元是加权度$d_i$，非对角元是$-w_{i,j}$；每行之和为$d_i-\sum_jw_{i,j}=0$，所以$\bm L\bm1=\bm0$。这与直觉一致：常量在每条边上都没有差。
+
+单位权三点路径的度为$(1,2,1)$。在对角线上填度，再在每条边$\{1,2\}$、$\{2,3\}$对应的两个对称位置填$-1$，得到
+\[
+ \bm L=\begin{bmatrix}1&-1&0\\-1&2&-1\\0&-1&1\end{bmatrix},\qquad
+ \bm L\begin{bmatrix}3\\1\\2\end{bmatrix}=\begin{bmatrix}3-1\\-3+2\cdot1-2\\-1+2\end{bmatrix}=\begin{bmatrix}2\\-3\\1\end{bmatrix}.
+\]
+中间顶点的输出$-3$是它与两个邻居之差的和$(1-3)+(1-2)$。
+
+把定义中的和拆成两项，可以看清$\bm L$在每个顶点量的是什么。对度为正的顶点$i$，记邻居值按边权的平均为$\bar f_i=\frac1{d_i}\sum_jw_{i,j}f_j$，则
+\begin{equation}
+ (\bm L\bm f)_i=d_if_i-\sum_{j=1}^nw_{i,j}f_j=d_i\bigl(f_i-\bar f_i\bigr).
+ \label{eq:graph-spec-laplacian-neighbor-average}
+\end{equation}
+所以$(\bm L\bm f)_i$说的是：本点比邻居的平均高出多少，再乘以本点的连接总量$d_i$。输出为正，本点高于周围，像一座小山峰；为负，本点低于周围，像一处洼地；为零，本点恰好等于邻居平均。在三点路径上，顶点$2$的邻居平均为$\frac{3+2}2=\frac52$，本点值$1$比它低$\frac32$，乘以度$2$正是$-3$。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=89.031mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-neighbor-deviation/figure.pdf}
+  \caption{拉普拉斯读作“本点值减邻居平均，再乘度”。单位权六点路径上取$\bm f=(0,1,2,4,3,3)^{\top}$。蓝色实心点是本点值，黄色空心圈是邻居平均，箭头是二者之差；下方两行是度与$(\bm L\bm f)_i$。顶点$4$高出邻居平均$\tfrac32$，输出$3$；顶点$3$、$5$低于邻居平均$\tfrac12$、端点$1$低于唯一邻居$1$，输出都是$-1$；顶点$2$位于直线段上、顶点$6$与唯一邻居相等，输出都为$0$。}
+  \label{fig:graph-spec-neighbor-deviation}
+\end{figure}
+
+图~\ref{fig:graph-spec-neighbor-deviation}在单位权六点路径上画出了这种读法。函数$\bm f=(0,1,2,4,3,3)^{\top}$在顶点$4$处凸起，那里的输出为正；在顶点$3$、$5$处略低于两侧的平均，端点$1$低于它唯一的邻居，这三处输出为负；顶点$2$夹在$0$与$2$之间，正好等于邻居平均，输出为零。路径内部顶点的度为$2$，式~\eqref{eq:graph-spec-laplacian-neighbor-average}变为
+\[
+ (\bm L\bm f)_i=2f_i-f_{i-1}-f_{i+1}=-\bigl(f_{i+1}-2f_i+f_{i-1}\bigr),
+\]
+括号中是二阶差分，在数轴上用来近似二阶导数。因此在路径上，$\bm L\bm f$量的是函数在每一处弯了多少：直线段上为零，向上凸起处为正，向下凹陷处为负。它的符号与微积分中的拉普拉斯算子相反，这样约定是为了让下一小节的二次型非负。各顶点的输出加起来总是零，$\bm1^{\top}\bm L\bm f=(\bm L\bm1)^{\top}\bm f=0$：图中山峰处的$3$恰好被三处洼地的$-1$抵消。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=111.887mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-laplacian-two-routes/figure.pdf}
+  \caption{同一个拉普拉斯的两条计算路线，单位权三点路径，$\bm f=(3,1,2)^{\top}$。(a)~在黄色顶点$2$处把本点值与每个邻居值相减再求和，得$(\bm L\bm f)_2=-3$；(b)~先用$\bm B^{\top}$取边差$(2,-1)$，再乘边权（此处均为$1$），最后用$\bm B$按净流出汇总回顶点，得到完整的$\bm L\bm f=(2,-3,1)^{\top}$。两条路线在每个顶点给出相同结果。}
+  \label{fig:graph-spec-laplacian-two-routes}
+\end{figure*}
+
+\paragraph{关联矩阵分解}
+第二条路线从上一节的边差出发：先用$\bm B^{\top}$取边差，再用$\bm W_E$把第$e$条边的差乘以$w_e$，最后用$\bm B$按净流出汇总回顶点。三步合起来是矩阵$\bm B\bm W_E\bm B^{\top}$。要核对它等于$\bm L$，记$\bm b_e$为$\bm B$的第$e$列，则
+\[
+ \bm B\bm W_E\bm B^{\top}=\sum_{e\in E}w_e\bm b_e\bm b_e^{\top}.
+\]
+若$e$连接$i$与$j$，则$\bm b_e=\pm(\bm e_i-\bm e_j)$，$\bm b_e\bm b_e^{\top}$在$(i,i)$、$(j,j)$处为$1$，在$(i,j)$、$(j,i)$处为$-1$，其余为零，而且与参考方向无关。逐边相加，每个对角位置累计出$d_i$，每个非对角位置得到$-w_{i,j}$，因此
+\begin{equation}
+ \bm L=\bm B\bm W_E\bm B^{\top}.
+ \label{eq:graph-spec-laplacian-incidence}
+\end{equation}
+图~\ref{fig:graph-spec-laplacian-two-routes}(b)在三点路径上按这条路线计算，结果仍是$(2,-3,1)^{\top}$。
+
+上一节要求无向图上的算子不依赖参考方向，用式~\eqref{eq:graph-spec-laplacian-incidence}可以整体核对这一点。改记部分边的方向后，关联矩阵变为$\bm B\bm R$，其中$\bm R$是对角元为$\pm1$的符号矩阵。由于对角矩阵相乘可以交换、$\bm R^2=\bm I$，有$\bm R\bm W_E\bm R=\bm W_E$，于是
+\[
+ (\bm B\bm R)\bm W_E(\bm B\bm R)^{\top}=\bm B\bm R\bm W_E\bm R\bm B^{\top}=\bm B\bm W_E\bm B^{\top}.
+\]
+边差变号两次，一次在取差时，一次在汇总时，两次抵消。抵消之所以成立，是因为参考方向只是记账约定；真正的有向图中弧的方向是数据本身，不能这样消去，其拉普拉斯一般不对称，不在本章范围内。
+
+\subsection{沿边变化能量}
+\label{sec:graph-spec-dirichlet-energy}
+
+$\bm L\bm f$在每个顶点给出一个比较结果，而“这组读数整体上沿边变化多少”需要用一个数回答。自然的候选是二次型$\bm f^{\top}\bm L\bm f$。把式~\eqref{eq:graph-spec-laplacian-incidence}代入，中间恰好是边差的加权平方和：
+\begin{equation}
+ \begin{aligned}
+ \bm f^{\top}\bm L\bm f
+ &=(\bm B^{\top}\bm f)^{\top}\bm W_E(\bm B^{\top}\bm f)
+ =\sum_{\{i,j\}\in E}w_{i,j}(f_i-f_j)^2\\
+ &=\frac12\sum_{i=1}^n\sum_{j=1}^nw_{i,j}(f_i-f_j)^2 .
+ \end{aligned}
+ \label{eq:graph-spec-dirichlet-energy}
+\end{equation}
+中间的和对无向边求和，每条边计一次；最右端对有序点对$(i,j)$求和，每条边作为$(i,j)$与$(j,i)$各出现一次，所以要乘$\frac12$。这个量称为沿边变化能量，也称\term{Dirichlet能量}（Dirichlet energy）。它的大小取决于两样东西：相邻值差多少，以及图要求这一对顶点被比较得多强。
+
+图~\ref{fig:graph-spec-energy-edge-weights}固定$\bm f=(3,1,2)^{\top}$，只改变边权。两条边的差是$2$与$-1$，平方始终是$4$和$1$。单位权时能量为$1\cdot4+1\cdot1=5$，也可以由上面的$\bm L\bm f$核对：$\bm f^{\top}(\bm L\bm f)=3\cdot2+1\cdot(-3)+2\cdot1=5$。把$\{2,3\}$的权加到$4$，较小的差被放大四倍，能量变为$4+4\cdot1=8$；把$\{1,2\}$的权减到$\frac14$，较大的差几乎不再计入，能量降到$\frac14\cdot4+1=2$。所以说一个函数“平滑”，总是相对于给定的边权而言的。
+
+可以用弹簧来想象这个量。把每个顶点的值看成一个滑块的高度，每条边是一根劲度为$w_{i,j}$的弹簧，两端高度差为$f_i-f_j$时，弹簧储存的势能与$w_{i,j}(f_i-f_j)^2$成正比。能量小，说明弹簧大多松弛，相邻的值彼此接近；某条硬弹簧被拉长，代价就大。这个图像也说明了$\bm L\bm f$与能量的关系。对$f_i$求偏导时，只有端点含$i$的边起作用：
+\[
+ \frac{\partial}{\partial f_i}\sum_{\{j,k\}\in E}w_{j,k}(f_j-f_k)^2=2\sum_{j=1}^nw_{i,j}(f_i-f_j)=2(\bm L\bm f)_i ,
+\]
+即能量的梯度是$2\bm L\bm f$。$(\bm L\bm f)_i>0$时把$f_i$稍微调低，$(\bm L\bm f)_i<0$时稍微调高，能量都会下降；两种调整都把本点值拉向邻居平均，正如弹簧把滑块拉回邻居之间。第~\ref{sec:graph-filtering}节压低逐点跳动时还会用到这种效果。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=112.924mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-energy-edge-weights/figure.pdf}
+  \caption{同一顶点函数$\bm f=(3,1,2)^{\top}$在三组边权下的沿边变化能量，线宽示意边权大小。两条边的差的平方始终为$4$与$1$，能量是它们的加权和：(a)~权$(1,1)$时为$5$；(b)~加重边$\{2,3\}$后为$8$；(c)~减轻边$\{1,2\}$后为$2$。}
+  \label{fig:graph-spec-energy-edge-weights}
+\end{figure*}
+
+\paragraph{半正定性}
+式~\eqref{eq:graph-spec-dirichlet-energy}的每一项都是非负权乘平方，所以对任意$\bm f$都有$\bm f^{\top}\bm L\bm f\geq0$。$\bm L$又是对称矩阵，因此它对称半正定（第~\ref{sec:ls-gram-psd}节）。这一结论用到了权非负：若允许负权，对应的项可以为负，半正定性一般不再成立。
+
+各项非负，所以能量为零当且仅当每一项为零，即对每条正权边都有$f_i=f_j$；零权边的项本来就是零，不对两端施加限制。这是逐边的条件。相等关系怎样沿正权路径传递、零能量的函数究竟有哪些，要用到连通分量，留到第~\ref{sec:graph-spectrum-connectivity}节回答。

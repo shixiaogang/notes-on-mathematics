@@ -1,0 +1,315 @@
+% 第6章第7节：谱划分（图划分问题与割的表示、RatioCut谱方法、NCut谱方法、方法比较与结果检验）。
+
+\section{谱划分}
+\label{sec:graph-spectral-partition}
+
+章首的第三个问题是按连接强弱把顶点分成两组。本节固定$n\geq2$，要求两组都非空。跨组边权可以写成拉普拉斯的二次型，但只压低它会切出失衡的分组，所以目标中还要计入两组的大小；按顶点数计入和按体积计入，分别引出组合拉普拉斯和归一化拉普拉斯的第二特征向量。两种方法都先放宽取值求谱下界，再用阈值扫描恢复实际分组。
+
+\subsection{图划分问题与割的表示}
+\label{sec:graph-spec-partition-problem}
+
+输入是非负权无向图，输出是顶点集的一个二分$S$与$\bar S=V\setminus S$，两组都非空，并且跨组的连接尽量弱。跨组的连接强度用
+\[
+ \operatorname{cut}(S,\bar S)=\sum_{i\in S}\sum_{j\in\bar S}w_{i,j}
+\]
+衡量。这沿用了第~\ref{sec:graph-max-flow}节割的想法：把顶点分到两侧，累计跨过两侧的边上的数值。区别在于这里的图是无向的，没有源和汇，两个方向不加区分。
+
+割权可以写成二次型。令$\bm s$为$S$的指示向量，$s_i=1$（$i\in S$）或$0$（$i\in\bar S$）。代入能量式~\eqref{eq:graph-spec-dirichlet-energy}，两端在同一组的边$(s_i-s_j)^2=0$，跨组的边$(s_i-s_j)^2=1$，所以
+\begin{equation}
+ \bm s^{\top}\bm L\bm s=\sum_{\{i,j\}\in E}w_{i,j}(s_i-s_j)^2=\operatorname{cut}(S,\bar S).
+ \label{eq:graph-spec-cut-quadratic}
+\end{equation}
+也就是说，把分组看成一个只取$0$和$1$的顶点函数，它的沿边变化能量恰好只在跨组边上产生，每条跨组边贡献它的边权。于是划分问题变成在取值为$0$或$1$的向量上最小化$\bm L$的二次型。
+
+只最小化割权并不够。若允许空组，$S=\varnothing$的割权为零，问题平凡；这正是要求两组非空的原因。即使要求非空，最小割也常常只切下一个连接很弱的顶点。图~\ref{fig:graph-spec-cut-indicator}中两个单位权三角形$\{1,2,3\}$、$\{4,5,6\}$由一条单位权边$\{3,4\}$相连，顶点$7$以权$0.6$挂在顶点$2$上，下文称它为七点图。直观的分法是沿中间的桥切开，割权为$1$；但只切下顶点$7$的割权是$0.6$，枚举全部$63$种非空二分可知它就是最小割。单纯的割权不关心两组各有多大。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=108.423mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-cut-indicator/figure.pdf}
+  \caption{割与指示向量。两个单位权三角形由桥$\{3,4\}$相连，顶点$7$以权$0.6$连到顶点$2$。蓝色顶点属于$S$（指示向量取$1$），绿色顶点属于$\bar S$（取$0$），红色边跨组，$\bm s^{\top}\bm L\bm s$等于红色边权之和。(a)~$S=\{7\}$，割权$0.6$，是全部非空二分中的最小割；(b)~$S=\{1,2,3,7\}$，割权$1$，两组大小相近。}
+  \label{fig:graph-spec-cut-indicator}
+\end{figure}
+
+\paragraph{连续松弛}
+解决失衡的办法是在目标中加入两组大小的惩罚，后两小节的RatioCut与NCut是两种不同的加法。加入平衡项后，问题仍是在有限多个分组中挑选：$n$个顶点的非空二分有$2^{n-1}-1$种，随$n$指数增长，逐个比较很快就做不到。两种方法都靠放宽可行集来处理。
+
+放宽的想法可以用整数问题来说明。在整数中找使某个量最小的点往往很难；允许取小数之后，问题可能变成能直接求解的连续问题。小数的最优值不会比整数的更大，因为整数本身也是小数；代价是小数解一般不是整数，还要把它取回成整数，再按原来的量计算。谱划分做的是同一件事：把“每个顶点只能取两个值之一”放宽为“每个顶点可以取任意实数”，求出连续最优解，再从中取回一个分组。
+
+形式上，设离散问题在有限可行集$\mathcal F$上最小化目标$J$，最优值为$J^\star$。若把可行集扩大为$\mathcal C\supseteq\mathcal F$，并把$J$延拓到$\mathcal C$上，可选的对象只多不少，最小值只能下降：$L=\min_{\mathcal C}J\leq J^\star$。这种做法称为\term{连续松弛}（continuous relaxation），它给出下界。另一方面，从连续解出发构造任意一个合法分组并计算原目标值$U$，则$U\geq J^\star$，它给出上界。于是
+\[
+ 0\leq U-J^\star\leq U-L ,
+\]
+差$U-L$限制了所得分组可能的次优程度。它只是次优程度的上界，只有下界恰好取到$J^\star$时才等于真实的差距。
+
+\subsection{RatioCut谱方法}
+\label{sec:graph-spec-ratio-cut}
+
+\subsubsection{问题与思路}
+
+为了不让一组过小，把割权按两组的顶点数放大。设$a=|S|>0$，$b=|\bar S|>0$，定义\term{比率割}（RatioCut）
+\begin{equation}
+ \operatorname{RatioCut}(S,\bar S)=\operatorname{cut}(S,\bar S)\Bigl(\frac1a+\frac1b\Bigr).
+ \label{eq:graph-spec-ratio-cut}
+\end{equation}
+一组越小，$\frac1a$越大，切下它的代价就越高。在七点图中，只切下顶点$7$的RatioCut为$0.6\cdot(1+\tfrac16)=0.7$，沿桥切开的RatioCut为$1\cdot(\tfrac14+\tfrac13)=\tfrac7{12}\approx0.58$；枚举可知后者是全部非空二分中的最小值。
+
+\paragraph{谱下界}
+要把RatioCut与谱联系起来，先把它写成Rayleigh商（定义~\ref{def:matrix-analysis-rayleigh-quotient}）。$\bm f^{\top}\bm L\bm f/\bm f^{\top}\bm f$是每单位长度的沿边变化能量，它不随$\bm f$的整体缩放改变。对给定分组构造在两组上分别取常数的向量
+\begin{equation}
+ f_i=\sqrt{b/a}\quad(i\in S),\qquad f_i=-\sqrt{a/b}\quad(i\in\bar S).
+ \label{eq:graph-spec-ratio-cut-vector}
+\end{equation}
+它与指示向量一样把分组记成一个顶点函数，只是把两个取值选成一正一负，并按两组大小调整。逐项计算：$\bm1^{\top}\bm f=a\sqrt{b/a}-b\sqrt{a/b}=\sqrt{ab}-\sqrt{ab}=0$；$\bm f^{\top}\bm f=a\cdot\tfrac ba+b\cdot\tfrac ab=n$；跨组边上的差都是$\sqrt{b/a}+\sqrt{a/b}=n/\sqrt{ab}$，同组边上的差为零，所以
+\[
+ \bm f^{\top}\bm L\bm f=\operatorname{cut}(S,\bar S)\frac{n^2}{ab}=n\operatorname{cut}(S,\bar S)\Bigl(\frac1a+\frac1b\Bigr)=n\operatorname{RatioCut}(S,\bar S).
+\]
+因此$\operatorname{RatioCut}(S,\bar S)=\bm f^{\top}\bm L\bm f/\bm f^{\top}\bm f$。最小化RatioCut，等价于在“与$\bm1$正交、只取两个由分组决定的值”的向量中最小化$\bm L$的Rayleigh商。去掉“只取两个值”的限制，只保留$\bm f\neq\bm0$与$\bm f\perp\bm1$，可行集从有限个向量扩大为一个$n-1$维子空间去掉原点，这就是连续松弛。松弛后的问题可以直接用谱展开求解。
+
+\begin{theorem}[RatioCut的谱下界]
+\label{thm:graph-spec-ratio-cut-bound}
+设$\bm L$的特征值为$0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_n$，则
+\[
+ \min_{\bm f\neq\bm0,\ \bm f\perp\bm1}\frac{\bm f^{\top}\bm L\bm f}{\bm f^{\top}\bm f}=\lambda_2 ,
+\]
+最小值在第二特征向量$\bm u_2$处取到。因此对每个非空二分都有$\operatorname{RatioCut}(S,\bar S)\geq\lambda_2$。
+\end{theorem}
+
+\begin{proof}
+$\bm1$在$\bm L$的零空间中，所以可以取标准正交特征基使$\bm u_1=\bm1/\sqrt n$。$\bm f\perp\bm1$意味着$\bm f$在$\bm u_1$上的坐标为零，$\bm f=\sum_{k\geq2}c_k\bm u_k$。由式~\eqref{eq:graph-spec-parseval}，
+\[
+ \frac{\bm f^{\top}\bm L\bm f}{\bm f^{\top}\bm f}=\frac{\sum_{k\geq2}\lambda_kc_k^2}{\sum_{k\geq2}c_k^2},
+\]
+它是$\lambda_2,\ldots,\lambda_n$以$c_k^2$为权的加权平均，不小于$\lambda_2$；取$\bm f=\bm u_2$时等于$\lambda_2$。每个两水平向量~\eqref{eq:graph-spec-ratio-cut-vector}都在可行集中，所以RatioCut不小于这个最小值。
+\end{proof}
+
+证明只用到已有的谱分解，不需要拉格朗日乘子或一般的约束优化理论。第二特征向量常称为Fiedler向量；正权支撑图连通时，由定理~\ref{thm:graph-spec-null-space}知$\lambda_2>0$。
+
+\paragraph{阈值扫描}
+连续最优解$\bm u_2$一般不是两水平向量，需要把它变回分组。$\bm u_2$为什么会携带分组的信息，可以从它所解的问题看出：它与$\bm1$正交，各分量之和为零，所以正负两部分都要有相当的分量；它又是这类向量中每单位长度沿边变化能量最小的，所以要让每条重边两端的取值尽量接近。两个要求合起来，$\bm u_2$倾向于在连接紧密的一群顶点上取相近的值，把从正到负的过渡放在两群之间连接稀少的地方。这只是直观解释，不保证变号处就是最优的切口，所以扫描还要用原目标评价。
+
+两水平向量在$S$上取正值、在$\bar S$上取负值，所以自然的做法是按$\bm u_2$的坐标排序，在某个位置切开；不知道切在哪里最好，就把每个可能的位置都试一遍，用原目标评价。这种逐个阈值试探的做法称为\term{阈值扫描}（threshold sweep）。扫描时依次把顶点从$\bar S$移入$S$，每移入一个顶点，割权只在它的邻边上改变，所以不必每次重新计算整张图的割权。
+
+\subsubsection{算法实现}
+
+图的正权边邻接表与顶点数$n$在运行前给定；第二特征向量$\bm v=\bm u_2$及按其坐标排好的顶点分组在扫描开始前一次算出，扫描中不变。它们都不算状态。坐标相同的顶点并为一组，整体移动，否则同样的坐标会被任意的先后次序拆开，结果依赖于排序的实现而不是谱方向。扫描维护五项状态：
+\begin{itemize}
+  \item 归属标记：每个顶点当前是否在$S$中，初值全部为否；
+  \item 割权$c$：当前$S$与$\bar S$之间的边权之和，初值为$0$；
+  \item 组大小$a$：当前$S$的顶点数，初值为$0$；
+  \item 最优值$U$：到目前为止评价过的最小RatioCut，初值为$+\infty$；
+  \item 最优分组：取得$U$时的$S$，初值为空。
+\end{itemize}
+此后依次取排序中的下一组顶点，做三件事：
+\begin{itemize}
+  \item 移入：对组中每个顶点$i$，按移入$i$之前的$S$计算增量$\sum_{j\notin S}w_{i,j}-\sum_{j\in S}w_{i,j}$，令$c\gets c+\text{增量}$、$a\gets a+1$，再把$i$标记为在$S$中。$i$移入后，它连向$S$的边不再跨组，连向$\bar S$的边开始跨组，增量正是这两部分之差。
+  \item 评价：一组移完后计算$c\bigl(\tfrac1a+\tfrac1{n-a}\bigr)$。
+  \item 更新最优：若评价值小于$U$，令$U$为该值，并记下当前$S$为最优分组。
+\end{itemize}
+当剩下的只有排在最后的一组时停止，此时再移入就会使$\bar S$为空。每次评价时$S$至少含排在最前的一组，$\bar S$至少含排在最后的一组，所以两组都非空。
+
+\begin{algorithm}[RatioCut谱划分（阈值扫描）]
+\label{alg:graph-spec-sweep}
+输入：$n\geq2$个顶点的非负权无向图（以正权边邻接表存储）。输出：一个非空二分及其RatioCut值$U$。
+\begin{enumerate}
+ \item 构造$\bm L=\bm D-\bm W$，求第二特征向量$\bm v=\bm u_2$。
+ \item 按$\bm v$的坐标从大到小排列顶点；坐标相同的顶点并为一组，整体移动。
+ \item 置$S=\varnothing$，割权$c=0$，组大小$a=0$，当前最优值$U=+\infty$。
+ \item 依次取下一组顶点，逐个移入$S$。每移入一个顶点$i$，令$c\gets c+\sum_{j\notin S}w_{i,j}-\sum_{j\in S}w_{i,j}$（$S$取移入$i$之前的集合），$a\gets a+1$。一组移完后，计算$c\bigl(\tfrac1a+\tfrac1{n-a}\bigr)$；它小于$U$时更新$U$并记下当前$S$。
+ \item 当剩下的只有最后一组时停止（再移入就会使$\bar S$为空），输出记下的分组和$U$。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在七点图上运行算法~\ref{alg:graph-spec-sweep}。第1步，七个顶点的度依次为$2,2.6,3,3,2,2,0.6$，数值求得$\lambda_2\approx0.317$，第二特征向量（取第一个分量为正的符号）约为
+\[
+ \bm u_2\approx(0.216,\ 0.289,\ 0.075,\ -0.304,\ -0.445,\ -0.445,\ 0.613)^{\top}.
+\]
+它在三角形$\{1,2,3\}$与顶点$7$上为正，在三角形$\{4,5,6\}$上为负，跨过桥$\{3,4\}$时从$0.075$变到$-0.304$；顶点$7$只靠一条弱边相连，它的值$0.613$也与顶点$2$的$0.289$相差较大，但没有变号。第2步，排序为$7,2,1,3,4$，最后是坐标相同的$\{5,6\}$，共有五个阈值，见图~\ref{fig:graph-spec-seven-vertex-sweep}(a)。第3、4步逐个阈值推进，图~\ref{fig:graph-spec-ratio-cut-sweep-steps}画出每一步的分组与跨组边，表~\ref{tab:graph-spec-ratio-cut-sweep}列出状态：
+\begin{itemize}
+  \item 移入$7$：它唯一的邻边连向$\bar S$，割权由$0$增至$0.6$；$a=1$，RatioCut为$0.6\cdot(1+\tfrac16)=0.7$，成为当前最优。
+  \item 移入$2$：边$\{2,7\}$不再跨组，边$\{1,2\}$、$\{2,3\}$开始跨组，增量$2-0.6=1.4$，割权为$2$；RatioCut为$2\cdot(\tfrac12+\tfrac15)=1.4$，不更新。
+  \item 移入$1$：边$\{1,2\}$不再跨组，边$\{1,3\}$开始跨组，增量为$0$，割权仍为$2$；RatioCut为$2\cdot(\tfrac13+\tfrac14)=\tfrac76$，不更新。
+  \item 移入$3$：它连向$S$的两条边$\{1,3\}$、$\{2,3\}$不再跨组，只有桥$\{3,4\}$开始跨组，增量$1-2=-1$，割权降到$1$；RatioCut为$1\cdot(\tfrac14+\tfrac13)=\tfrac7{12}$，更新为当前最优。
+  \item 移入$4$：桥不再跨组，边$\{4,5\}$、$\{4,6\}$开始跨组，增量$2-1=1$，割权为$2$；RatioCut为$2\cdot(\tfrac15+\tfrac12)=1.4$，不更新。
+\end{itemize}
+此时只剩最后一组$\{5,6\}$，扫描停止，输出$S=\{1,2,3,7\}$与$U=\tfrac7{12}$，恰是沿桥切开的分组。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=106.398mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-ratio-cut-sweep-steps/figure.pdf}
+  \caption{七点图上RatioCut阈值扫描的逐步执行，顶点按第二特征向量的坐标依次移入$S$。蓝色顶点属于$S$，绿色顶点属于$\bar S$，粗描边为本步移入的顶点，红色粗边为跨组边，红字标出全部阈值中的最小值。第(4)步移入顶点$3$后只剩桥$\{3,4\}$跨组，RatioCut降到$\tfrac7{12}$。}
+  \label{fig:graph-spec-ratio-cut-sweep-steps}
+\end{figure}
+
+\begin{table}[!htb]
+  \centering
+  \caption{七点图上RatioCut阈值扫描的状态。“增量”一列是$\sum_{j\notin S}w_{i,j}-\sum_{j\in S}w_{i,j}$，按移入前的$S$计算；$U$为到该步为止的最小RatioCut。}
+  \label{tab:graph-spec-ratio-cut-sweep}
+  \small
+  \begin{tabular}{@{}cccccccc@{}}
+    \toprule
+    步 & 移入 & 增量 & 割权$c$ & $a$ & $n-a$ & RatioCut & $U$ \\
+    \midrule
+    初始 & — & — & $0$ & $0$ & $7$ & — & $+\infty$ \\
+    $1$ & $7$ & $0.6-0=0.6$ & $0.6$ & $1$ & $6$ & $0.7$ & $0.7$ \\
+    $2$ & $2$ & $2-0.6=1.4$ & $2$ & $2$ & $5$ & $1.4$ & $0.7$ \\
+    $3$ & $1$ & $1-1=0$ & $2$ & $3$ & $4$ & $\tfrac76\approx1.17$ & $0.7$ \\
+    $4$ & $3$ & $1-2=-1$ & $1$ & $4$ & $3$ & $\tfrac7{12}\approx0.58$ & $\tfrac7{12}$ \\
+    $5$ & $4$ & $2-1=1$ & $2$ & $5$ & $2$ & $1.4$ & $\tfrac7{12}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=99.67mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-seven-vertex-sweep/figure.pdf}
+  \caption{七点图上的阈值扫描。(a)~$\bm L$的第二特征向量（蓝）与广义特征问题$\bm L\bm y=\mu\bm D\bm y$的第二特征向量（绿）按坐标排序，均按最大绝对值缩放到$1$；两者排序相同，$5$与$6$坐标相同、整体移动；点线是五个阈值的位置，红线是两种目标共同选中的阈值。(b)~五个阈值得到的RatioCut与NCut（实线）及谱下界$\lambda_2\approx0.317$、$\mu_2\approx0.181$（虚线）；两种目标都在第四个阈值$S=\{1,2,3,7\}$处最小。}
+  \label{fig:graph-spec-seven-vertex-sweep}
+\end{figure}
+
+\subsubsection{算法分析}
+
+\paragraph{正确性}
+扫描对每个候选分组都用原目标精确计算，评价时两组都非空，所以输出的是一个合法分组，$U$是它真实的RatioCut。由连续松弛的上下界关系和定理~\ref{thm:graph-spec-ratio-cut-bound}，$\lambda_2\leq J^\star\leq U$。七点图上$U\approx0.583$、$\lambda_2\approx0.317$，仅凭这两个数只能断定次优程度至多约$0.27$。图~\ref{fig:graph-spec-relaxation-bounds}把全部$63$种非空二分的RatioCut排在数轴上：谱下界落在所有取值的左侧，扫描只检查其中五个，最小的一个恰好也是全部二分中的最小值。后一点是枚举得到的，不是扫描本身能保证的。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=104.221mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-relaxation-bounds/figure.pdf}
+  \caption{七点图上RatioCut的松弛下界、扫描候选与全部非空二分。每个圆点是一个二分，横坐标为它的RatioCut，取值相同的竖直堆叠；蓝色实心点是阈值扫描检查的五个分组。红色虚线为谱下界$\lambda_2\approx0.317$，低于每个二分的取值；扫描的最小值$U$恰等于离散最优值$J^\star=\tfrac7{12}$。}
+  \label{fig:graph-spec-relaxation-bounds}
+\end{figure}
+
+\paragraph{与离散最优的差距}
+扫描只在$\bm u_2$决定的至多$n-1$个阈值分组中挑选，并不保证找到离散最优；谱下界一般也不紧。单位权四点路径$1-2-3-4$可以完全手算：特征值为$0$、$2-\sqrt2$、$2$、$2+\sqrt2$，第二特征向量正比于$(1+\sqrt2,1,-1,-1-\sqrt2)^{\top}$，扫描得到的RatioCut依次为$\tfrac43$、$1$、$\tfrac43$，所以$U=1$，等于枚举七种二分得到的离散最优值。谱下界为$\lambda_2=2-\sqrt2\approx0.586$，严格小于$1$，见图~\ref{fig:graph-spec-four-path-sweep}。这说明松弛通常不紧：这里恢复的分组恰好最优，但只凭$U-L\approx0.414$并不能确认这一点。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=93.751mm]{figures/01-basic-mathematics/04-graphs/tikz/c6-four-path-sweep/figure.pdf}
+  \caption{单位权四点路径$1-2-3-4$上的两种谱划分。(a)~$\bm L$的第二特征向量（蓝）与广义特征问题$\bm L\bm y=\mu\bm D\bm y$的第二特征向量（绿），均按最大绝对值缩放到$1$；二者在零点两侧给出同样的分组，但中间两点的相对幅度不同。(b)~按坐标排序扫描三个阈值得到的原目标值，实线为RatioCut与NCut，虚线为相应谱下界$\lambda_2=2-\sqrt2$与$\mu_2=\tfrac12$；两种目标都在$S=\{1,2\}$处最小，且严格高于下界。}
+  \label{fig:graph-spec-four-path-sweep}
+\end{figure}
+
+\paragraph{复杂度}
+整个方法的开销分三部分。求$\bm u_2$：稠密完整特征分解需要$O(n^3)$时间、$O(n^2)$空间；大型稀疏图常用只求少数特征向量的迭代方法，其代价取决于求解器、所需精度和$\lambda_2$与$\lambda_3$的间隔，不能只因为$\bm L$稀疏就断言是线性时间。排序需要$O(n\log n)$。扫描时每个顶点移动一次，移动时访问它的邻边，每条正权边被访问常数次，需要$O(n+m_+)$。
+
+\subsection{NCut谱方法}
+\label{sec:graph-spec-normalized-cut}
+
+\subsubsection{问题与思路}
+
+RatioCut用顶点个数衡量组的大小。另一种选择是用组内的连接总量：一组顶点的加权度之和
+\[
+ \operatorname{vol}(S)=\sum_{i\in S}d_i
+\]
+称为它的\term{体积}（volume）。顶点数只数有几个顶点，体积则数这些顶点身上一共连着多少边权；一个只靠一条弱边挂在图上的顶点，按个数算是$1$，按体积算只有那条边的权。设$p=\operatorname{vol}(S)>0$，$q=\operatorname{vol}(\bar S)>0$，定义\term{归一化割}（normalized cut，NCut）
+\begin{equation}
+ \operatorname{NCut}(S,\bar S)=\operatorname{cut}(S,\bar S)\Bigl(\frac1p+\frac1q\Bigr).
+ \label{eq:graph-spec-normalized-cut}
+\end{equation}
+它要求两组的体积都为正。在七点图中，顶点$7$的体积只有$0.6$，只切下它的NCut为$0.6(\tfrac1{0.6}+\tfrac1{14.6})\approx1.04$；沿桥切开时两侧体积为$8.2$与$7$，NCut为$\tfrac1{8.2}+\tfrac17\approx0.26$，是全部非空二分中的最小值。
+
+与RatioCut平行，构造$y_i=\sqrt{q/p}$（$i\in S$）、$y_i=-\sqrt{p/q}$（$i\in\bar S$）。这次用度加权核对：
+\[
+ \bm y^{\top}\bm D\bm1=p\sqrt{q/p}-q\sqrt{p/q}=0,\qquad
+ \bm y^{\top}\bm D\bm y=p\cdot\tfrac qp+q\cdot\tfrac pq=\operatorname{vol}(V),
+\]
+跨组边上的差为$\sqrt{q/p}+\sqrt{p/q}=(p+q)/\sqrt{pq}$，所以$\bm y^{\top}\bm L\bm y=\operatorname{cut}(S,\bar S)(p+q)^2/(pq)=\operatorname{vol}(V)\operatorname{NCut}(S,\bar S)$。于是
+\[
+ \operatorname{NCut}(S,\bar S)=\frac{\bm y^{\top}\bm L\bm y}{\bm y^{\top}\bm D\bm y},\qquad \bm y^{\top}\bm D\bm1=0 .
+\]
+与RatioCut相比，正交条件和长度都换成了第~\ref{sec:graph-spec-degree-inner-product}小节的度加权版本，这正对应于平衡尺度从顶点数换成了体积。
+
+这个商可以化为$\bm L_{\mathrm{sym}}$的Rayleigh商。先把谱计算限制在正度顶点$V_+$上：支撑孤点使$\bm D$奇异，还给$\bm L_{\mathrm{sym}}$带来不对应合法分组的零特征向量$\bm e_v$，在算法分析中单独处理。在$V_+$上作坐标代换$\bm x=\bm D^{1/2}\bm y$，则
+\[
+ \frac{\bm y^{\top}\bm L\bm y}{\bm y^{\top}\bm D\bm y}=\frac{\bm x^{\top}\bm L_{\mathrm{sym}}\bm x}{\bm x^{\top}\bm x},\qquad
+ \bm y^{\top}\bm D\bm1=\bm x^{\top}\bm D^{1/2}\bm1=0 .
+\]
+约束变成$\bm x\perp\bm D^{1/2}\bm1$，而$\bm D^{1/2}\bm1$正是$\bm L_{\mathrm{sym}}$的零特征向量（第~\ref{sec:graph-spec-null-space-components}小节）。取$\bm L_{\mathrm{sym}}$的标准正交特征基，使第一个向量为$\bm D^{1/2}\bm1/\lVert\bm D^{1/2}\bm1\rVert_2$，重复定理~\ref{thm:graph-spec-ratio-cut-bound}的证明，可知松弛问题的最小值是$\bm L_{\mathrm{sym}}$的第二小特征值$\mu_2$，在相应特征向量$\bm x_2$处取到，并且每个合法分组都有$\operatorname{NCut}\geq\mu_2$。
+
+换回原坐标$\bm y_2=\bm D^{-1/2}\bm x_2$，由$\bm L_{\mathrm{sym}}\bm x_2=\mu_2\bm x_2$左乘$\bm D^{1/2}$得
+\[
+ \bm L\bm y_2=\mu_2\bm D\bm y_2 ,
+\]
+这是一个广义特征问题（定义~\ref{def:matrix-analysis-generalized-eigenvalue}），也可写成$\bm L_{\mathrm{rw}}\bm y_2=\mu_2\bm y_2$。阈值扫描应当使用$\bm y_2$的坐标：两水平向量$\bm y$在原坐标中才是“$S$上取正、$\bar S$上取负”的形式。一般的非正则图上，不能用组合拉普拉斯的第二特征向量代替它：只有每个顶点度都等于同一个$d$时，$\bm L_{\mathrm{sym}}=\bm L/d$，两种方向才相同，特征值相差因子$d$。
+
+\subsubsection{算法实现}
+
+NCut谱划分沿用算法~\ref{alg:graph-spec-sweep}的框架，改动两处。谱方向改为广义特征问题$\bm L\bm y=\mu\bm D\bm y$的第二特征向量$\bm y_2$：实际计算时先求$\bm L_{\mathrm{sym}}$的第二特征向量$\bm x_2$，再令$\bm y_2=\bm D^{-1/2}\bm x_2$。组的大小改用体积计量，相应的状态由组大小换成体积。
+
+与RatioCut相同，图的邻接表、加权度、总体积$\operatorname{vol}(V)$、谱方向$\bm y_2$及排好序的顶点分组在扫描开始前算出，扫描中不变，不算状态。扫描维护五项状态：
+\begin{itemize}
+  \item 归属标记：每个顶点当前是否在$S$中，初值全部为否；
+  \item 割权$c$：初值为$0$，更新规则与RatioCut相同；
+  \item 体积$p$：当前$S$的体积$\operatorname{vol}(S)$，初值为$0$；
+  \item 最优值$U$：到目前为止评价过的最小NCut，初值为$+\infty$；
+  \item 最优分组：取得$U$时的$S$，初值为空。
+\end{itemize}
+依次取排序中的下一组顶点：
+\begin{itemize}
+  \item 移入：对组中每个顶点$i$，按移入前的$S$计算与RatioCut相同的增量更新$c$，并令$p\gets p+d_i$；
+  \item 评价：一组移完后，若$p>0$且$\operatorname{vol}(V)-p>0$，计算$c\bigl(\tfrac1p+\tfrac1{\operatorname{vol}(V)-p}\bigr)$，否则跳过这个阈值；
+  \item 更新最优：评价值小于$U$时更新$U$并记下当前$S$。
+\end{itemize}
+停止规则同前：剩下的只有最后一组时停止。
+
+\begin{algorithm}[NCut谱划分（阈值扫描）]
+\label{alg:graph-spec-ncut-sweep}
+输入：$n\geq2$个顶点、至少一条正权边的非负权无向图（以正权边邻接表存储）。输出：一个两侧体积为正的二分及其NCut值$U$。
+\begin{enumerate}
+ \item 在正度顶点上构造$\bm L_{\mathrm{sym}}$，求第二特征向量$\bm x_2$，令$\bm y_2=\bm D^{-1/2}\bm x_2$；支撑孤点的坐标置为$0$。
+ \item 按$\bm y_2$的坐标从大到小排列顶点；坐标相同的顶点并为一组，整体移动。
+ \item 置$S=\varnothing$，割权$c=0$，体积$p=0$，当前最优值$U=+\infty$。
+ \item 依次取下一组顶点，逐个移入$S$。每移入一个顶点$i$，令$c\gets c+\sum_{j\notin S}w_{i,j}-\sum_{j\in S}w_{i,j}$（$S$取移入$i$之前的集合），$p\gets p+d_i$。一组移完后，若两侧体积都为正，计算$c\bigl(\tfrac1p+\tfrac1{\operatorname{vol}(V)-p}\bigr)$；它小于$U$时更新$U$并记下当前$S$。
+ \item 当剩下的只有最后一组时停止，输出记下的分组和$U$。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在七点图上，数值求得$\mu_2\approx0.181$，
+\[
+ \bm y_2\approx(0.258,\ 0.284,\ 0.138,\ -0.202,\ -0.318,\ -0.318,\ 0.347)^{\top}.
+\]
+它的排序与$\bm u_2$相同，见图~\ref{fig:graph-spec-seven-vertex-sweep}(a)，所以割权的变化与表~\ref{tab:graph-spec-ratio-cut-sweep}完全一样，只是组的大小换成体积。总体积$\operatorname{vol}(V)=15.2$，各步的状态见表~\ref{tab:graph-spec-ncut-sweep}。第一步只切下顶点$7$，NCut约为$1.04$，高于同一分组的RatioCut值$0.7$，因为顶点$7$的体积只有$0.6$。最小值仍在第四个阈值$S=\{1,2,3,7\}$处取到，等于枚举得到的离散最优值，见图~\ref{fig:graph-spec-seven-vertex-sweep}(b)。
+
+\begin{table}[!htb]
+  \centering
+  \caption{七点图上NCut阈值扫描的状态。割权$c$的变化与表~\ref{tab:graph-spec-ratio-cut-sweep}相同；$p$为$S$的体积，$\operatorname{vol}(V)=15.2$；$U$为到该步为止的最小NCut。}
+  \label{tab:graph-spec-ncut-sweep}
+  \small
+  \begin{tabular}{@{}ccccccc@{}}
+    \toprule
+    步 & 移入 & 割权$c$ & $p$ & $\operatorname{vol}(V)-p$ & NCut & $U$ \\
+    \midrule
+    初始 & — & $0$ & $0$ & $15.2$ & — & $+\infty$ \\
+    $1$ & $7$ & $0.6$ & $0.6$ & $14.6$ & $\approx1.04$ & $\approx1.04$ \\
+    $2$ & $2$ & $2$ & $3.2$ & $12$ & $\approx0.79$ & $\approx0.79$ \\
+    $3$ & $1$ & $2$ & $5.2$ & $10$ & $\approx0.58$ & $\approx0.58$ \\
+    $4$ & $3$ & $1$ & $8.2$ & $7$ & $\approx0.26$ & $\approx0.26$ \\
+    $5$ & $4$ & $2$ & $11.2$ & $4$ & $\approx0.68$ & $\approx0.26$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{算法分析}
+
+\paragraph{正确性}
+与RatioCut相同，扫描用原目标计算每个候选分组，只评价两侧体积都为正的分组，所以输出合法，$U$是它真实的NCut；松弛给出$\mu_2\leq J^\star\leq U$。七点图上$U\approx0.265$、$\mu_2\approx0.181$。
+
+\paragraph{分量与孤点}
+若正度顶点组成多个正权支撑分量，把部分分量放进$S$、其余放进$\bar S$，NCut为零，已经最优；此时$\mu_2=0$，零特征空间多维，应直接按分量分组（第~\ref{sec:graph-connectivity-computation}节的遍历）。支撑孤点不影响割权与体积，可放进任一组。若$E_+$为空，没有合法二分；否则把一条正权边的两端分开即得两个正体积组。所以恢复时要检查两组非空且体积为正，再重算原NCut。
+
+\paragraph{与离散最优的差距}
+与RatioCut一样，NCut的谱下界一般也不紧。回到单位权四点路径，$\bm D=\operatorname{diag}(1,2,2,1)$。广义第二特征值为$\mu_2=\tfrac12$，可直接核对$\bm L\bm y_2=\tfrac12\bm D\bm y_2$，其中$\bm y_2=(1,\tfrac12,-\tfrac12,-1)^{\top}$。扫描得到的NCut依次为$\tfrac65$、$\tfrac23$、$\tfrac65$，离散最优值$\tfrac23$同样在$\{1,2\}|\{3,4\}$处取到，严格高于下界$\tfrac12$。
+
+\paragraph{复杂度}
+与RatioCut相比，只多了求$\bm D^{-1/2}$、由$\bm x_2$换回$\bm y_2$与累加体积，都是$O(n)$；主要开销仍是求第二特征向量，排序$O(n\log n)$，扫描$O(n+m_+)$。
+
+\subsection{方法比较与结果检验}
+\label{sec:graph-spec-partition-comparison}
+
+两种方法的流程相同，差别在平衡尺度及相应的特征问题：RatioCut用$\bm L$的第二特征向量，NCut用$\bm L\bm y=\mu\bm D\bm y$的第二特征向量。在四点路径上两种谱方向中间两点的相对幅度不同（约$0.41$对$\tfrac12$），目标和下界也不同，只是在两个例子中恰好给出同一个分组。体积把连接弱的顶点看得更“小”：只切下顶点$7$时，RatioCut的惩罚因子为$1+\tfrac16$，NCut为$\tfrac1{0.6}+\tfrac1{14.6}\approx1.74$。所有顶点度相同时，两种方法给出同一个谱方向。
+
+与精确算法相比，不加平衡项的最小割可以固定一个源、依次换汇，用第~\ref{sec:graph-max-flow}节的流算法精确求出，但在七点图上给出的正是失衡的$\{7\}$。加入平衡项后，本章没有给出求离散最优的有效算法，小图上只能枚举$2^{n-1}-1$种非空二分。谱方法以多项式代价换来一个下界和一个候选分组，而不是最优性的保证。
+
+\paragraph{结果检验}
+检查谱划分的输出时：用原目标重算所得分组的值，不报告松弛值；检查两组非空，NCut还要求体积为正；比较上下界，$U-L$大只说明次优程度可能较大；第二特征值重复时，数值程序可能返回特征空间中的任意向量，应考察整个子空间或比较多个候选方向的扫描结果。小图上还可以枚举全部二分直接核对。
