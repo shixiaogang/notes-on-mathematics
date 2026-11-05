@@ -6,7 +6,7 @@
 
 主要依赖本卷第一部分的度量、积分和换测度，以及卷二的线性空间与谱分析；先建立具体函数空间，再集中研究泛函、算子及变换。RKHS处就地陈述Riesz表示，证明在4.9章补全；一般函数选解和正则化由卷五承担。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/02-spaces-and-analysis/08-function-spaces.md)、[既有大纲2](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/02-spaces-and-analysis/08-function-spaces.md)、[既有大纲2](../source-outline/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 4.5 函数空间
 

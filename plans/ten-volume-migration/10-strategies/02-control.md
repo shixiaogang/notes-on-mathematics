@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分从执行器、传感器和目标可行性进入具体反馈，再研究一般连续时间最优条件与约束保证；前置为卷二矩阵方程、卷六微分方程、9.1稳定性、9.15估计及本卷决策。
 
-来源：[原控制目录](../../../outlines/mathematical-foundations/05-control-decision-and-games/16-control.md)、[当前控制正文](../../../tex/05-control-decision-and-games/02-control/02-policy-realization-and-control.tex)、[当前连续决策内容](../../../tex/05-control-decision-and-games/01-decision/03-policy-value-and-optimization.tex)。先具体反馈与LQR，后PMP和HJB；求解器回用卷五，模型参数推断回用卷八。
+来源：[原控制目录](../source-outline/05-control-decision-and-games/16-control.md)、[当前控制正文](../../../tex/05-control-decision-and-games/02-control/02-policy-realization-and-control.tex)、[当前连续决策内容](../../../tex/05-control-decision-and-games/01-decision/03-policy-value-and-optimization.tex)。先具体反馈与LQR，后PMP和HJB；求解器回用卷五，模型参数推断回用卷八。
 
 ## 10.4 可达性、可控性与可观测性
 

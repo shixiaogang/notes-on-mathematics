@@ -2,7 +2,7 @@
 
 状态：本文件是十卷方案的详细目标大纲，尚未修改正文。先从高斯样本算出参数估计与精确误差，再推广模型和方法；参数与非参数对象明确区分，精度按渐近、有限样本上界、有限样本下界连续研究。[返回全局大纲](../README.md)。
 
-材料依据为当前[初等统计正文](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)、[统计推断正文](../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/04-statistical-inference.tex)，以及原[第五部分](../../../outlines/mathematical-foundations/01-objects-and-foundations/05-probability-and-statistics-basics.md)、[第十四部分目标大纲](../../../outlines/mathematical-foundations/04-geometry-distributions-and-inference/14-inference-and-causal-identification.md)。本文件含重新归组与拟补内容，不表示各章已按此实施。
+材料依据为当前[初等统计正文](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)、[统计推断正文](../../../tex/04-manifolds-distributions-and-inference/03-inference-and-causal-identification/04-statistical-inference.tex)，以及原[第五部分](../source-outline/01-objects-and-foundations/05-probability-and-statistics-basics.md)、[第十四部分目标大纲](../source-outline/04-geometry-distributions-and-inference/14-inference-and-causal-identification.md)。本文件含重新归组与拟补内容，不表示各章已按此实施。
 
 8.1的具体例子只需7.1—7.2和卷二相关知识；渐近精度再调用7.5—7.6，下界调用7.8—7.9及7.12的Fisher信息，复杂后验计算按需调用7.12、7.14。编码、信道、最优运输不是进入推断的共同门槛；固定样本推断在此，鞅与停止保证在卷九，长期观测策略在卷十。
 

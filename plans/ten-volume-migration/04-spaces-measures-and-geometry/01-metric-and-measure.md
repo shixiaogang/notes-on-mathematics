@@ -6,7 +6,7 @@
 
 主要依赖卷一的集合、极限与经典积分，以及卷二的有限维空间和多元积分；按“度量—测度—积分—密度”建立后续分析的共同基础。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/02-spaces-and-analysis/06-metric-and-measure.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/02-spaces-and-analysis/06-metric-and-measure.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 4.1 度量空间
 

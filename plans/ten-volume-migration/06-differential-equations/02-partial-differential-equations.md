@@ -6,7 +6,7 @@
 
 主要依赖本卷常微分方程、卷二的场与积分定理、卷四的Sobolev空间和Fourier变换，以及卷五的变分工具；按边值平衡、输运、扩散和一阶非线性场分别展开，波动方程为补充。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 6.4 椭圆方程与边值问题
 

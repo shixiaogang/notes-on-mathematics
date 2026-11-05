@@ -6,7 +6,7 @@
 
 主要依赖卷二的隐函数、微分与积分，以及本卷的度量和函数空间；先研究几何对象与映射，再讨论长度、对称、积分和有限观测重构。测地线提前引用6.3章的局部ODE结论，流形优化集中在5.12章。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/04-geometry-distributions-and-inference/12-manifolds.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/04-geometry-distributions-and-inference/12-manifolds.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 4.12 流形与光滑映射
 

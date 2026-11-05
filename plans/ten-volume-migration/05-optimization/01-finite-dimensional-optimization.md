@@ -6,7 +6,7 @@
 
 主要依赖卷二的谱、线性求解与微分，以及卷四的紧性和投影；由线性模型进入一般有限维算法。随机优化就地说明有限抽样与条件无偏假设，概率基础可参考7.4章，轨迹收敛由卷九承担。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/09-optimization.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 5.1 优化问题与解
 

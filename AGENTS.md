@@ -6,7 +6,7 @@
 
 - [LaTeX 与数学记号](specs/latex.md)：入口、宏、符号、引用与构建。
 - [写作](specs/writings.md)：中文论述与技术含义；各章保留独立的“本章小结”。
-- [大纲](specs/outlines.md)：`outlines/current/` 记录实际正文，其余目录保留五卷来源大纲。只调整大纲时不改正文。
+- [大纲](specs/outlines.md)：`outlines/current/` 记录实际正文；outlines/ 只保存当前正文提要，未来目标结构与内容放在 plans/。只调整计划时不改正文。
 - [工作计划](specs/plans.md)：`plans/` 当前仅有 `ten-volume-migration/` 这一项待执行计划，完整保存已确定的十卷内容结构、逐部分细纲与实施步骤。
 - [图像](specs/figures.md)与[样式](specs/design.md)：资源复现、字体、黄色主题与语义环境。
 

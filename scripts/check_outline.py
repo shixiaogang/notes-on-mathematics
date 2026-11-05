@@ -92,7 +92,11 @@ def check(root=ROOT):
             errors.append(f"Discontinuous chapter numbers: {volume['volume']}")
         all_chapters.extend(volume_chapters)
 
-    actual = {p.relative_to(outline) for p in outline.rglob("*.md")}
+    # Source outlines support the plan but do not use ten-volume numbering.
+    actual = {
+        p.relative_to(outline) for p in outline.rglob("*.md")
+        if p.relative_to(outline).parts[0] != "source-outline"
+    }
     if actual != expected:
         errors.append(f"Unexpected/missing outline files: {sorted(str(p) for p in actual ^ expected)}")
     overview_path = outline / "README.md"
@@ -102,6 +106,10 @@ def check(root=ROOT):
     for relative in expected - {Path("README.md")}:
         if f"]({relative.as_posix()})" not in overview:
             errors.append(f"Part missing from global outline: {relative}")
+
+    current_files = {p.relative_to(root / "outlines") for p in (root / "outlines").rglob("*.md")}
+    if any(p != Path("README.md") and p.parts[0] != "current" for p in current_files):
+        errors.append("outlines/ may contain only current manuscript outlines")
 
     link_count = 0
     for directory in (root / "outlines", root / "plans"):

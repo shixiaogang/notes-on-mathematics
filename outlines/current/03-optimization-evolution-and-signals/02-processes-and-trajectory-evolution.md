@@ -1,6 +1,6 @@
 # 卷3《数学准备：优化、动力系统与信号处理》：过程与轨迹演化大纲
 
-正文入口：[part.tex](../../../tex/03-optimization-evolution-and-signals/02-processes-and-trajectory-evolution/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案见[数学基础五卷目录中的第十部分](../../mathematical-foundations/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)，本部分正文已按该方案的六章结构实施。
+正文入口：[part.tex](../../../tex/03-optimization-evolution-and-signals/02-processes-and-trajectory-evolution/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案见[数学基础五卷目录中的第十部分](../../../plans/ten-volume-migration/source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)，本部分正文已按该方案的六章结构实施。
 
 阅读指引：以温度递推、弹簧小球、金属棒温度场与排队人数引出“规律怎样生成轨迹”的问题。前三章研究确定性演化：离散动力系统、常微分方程与偏微分方程，各章把求解、稳定性与数值计算连在一起；后三章加入随机性：第13章建立随机过程的共同语言，第11、12章分别研究离散时间与连续时间随机过程，按转移与条件未来、随机累计与停止、长期分布与时间平均组织问题，并在章末安排采样积分与带噪递推应用。离散与连续指时间索引；Markov性质、鞅性质与平稳性回答不同问题，不作为互斥类别。原“动力系统”章中基于观测的状态推断已迁至“信号与状态估计”部分的“基于状态模型的信号估计”章。
 

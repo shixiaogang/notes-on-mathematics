@@ -6,7 +6,7 @@
 
 主要依赖本卷有限维求解、卷四的Hilbert空间、RKHS、弱紧性、Sobolev空间及流形微分；分别研究由观测选择函数、一般函数变分和几何约束下选点。统计误差与分布特有约束由卷八和卷七承担。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/09-optimization.md)、[既有大纲2](../../../outlines/mathematical-foundations/04-geometry-distributions-and-inference/12-manifolds.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[既有大纲2](../source-outline/04-geometry-distributions-and-inference/12-manifolds.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 5.10 函数拟合与正则化
 

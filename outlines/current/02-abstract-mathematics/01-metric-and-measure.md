@@ -1,6 +1,6 @@
 # 卷2《数学准备：抽象数学》：度量与测度大纲
 
-正文入口：[part.tex](../../../tex/02-abstract-mathematics/01-metric-and-measure/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../mathematical-foundations/02-spaces-and-analysis/06-metric-and-measure.md)。本部分已按目标大纲的四章结构实施到正文。
+正文入口：[part.tex](../../../tex/02-abstract-mathematics/01-metric-and-measure/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../../plans/ten-volume-migration/source-outline/02-spaces-and-analysis/06-metric-and-measure.md)。本部分已按目标大纲的四章结构实施到正文。
 
 阅读指引从绝对值的误差语言进入，说明第1章用距离规则建立邻近、收敛、完备与紧致，研究连续映射、空间比较与压缩迭代；第2章规定可测集合与测度，构造Lebesgue测度，研究可测映射传递质量以及测度的比较与分解；第3章由简单函数定义积分，比较求和与经典积分，按条件组织极限交换、累次积分、换元与含参积分，并讨论积分恢复增量；第4章在测度与积分已建立后研究密度的存在、计算与换测度。指引最后说明条件期望、概率收敛与分布距离留给后续的概率空间与概率分布部分。
 

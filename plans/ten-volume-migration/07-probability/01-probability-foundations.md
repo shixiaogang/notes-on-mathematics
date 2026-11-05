@@ -2,7 +2,7 @@
 
 状态：本文件是十卷方案的详细目标大纲，尚未修改正文。先用概率表和普通密度建立具体计算，再借卷四的测度与积分推广对象、条件信息和极限；完成7.1—7.2即可进入卷八的高斯推断例子。[返回全局大纲](../README.md)。
 
-材料依据为当前[初等概率正文](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)、[概率空间正文](../../../tex/02-abstract-mathematics/02-probability-spaces/part.tex)，以及原[第五部分](../../../outlines/mathematical-foundations/01-objects-and-foundations/05-probability-and-statistics-basics.md)、[第七部分目标大纲](../../../outlines/mathematical-foundations/02-spaces-and-analysis/07-probability-spaces.md)。本方案重新分配收敛与独立和材料，不沿用旧章的边界；统计估计移入卷八，时间增长的信息与鞅留卷九。
+材料依据为当前[初等概率正文](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)、[概率空间正文](../../../tex/02-abstract-mathematics/02-probability-spaces/part.tex)，以及原[第五部分](../source-outline/01-objects-and-foundations/05-probability-and-statistics-basics.md)、[第七部分目标大纲](../source-outline/02-spaces-and-analysis/07-probability-spaces.md)。本方案重新分配收敛与独立和材料，不沿用旧章的边界；统计估计移入卷八，时间增长的信息与鞅留卷九。
 
 ## 7.1 随机变量与概率分布
 

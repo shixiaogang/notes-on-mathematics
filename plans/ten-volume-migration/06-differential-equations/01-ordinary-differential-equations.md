@@ -6,7 +6,7 @@
 
 主要依赖卷一的微积分、卷二的线性系统与矩阵指数，以及卷四的完备空间、压缩映射和绝对连续性；讨论方程、有限时间解及敏感性，长期行为由卷九承担。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 6.1 常微分方程与初值问题
 

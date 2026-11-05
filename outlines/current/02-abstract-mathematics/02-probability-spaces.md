@@ -1,6 +1,6 @@
 # 卷2《数学准备：抽象数学》：概率空间大纲
 
-正文入口：[part.tex](../../../tex/02-abstract-mathematics/02-probability-spaces/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../mathematical-foundations/02-spaces-and-analysis/07-probability-spaces.md)。
+正文入口：[part.tex](../../../tex/02-abstract-mathematics/02-probability-spaces/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../../plans/ten-volume-migration/source-outline/02-spaces-and-analysis/07-probability-spaces.md)。
 
 阅读指引：先指出卷一的概率表与普通密度不足以处理含点质量的分布、只记录部分信息的观测和随机变量列的极限，说明本部分借助上一部分的测度与积分建立一般概率模型；随后交代前两章分别建立随机对象、分布、独立性与期望，以及条件期望、概率核、条件分布与条件独立；后两章分别在同一概率空间上比较随机变量的收敛并证明强大数律，以及只比较分布、建立弱收敛、紧性、特征函数与中心极限定理；最后说明信息随时间增长、随机过程、分布距离与统计渐近理论留到卷三、卷四的相应部分。
 

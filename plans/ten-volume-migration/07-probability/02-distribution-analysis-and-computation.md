@@ -2,7 +2,7 @@
 
 状态：本文件是十卷方案的详细目标大纲，尚未修改正文。把概率分布本身作为对象，分别研究表示、比较、依赖、编码、选择、耦合和计算；各问题明确给定量与未知量，不以共用期望或KL为由合并任务。[返回全局大纲](../README.md)。
 
-材料依据为当前[概率分布正文](../../../tex/04-manifolds-distributions-and-inference/02-probability-distributions/part.tex)和原[第十三部分目标大纲](../../../outlines/mathematical-foundations/04-geometry-distributions-and-inference/13-probability-distributions.md)。当前正文仍集中在一个大章，本文件包含拆分、去重与拟补安排，并非已有正文目录；弱收敛基础归7.5，统计估计归卷八，采样链归卷九。散度与变分采用自然对数，编码计算采用以2为底的对数，跨用时说明换底与单位。
+材料依据为当前[概率分布正文](../../../tex/04-manifolds-distributions-and-inference/02-probability-distributions/part.tex)和原[第十三部分目标大纲](../source-outline/04-geometry-distributions-and-inference/13-probability-distributions.md)。当前正文仍集中在一个大章，本文件包含拆分、去重与拟补安排，并非已有正文目录；弱收敛基础归7.5，统计估计归卷八，采样链归卷九。散度与变分采用自然对数，编码计算采用以2为底的对数，跨用时说明换底与单位。
 
 ## 7.7 概率分布、分布族与信息量
 

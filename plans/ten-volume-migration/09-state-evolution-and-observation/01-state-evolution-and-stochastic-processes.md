@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分研究给定规律下的状态轨迹、随机累计与长期行为；依赖卷二的谱与递推、卷六的方程、卷七的条件概率与极限，优化算法和固定样本统计分别回用卷五、八。
 
-来源：[原过程部分大纲](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)、[当前过程正文入口](../../../tex/03-optimization-evolution-and-signals/02-processes-and-trajectory-evolution/part.tex)。常微分方程和偏微分方程的解理论归卷六；静态随机函数与随机测度的推断模型归8.2。
+来源：[原过程部分大纲](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)、[当前过程正文入口](../../../tex/03-optimization-evolution-and-signals/02-processes-and-trajectory-evolution/part.tex)。常微分方程和偏微分方程的解理论归卷六；静态随机函数与随机测度的推断模型归8.2。
 
 ## 9.1 动力系统与轨迹的长期行为
 

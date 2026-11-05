@@ -12,6 +12,5 @@
 | 4 | 数学准备：流形、概率分布与统计推断 | 4 | [流形](04-manifolds-distributions-and-inference/01-manifolds.md)；[概率分布](04-manifolds-distributions-and-inference/02-probability-distributions.md)；[推断与因果识别](04-manifolds-distributions-and-inference/03-inference-and-causal-identification.md) |
 | 5 | 数学准备：控制、决策与博弈 | 3 | [决策](05-control-decision-and-games/01-decision.md)；[控制](05-control-decision-and-games/02-control.md)；[博弈](05-control-decision-and-games/03-games.md) |
 
-[数学基础五卷目标目录](../mathematical-foundations/README.md)保留前一阶段的95个目标章目及细化讨论，也是十卷草案引用的来源。后续结构调整以十卷草案为讨论入口；目标章数分别统计，不能作为相应正文已经完成的依据。
 
 正文变更时同步相应部分的大纲、目录和完成状态，具体见[大纲目录规范](../../specs/outlines.md)。

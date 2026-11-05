@@ -1,6 +1,6 @@
 # 卷1《数学准备：基础数学》：概率与统计基础大纲
 
-正文入口：[part.tex](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../mathematical-foundations/01-objects-and-foundations/05-probability-and-statistics-basics.md)。
+正文入口：[part.tex](../../../tex/01-basic-mathematics/05-probability-and-statistics-basics/part.tex)。以下按实际正文顺序保留内容提要；目标细化方案另见[数学基础五卷目标目录](../../../plans/ten-volume-migration/source-outline/01-objects-and-foundations/05-probability-and-statistics-basics.md)。
 
 阅读指引：导读从掷骰、抽检与等待时间等不确定结果进入，说明概率论由已知规律计算事件与数值特征、统计学由数据反推未知规律并评价误差；随后交代前两章研究单个与多个随机变量，后三章依次完成参数估计、估计误差、区间检验与预测；最后说明本部分只用离散求和与普通密度积分，一般概率空间、条件期望与收敛理论留到卷二，更多分布族和复杂推断见卷四，并提醒区分随机变量、实现值和分布。
 

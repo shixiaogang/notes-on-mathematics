@@ -6,7 +6,7 @@
 
 主要依赖本卷第一部分的目标、最优条件、对偶及求解方法，双层优化另用卷二的隐函数与线性方程；三章分别处理目标取舍、最坏响应和嵌套选解。
 
-整理依据：[既有大纲1](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/09-optimization.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
 
 ## 5.7 多目标优化
 

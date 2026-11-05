@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分先研究确定性观测能否恢复信号，再用联合概率规律定义一般估计，最后利用状态转移进行递推；采样恢复不以随机过程为共同前置，离散Kalman不以随机微积分为前置。
 
-来源：[原信号部分大纲](../../../outlines/mathematical-foundations/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)、[当前信号正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/01-signal-representation-and-processing.tex)、[当前状态估计正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/02-state-space-estimation.tex)。求解算法回用卷五，未知参数的一般推断回用卷八；涉及图上信号的恢复时按需调用第三部分。
+来源：[原信号部分大纲](../source-outline/03-optimization-evolution-and-signals/11-signals-and-state-estimation.md)、[当前信号正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/01-signal-representation-and-processing.tex)、[当前状态估计正文](../../../tex/03-optimization-evolution-and-signals/03-signals-and-state-estimation/02-state-space-estimation.tex)。求解算法回用卷五，未知参数的一般推断回用卷八；涉及图上信号的恢复时按需调用第三部分。
 
 ## 9.13 采样与信号恢复
 
