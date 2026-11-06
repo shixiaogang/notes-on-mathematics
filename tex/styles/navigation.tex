@@ -1,0 +1,241 @@
+% 小节位置导航。
+% 含有编号小节的页面，在右侧边栏最上方显示一个方框：列出本章各节，展开本页
+% 小节所在的节，并以暖黄底标出本页出现的全部小节。每页至多一个方框。
+% 方框由 marginfix 在组页时放入边栏顶端，本页其他边注（文献、说明等）自动排在
+% 方框之后；跨栏图表位于正文浮动区，不与方框重叠。
+% 页码取自上一轮编译记录的小节标题位置；首轮编译没有导航，再编译一次即稳定
+% （方框不改变正文排版，因此页码不会因导航而变化）。
+\RequirePackage{zref-abspage}
+\makeatletter
+
+% ---------- 章节目录（来自 aux） ----------
+\newcommand{\BookNavSection}[3]{% {章号}{节号}{标题}
+  \expandafter\ifx\csname booknav@secs@#1\endcsname\relax
+    \expandafter\gdef\csname booknav@secs@#1\endcsname{}\fi
+  \expandafter\g@addto@macro\csname booknav@secs@#1\endcsname
+    {\booknav@sec{#2}{#3}}}
+\newcommand{\BookNavSubsectionEntry}[3]{% {节号}{小节号}{标题}
+  \expandafter\ifx\csname booknav@subs@#1\endcsname\relax
+    \expandafter\gdef\csname booknav@subs@#1\endcsname{}\fi
+  \expandafter\g@addto@macro\csname booknav@subs@#1\endcsname
+    {\booknav@sub{#2}{#3}}}
+\newcommand{\BookNavRecordSection}[1]{%
+  \if@mainmatter
+    \protected@write\@auxout{}{\string\BookNavSection
+      {\arabic{chapter}}{\thesection}{\unexpanded{#1}}}%
+  \fi
+  #1}
+
+% ---------- 小节所在页 ----------
+% \BookNavAnchor{编号}{章号}{节号}{小节号}：aux 中的小节记录；
+% 其页码由 zref 标签 booknav-a<编号> 给出。
+\newcount\booknav@anchors
+\newcommand{\BookNavAnchor}[4]{%
+  \expandafter\gdef\csname booknav@a@#1\endcsname{{#2}{#3}{#4}}%
+  \xdef\booknav@lastanchors{#1}}
+\gdef\booknav@lastanchors{0}
+\newcommand{\BookNavSubsection}[1]{%
+  \if@mainmatter
+    \global\advance\booknav@anchors\@ne
+    \protected@write\@auxout{}{\string\BookNavSubsectionEntry
+      {\thesection}{\thesubsection}{\unexpanded{#1}}}%
+    \immediate\write\@auxout{\string\BookNavAnchor{\the\booknav@anchors}%
+      {\arabic{chapter}}{\thesection}{\thesubsection}}%
+    \zref@labelbyprops{booknav-a\the\booknav@anchors}{abspage}%
+  \fi
+  #1}
+
+% 跨栏内容（跨栏图表等）的上下端位置，用于让方框避开正文中的跨栏图。
+\RequirePackage{zref-savepos}
+\zref@addprop{savepos}{abspage}
+\newcount\booknav@wides
+\gdef\booknav@lastwides{0}
+\newcommand{\BookNavWides}[1]{\gdef\booknav@lastwides{#1}}
+\AtEndDocument{\immediate\write\@auxout{\string\BookNavWides{\the\booknav@wides}}}
+\AddToHook{env/fullwidth/begin}{\global\advance\booknav@wides\@ne
+  \edef\booknav@thisw{\the\booknav@wides}\zsavepos{booknav-w\booknav@thisw t}}
+\AddToHook{env/fullwidth/end}{\par\zsavepos{booknav-w\booknav@thisw b}}
+
+% ---------- 方框内容 ----------
+\newcommand{\booknavfont}{\heiti\fontsize{7}{9}\selectfont}
+\newcommand{\booknav@line}[4]{% {缩进}{编号宽度}{编号}{标题}
+  \par\noindent\hangindent=\dimexpr#1+#2\relax\hangafter=1
+  \hspace*{#1}\makebox[#2][l]{#3}#4\par}
+\newcommand{\booknav@sec}[2]{%
+  \booknav@ifsection{#1}%
+    {{\color{BookAccentText}\booknav@line{0pt}{3em}{#1}{#2}}%
+     \expandafter\ifx\csname booknav@subs@#1\endcsname\relax\else
+       \csname booknav@subs@#1\endcsname\fi}%
+    {{\color{BookMuted}\booknav@line{0pt}{3em}{#1}{#2}}}}
+\newcommand{\booknav@sub}[2]{%
+  \booknav@ifcurrent{#1}%
+    {\par\vspace{0.4pt}\noindent
+     \colorbox{BookAccent}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+       \color{BookAccentInk}\booknav@line{0.8em}{3.7em}{#1}{#2}}}\par\vspace{0.4pt}}%
+    {{\color{BookInk}\booknav@line{0.8em}{3.7em}{#1}{#2}}}}
+\newcommand{\booknav@render}[1]{% {章号}
+  \begingroup\booknavfont\color{BookInk}%
+  \setlength{\parskip}{0pt}\setlength{\parindent}{0pt}\setlength{\fboxrule}{0.4pt}%
+  \setlength{\fboxsep}{3pt}%
+  \fcolorbox{BookRule}{white}{\parbox{\dimexpr\marginparwidth-6.8pt\relax}{%
+    \setlength{\fboxsep}{1.2pt}%
+    {\color{BookMuted}第#1章\quad 本章位置\par}\vspace{2pt}%
+    {\color{BookRule}\hrule height 0.4pt}\vspace{2pt}%
+    \csname booknav@secs@#1\endcsname}}%
+  \endgroup}
+
+\ExplSyntaxOn
+\clist_new:N \g__booknav_cursubs_clist
+\clist_new:N \g__booknav_cursecs_clist
+\cs_new:Npn \booknav@ifcurrent #1 { \clist_if_in:NnTF \g__booknav_cursubs_clist {#1} }
+\cs_new:Npn \booknav@ifsection #1 { \clist_if_in:NnTF \g__booknav_cursecs_clist {#1} }
+\bool_new:N \g__booknav_ready_bool
+\box_new:N \g__booknav_box
+\dim_new:N \l__booknav_h_dim
+\dim_const:Nn \c__booknav_gap_dim { 6pt }
+
+% 读入上一轮的页码：页码 → {章号}{节列表}{小节列表}
+\cs_new_protected:Npn \__booknav_prepare:
+  {
+    \bool_gset_true:N \g__booknav_ready_bool
+    \int_step_inline:nn { \booknav@lastanchors }
+      {
+        \cs_if_exist:cT { booknav@a@##1 }
+          {
+            \zref@ifrefundefined { booknav-a##1 } { }
+              {
+                \tl_set:Ne \l_tmpa_tl { \zref@extractdefault { booknav-a##1 } { abspage } { 0 } }
+                \exp_last_unbraced:Nv \__booknav_record:nnn { booknav@a@##1 }
+              }
+          }
+      }
+    \int_step_inline:nn { \booknav@lastwides }
+      {
+        \zref@ifrefundefined { booknav-w##1t } { }
+          {
+            \zref@ifrefundefined { booknav-w##1b } { }
+              {
+                \tl_set:Ne \l_tmpa_tl { \zref@extractdefault { booknav-w##1t } { abspage } { 0 } }
+                \tl_set:Ne \l_tmpb_tl { \zref@extractdefault { booknav-w##1b } { abspage } { 0 } }
+                % 跨页的跨栏内容（如长表格）：首页从起点到页底，续页从页顶起，
+                % 末页到终点为止。
+                \int_step_inline:nnn { \l_tmpa_tl } { \l_tmpb_tl }
+                  {
+                    \__booknav_push_wide:nee {####1}
+                      { \int_compare:nNnTF {####1} = { \l_tmpa_tl }
+                          { \zposy { booknav-w##1t } sp } { \dim_use:N \paperheight } }
+                      { \int_compare:nNnTF {####1} = { \l_tmpb_tl }
+                          { \zposy { booknav-w##1b } sp } { 0pt } }
+                  }
+              }
+          }
+      }
+  }
+\cs_new_protected:Npn \__booknav_record:nnn #1#2#3
+  {
+    \tl_if_exist:cF { g__booknav_chap_ \l_tmpa_tl _tl }
+      {
+        \tl_gset:cn { g__booknav_chap_ \l_tmpa_tl _tl } {#1}
+        \clist_new:c { g__booknav_secs_ \l_tmpa_tl _clist }
+        \clist_new:c { g__booknav_subs_ \l_tmpa_tl _clist }
+      }
+    \clist_gput_right:cn { g__booknav_secs_ \l_tmpa_tl _clist } {#2}
+    \clist_gremove_duplicates:c { g__booknav_secs_ \l_tmpa_tl _clist }
+    \clist_gput_right:cn { g__booknav_subs_ \l_tmpa_tl _clist } {#3}
+  }
+
+\cs_new_protected:Npn \__booknav_push_wide:nnn #1#2#3
+  {
+    \seq_if_exist:cF { g__booknav_w_ #1 _seq } { \seq_new:c { g__booknav_w_ #1 _seq } }
+    \seq_gput_right:cn { g__booknav_w_ #1 _seq } { {#2} {#3} }
+  }
+\cs_generate_variant:Nn \__booknav_push_wide:nnn { nee }
+
+% 组页时（marginfix 排边注之前）：若本页有小节，排出方框并把边注起点移到方框之下。
+\cs_new_protected:Npn \__booknav_before_margin:
+  {
+    \bool_if:NF \g__booknav_ready_bool { \__booknav_prepare: }
+    \box_gclear:N \g__booknav_box
+    \tl_set:Ne \l_tmpb_tl { \int_eval:n { \g_shipout_readonly_int + 1 } }
+    \tl_if_exist:cT { g__booknav_chap_ \l_tmpb_tl _tl }
+      {
+        \clist_gset_eq:Nc \g__booknav_cursecs_clist { g__booknav_secs_ \l_tmpb_tl _clist }
+        \clist_gset_eq:Nc \g__booknav_cursubs_clist { g__booknav_subs_ \l_tmpb_tl _clist }
+        \vbox_gset:Nn \g__booknav_box
+          { \hbox:n { \booknav@render { \tl_use:c { g__booknav_chap_ \l_tmpb_tl _tl } } } }
+        \dim_set:Nn \l__booknav_h_dim
+          { \box_ht:N \g__booknav_box + \box_dp:N \g__booknav_box + \c__booknav_gap_dim }
+        \__booknav_avoid_wides:
+        % 只在边栏未被其他命令分段时调整起点。
+        \str_if_eq:eeT { \mfx@marginstart } { 0pt }
+          {
+            \tl_gset:Ne \mfx@marginstart
+              { \dim_eval:n { \g__booknav_shift_dim + \l__booknav_h_dim } }
+          }
+      }
+  }
+% 方框默认紧贴边栏顶端；若本页正文中有跨栏图压到这一段，就移到该图之后。
+% 边栏顶端在页面上的位置由上一轮的 booknav-mt<页码> 记录给出。
+\dim_new:N \g__booknav_shift_dim
+\dim_new:N \l__booknav_mt_dim
+\bool_new:N \l__booknav_moved_bool
+\cs_new_protected:Npn \__booknav_avoid_wides:
+  {
+    \dim_gzero:N \g__booknav_shift_dim
+    \zref@ifrefundefined { booknav-mt \l_tmpb_tl } { }
+      {
+        \seq_if_exist:cT { g__booknav_w_ \l_tmpb_tl _seq }
+          {
+            \dim_set:Nn \l__booknav_mt_dim { \zposy { booknav-mt \l_tmpb_tl } sp }
+            \bool_set_true:N \l__booknav_moved_bool
+            \bool_while_do:Nn \l__booknav_moved_bool
+              {
+                \bool_set_false:N \l__booknav_moved_bool
+                \seq_map_inline:cn { g__booknav_w_ \l_tmpb_tl _seq }
+                  { \__booknav_check_wide:nn ##1 }
+              }
+          }
+      }
+  }
+\cs_new_protected:Npn \__booknav_check_wide:nn #1#2
+  {
+    % 跨栏内容相对边栏顶端的上下距离
+    \dim_compare:nNnT { \l__booknav_mt_dim - (#1) - \c__booknav_gap_dim }
+        < { \g__booknav_shift_dim + \l__booknav_h_dim }
+      {
+        \dim_compare:nNnT { \l__booknav_mt_dim - (#2) + \c__booknav_gap_dim } > \g__booknav_shift_dim
+          {
+            \dim_gset:Nn \g__booknav_shift_dim
+              { \l__booknav_mt_dim - (#2) + \c__booknav_gap_dim }
+            \bool_set_true:N \l__booknav_moved_bool
+          }
+      }
+  }
+\cs_new_protected:Npn \__booknav_inject:
+  {
+    \tl_set:Ne \l_tmpb_tl { \int_eval:n { \g_shipout_readonly_int + 1 } }
+    \setbox\Mfx@marginbox \vbox
+      {
+        \vbox_to_zero:n
+          {
+            \zsavepos { booknav-mt \l_tmpb_tl }
+            \box_if_empty:NF \g__booknav_box
+              { \skip_vertical:N \g__booknav_shift_dim \box_use_drop:N \g__booknav_box }
+            \vss
+          }
+        \unvbox \Mfx@marginbox
+      }
+  }
+\ExplSyntaxOff
+
+% 接入 marginfix 的组页流程。
+\let\booknav@mfx@before\MFX@combinefloats@before
+\def\MFX@combinefloats@before{%
+  \booknav@beforemargin\booknav@mfx@before}
+\let\booknav@mfx@attach\MFX@attachmargin
+\def\MFX@attachmargin{\booknav@injectmargin\booknav@mfx@attach}
+\ExplSyntaxOn
+\cs_set_eq:NN \booknav@beforemargin \__booknav_before_margin:
+\cs_set_eq:NN \booknav@injectmargin \__booknav_inject:
+\ExplSyntaxOff
+\makeatother
