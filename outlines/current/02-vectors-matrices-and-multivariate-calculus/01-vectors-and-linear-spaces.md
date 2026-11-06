@@ -1916,7 +1916,7 @@
 
 ###### paragraph：算例
 
-1. 指出两点内积下$\langle1,t\rangle=1\neq0$；示例`ex:ls-gram-schmidt-two-point`对基$(1,t)$分五步正交化：归一化得$q_1=1/\sqrt2$，扣除分量得$t-\tfrac12$，再归一化得$q_2=\sqrt2(t-\tfrac12)$，核对正交与单位长度，最后读出$1+t$的坐标并验证Parseval恒等式。
+1. 指出两点内积下$\langle1,t\rangle=1\neq0$；示例`ex:ls-gram-schmidt-two-point`对基$(1,t)$逐步正交化：归一化得$q_1=1/\sqrt2$，扣除分量得$t-\tfrac12$（扣除的是两点取值的平均），再归一化得$q_2=\sqrt2(t-\tfrac12)$；随后核对正交与单位长度，读出$1+t$的坐标并验证Parseval恒等式。
 
 2. 与系数欧氏内积下$1,t$本已正交对照，说明标准正交基依赖内积。
 
