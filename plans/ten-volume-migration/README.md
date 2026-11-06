@@ -4,7 +4,7 @@
 
 这是当前唯一的计划，完整收录此前讨论确定的十卷组织、卷与章节分工及内容安排。卷一至卷三已按本计划迁入正文（10部分、44章），出版登记见 `tex/volumes.json`；迁移前的五卷正文与旧提要保存在 `tex_bak/`，卷四至卷十仍从中迁移。
 
-本目录固定十卷、29个部分、141章，其中6.8“波动方程与能量传播”为补充章。章在各卷内连续编号；全局文件保留卷—部分—章和每章内容说明，各部分文件进一步展开章—节—小节，每节、小节先用1—2句话概述内容；“线性方程与优化”中的算法另列推导步骤、关键公式与逐步算例。
+本目录固定十卷、30个部分、143章，其中6.8“波动方程与能量传播”为补充章。章在各卷内连续编号；全局文件保留卷—部分—章和每章内容说明，各部分文件进一步展开章—节—小节，每节、小节先用1—2句话概述内容；“线性方程与优化”中的算法另列推导步骤、关键公式与逐步算例。
 
 各部分链接均指向本计划目录中的详细安排，保留章、节、小节的内容分工及已讨论的展开要求。现行[正文提要](../../outlines/current/README.md)反映已迁入的卷一至卷三；执行时按下列已确定的卷章分工迁移，前三卷已确认的内容与卷二、三的部分、章层级安排一并保留。
 
@@ -13,7 +13,7 @@
 | 卷一：集合与一元微积分 | 2 | 7 | [集合](01-sets-and-univariate-calculus/01-sets.md)；[实数与一元函数](01-sets-and-univariate-calculus/02-real-numbers-and-univariate-functions.md) |
 | 卷二：向量、矩阵与多元微积分 | 4 | 24 | [向量与线性空间](02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces.md)；[谱分析](02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md)；[线性方程与优化](02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization.md)；[多元微积分](02-vectors-matrices-and-multivariate-calculus/04-multivariate-calculus.md) |
 | 卷三：图 | 4 | 13 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md) |
-| 卷四：度量、测度、函数空间与流形 | 3 | 24 | [度量与测度](04-spaces-measures-and-geometry/01-metric-and-measure.md)；[函数空间](04-spaces-measures-and-geometry/02-function-spaces.md)；[流形](04-spaces-measures-and-geometry/03-manifolds.md) |
+| 卷四：度量、测度、函数空间与流形 | 4 | 26 | [度量与测度](04-spaces-measures-and-geometry/01-metric-and-measure.md)；[函数空间](04-spaces-measures-and-geometry/02-function-spaces.md)；[流形](04-spaces-measures-and-geometry/03-manifolds.md)；[点集的几何与拓扑](04-spaces-measures-and-geometry/04-point-set-geometry-and-topology.md) |
 | 卷五：优化 | 3 | 12 | [优化问题与有限维求解](05-optimization/01-finite-dimensional-optimization.md)；[多准则与嵌套优化](05-optimization/02-multiple-criteria-and-nested-optimization.md)；[函数与流形优化](05-optimization/03-function-and-manifold-optimization.md) |
 | 卷六：微分方程 | 2 | 8 | [常微分方程](06-differential-equations/01-ordinary-differential-equations.md)；[偏微分方程](06-differential-equations/02-partial-differential-equations.md) |
 | 卷七：概率 | 2 | 14 | [概率基础](07-probability/01-probability-foundations.md)；[概率分布的分析与计算](07-probability/02-distribution-analysis-and-computation.md) |
@@ -43,7 +43,7 @@
 
 ### 迁移对应与内容缺口
 
-- [ ] 依据下文141章的分工，把现行五卷各章对应到十卷目标，分别标明整章迁移、拆分、合并及尚需补写的内容。
+- [ ] 依据下文143章的分工，把现行五卷各章对应到十卷目标，分别标明整章迁移、拆分、合并及尚需补写的内容。
 - [ ] 核对[五卷来源纲](source-outline/README.md)中仍用于本计划的章节分工，按当前十卷方案消除重复归属。
 - [ ] 登记跨卷依赖、语义标签、图像及生成器、索引词条和文献的归属，确定每批迁移范围。
 
@@ -68,7 +68,7 @@
 - [ ] 重新构建受影响卷，检查引用与成品一致性，抽查封面、目录、部首页和正文。
 - [ ] 检查各卷篇幅并处理当前首卷1130页的既有情况；清理退出出版入口的旧成品，保留可恢复的历史。
 
-完成依据：实际出版入口、当前正文提要与本计划的完成记录一致，构建及成品检查通过。使用 `python3 scripts/check_outline.py` 检查本计划总方案、29份部分安排和结构清单的标题、编号及链接；内容完成仍须逐章核对。
+完成依据：实际出版入口、当前正文提要与本计划的完成记录一致，构建及成品检查通过。使用 `python3 scripts/check_outline.py` 检查本计划总方案、30份部分安排和结构清单的标题、编号及链接；内容完成仍须逐章核对。
 
 ## 卷一：集合与一元微积分
 
@@ -430,9 +430,9 @@
 
 [查看本部分章、节和小节大纲](04-spaces-measures-and-geometry/03-manifolds.md)
 
-受几何约束的对象怎样局部表示、度量、积分与重构。
+受几何约束的对象怎样局部表示、度量与积分。
 
-主要依赖与分工：卷二的隐函数、微分与积分，以及本卷的度量和函数空间；五章分别建立对象与映射、黎曼几何、群作用、流形积分和有限观测重构。平行移动与测地线就地陈述所需的局部ODE结论，证明归6.3章；能量变分的一般推导归5.11章，流形优化集中在5.12章。
+主要依赖与分工：卷二的隐函数、微分与积分，以及本卷的度量和函数空间；四章分别建立对象与映射、黎曼几何、群作用及流形积分；点集的坐标与变换、点云几何和拓扑恢复集中在第四部分。平行移动与测地线就地陈述所需的局部ODE结论，证明归6.3章；能量变分的一般推导归5.11章，流形优化集中在5.12章。
 
 #### 4.20 流形与光滑映射
 
@@ -450,9 +450,25 @@
 
 在已有切映射、度量和联络的基础上，研究函数变化、无定向的体积累计及依赖定向的形式积分。先建立跨坐标图拼接与形式运算，再讨论Stokes公式、场算子和函数空间。
 
-#### 4.24 有限观测的几何重构
+### 第四部分：点集的几何与拓扑
 
-研究有限信息能够恢复哪些坐标、变换、切空间、内在距离及拓扑，每个问题分别交代可用观测与不唯一的自由度。区分确定性误差、表示不唯一和统计不确定性，不把一种对象的恢复成功自动推广到另一种。
+[查看本部分章、节和小节大纲](04-spaces-measures-and-geometry/04-point-set-geometry-and-topology.md)
+
+怎样从有限点、距离或对应关系重构坐标、估计几何量并辨认拓扑信息。
+
+主要依赖与分工：卷二的矩阵分解与逼近、卷三的最短路径，以及本卷的度量与流形结构。三章分别研究有限点配置及其变换、采样点云所反映的流形几何、有限复形与拓扑恢复；每章固定输入、待求对象和误差条件，几何量的逼近、同调恢复与统计置信保证分别说明。通用数值算法回用卷二，非线性优化归卷五，随机采样与置信保证归卷八。
+
+#### 4.24 点集的坐标重构与变换估计
+
+给定有限点之间的距离，研究能否重构欧氏坐标；给定两组对应点，研究能否确定它们之间的变换。先分清观测保留的自由度，再分别处理距离实现、刚体对齐和射影变换，不把有限点配置默认当作流形采样。
+
+#### 4.25 点云的局部几何与内在距离
+
+把有限点看作未知光滑嵌入流形的观测，研究如何估计局部切方向并逼近流形内在距离。先明确采样覆盖与邻域尺度，再分别检查局部线性近似和邻接图路径的误差，不把这两类量的逼近当作整个流形已经恢复。
+
+#### 4.26 单纯复形与拓扑恢复
+
+从连通分支和孔洞怎样被有限对象记录的问题进入单纯复形与同调，再建立有限复形、球并及流形之间的比较依据。先研究稠密样本在合适尺度下的同调恢复，再用尺度过滤和持久性描述跨尺度信息，区分扰动稳定与底层结构恢复。
 
 ## 卷五：优化
 
