@@ -2,7 +2,7 @@
 
 所属卷：卷三：数学准备：优化、动力系统与信号处理。
 
-状态：本稿以主工作区`0e1229d8`为基线，保存九章的目标安排，细化到节、小节及关键自然段；九章已按本稿实施到正文，现行[正文入口](../../../../tex/03-optimization-evolution-and-signals/01-optimization/part.tex)接入九章，实际内容提要见[当前正文提要](../../../../outlines/current/03-optimization-evolution-and-signals/01-optimization.md)。正文为讲解需要补充的例子、图解与段落标题以当前正文提要为准。
+状态：本稿以主工作区`0e1229d8`为基线，保存九章的目标安排，细化到节、小节及关键自然段；九章已按本稿实施到正文，现行[正文入口](../../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/part.tex)接入九章，实际内容提要见[当前正文提要](../../../../tex_bak/outlines/current/03-optimization-evolution-and-signals/01-optimization.md)。正文为讲解需要补充的例子、图解与段落标题以当前正文提要为准。
 
 ## 整体组织
 

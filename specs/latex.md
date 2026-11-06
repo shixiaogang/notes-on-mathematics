@@ -2,7 +2,7 @@
 
 ## 文件组织与命名
 
-- `tex/volumes.json` 登记五卷元数据；各卷 `tex/<slug>/main.tex` 是薄入口，只声明卷元数据，再载入共享驱动 `tex/book.tex`。不设置全集入口。
+- `tex/volumes.json` 登记已迁入正文的各卷元数据（当前为十卷计划的卷一至卷三）；尚未迁入的计划卷中被引用的章节位置登记在 `tex/planned-references.json`，相应卷迁入后删除对应条目；各卷 `tex/<slug>/main.tex` 是薄入口，只声明卷元数据，再载入共享驱动 `tex/book.tex`。不设置全集入口。
 - `tex/book.tex` 统一加载文档类、`tex/preamble.tex`、共享前页、当前版本的正文范围和共享后页。`tex/frontmatter.tex` 与 `tex/backmatter.tex` 分别是共享前页和后页入口。
 - 设部分的卷按“卷—部分—章”组织；当前各卷均按部分组织。`tex/` 下的两位序号目录表示卷，卷内同样编号的子目录表示部分；每章使用独立 `.tex` 文件。`volume.tex` 只声明卷及其内容，不承担文档类、前后页或出版模式配置。
 - 目录前缀按卷内、部分内顺序从 01 开始，只表示源文件顺序，不等同于 PDF 中显示的编号。
@@ -127,7 +127,7 @@
 
 1. 运行 `bash tests/check-book-editions.sh` 检查结构与最小索引流水线，运行 `make test`
    检查词条提取、映射、别名、索引产物和部首页奇数页分页（含标签与目录页码）。审计不得出现未登记词条、冲突映射或无效别名。
-2. `./build.sh build` 或无参数调用只更新受影响卷；`./build.sh volume <slug>` 构建指定卷；`./build.sh volumes` 和 `./build.sh all` 构建五卷，用于首次构建或全书结构变更。
+2. `./build.sh build` 或无参数调用只更新受影响卷；`./build.sh volume <slug>` 构建指定卷；`./build.sh volumes` 和 `./build.sh all` 构建目录登记的各卷，用于首次构建或全书结构变更。
 3. 五个 `target/volN-<slug>.pdf` 均非空且可正常打开，直接位于 `target/`；不保留全集及旧卷产物。
 4. 本次构建日志没有未定义引用、重复标签、缺失文献、缺失字形或致命错误；跨卷引用显示正确的卷与位置。
 5. 目录和书签采用“部分—章—节”，不设部分的卷采用“章—节”；顶层前后页书签的标题、顺序、层级和目标页正确。

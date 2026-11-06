@@ -12,7 +12,7 @@
 
 前置知识为第一部分的集合、映射、索引与有限求和，第二部分的实数、复数、极限和一元微积分。主体限定在有限维空间；多元积分采用欧氏空间中的Riemann积分与分片光滑几何对象。一般度量、测度、Lebesgue积分及无限维函数空间由卷二继续建立。
 
-正文基线为[向量、矩阵与多元函数部分](../../../../tex/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions/part.tex)及其递归输入。实际已完成的章序、标题和段落提要见[当前正文大纲](../../../../outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)，本稿的目标重排不表示正文已经同步实施。
+正文基线为[向量、矩阵与多元函数部分](../../../../tex_bak/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions/part.tex)及其递归输入。实际已完成的章序、标题和段落提要见[当前正文大纲](../../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)，本稿的目标重排不表示正文已经同步实施。
 
 章目标识采用“部分号.部分内章序号”，节、小节采用本部分内的章序号，仅用于讨论定位。编号条目是自然段提要；标为“paragraph”的标题才是有标题段落单元。各章保留独立的“本章小结”。返回[当前正文大纲索引](../../../../outlines/current/README.md)。
 

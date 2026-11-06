@@ -1,16 +1,15 @@
 # 正文大纲索引
 
-本目录记录已迁入本仓库的数学正文，当前仍按五卷、十七部分、63章组织。各卷及部分的章数、标题和顺序以实际正文入口为准。
+本目录记录已迁入本仓库的数学正文。正文按[十卷重组计划](../../plans/ten-volume-migration/README.md)分批迁入，当前完成卷一至卷三，共10个部分、44章；卷四至卷十尚无正文，不在此登记。各卷及部分的章数、标题和顺序以实际正文入口为准。
 
-已确定且待执行的目标结构见[十卷重组计划](../../plans/ten-volume-migration/README.md)，当前为十卷、29个部分、133章。该草案从机器学习笔记的数学大纲工作区同步，尚未实施到正文；本目录中的五卷正文提要继续反映当前内容。
+迁移前五卷正文的旧提要保存在 `tex_bak/outlines/current/`，只作后续迁移的来源，不反映当前正文。
 
 | 卷 | 卷名 | 章数 | 各部分大纲 |
 | --- | --- | ---: | --- |
-| 1 | 数学准备：基础数学 | 25 | [集合](01-basic-mathematics/01-sets.md)；[实数与一元函数](01-basic-mathematics/02-real-numbers-and-univariate-functions.md)；[向量、矩阵与多元函数](01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)；[图](01-basic-mathematics/04-graphs.md)；[概率与统计基础](01-basic-mathematics/05-probability-and-statistics-basics.md) |
-| 2 | 数学准备：抽象数学 | 14 | [度量与测度](02-abstract-mathematics/01-metric-and-measure.md)；[概率空间](02-abstract-mathematics/02-probability-spaces.md)；[函数空间](02-abstract-mathematics/03-function-spaces.md) |
-| 3 | 数学准备：优化、动力系统与信号处理 | 17 | [优化](03-optimization-evolution-and-signals/01-optimization.md)；[过程与轨迹演化](03-optimization-evolution-and-signals/02-processes-and-trajectory-evolution.md)；[信号与状态估计](03-optimization-evolution-and-signals/03-signals-and-state-estimation.md) |
-| 4 | 数学准备：流形、概率分布与统计推断 | 4 | [流形](04-manifolds-distributions-and-inference/01-manifolds.md)；[概率分布](04-manifolds-distributions-and-inference/02-probability-distributions.md)；[推断与因果识别](04-manifolds-distributions-and-inference/03-inference-and-causal-identification.md) |
-| 5 | 数学准备：控制、决策与博弈 | 3 | [决策](05-control-decision-and-games/01-decision.md)；[控制](05-control-decision-and-games/02-control.md)；[博弈](05-control-decision-and-games/03-games.md) |
+| 1 | 集合与一元微积分 | 7 | [集合](01-sets-and-univariate-calculus/01-sets.md)（第1—3章）；[实数与一元函数](01-sets-and-univariate-calculus/02-real-numbers-and-univariate-functions.md)（第4—7章） |
+| 2 | 向量、矩阵与多元微积分 | 24 | [向量与线性空间](02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces.md)（第1—3章）；[谱分析](02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md)（第4—8章）；[线性方程与优化](02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization.md)（第9—16章）；[多元微积分](02-vectors-matrices-and-multivariate-calculus/04-multivariate-calculus.md)（第17—24章） |
+| 3 | 图 | 13 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)（第1—2章）；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)（第3—7章）；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)（第8—10章）；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md)（第11—13章） |
 
+迁移时未纳入前三卷的旧材料：原卷一“概率与统计基础”按计划归卷七、卷八，原“图上的谱方法”按计划归卷九“图信号处理”，目前仍保存在 `tex_bak/`。
 
 正文变更时同步相应部分的大纲、目录和完成状态，具体见[大纲目录规范](../../specs/outlines.md)。

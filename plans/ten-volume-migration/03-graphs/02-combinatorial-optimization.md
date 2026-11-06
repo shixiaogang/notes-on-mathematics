@@ -2,7 +2,7 @@
 
 状态：十卷调整方案的部分大纲，尚未落实到正文。怎样在路径、连接、容量与配对约束下选择成本或数量最优的结构。范围承接当前正文及已确认的章级分工，以下节、小节说明拟保留的主要内容。
 
-[返回全局大纲](../README.md) · [当前正文提要](../../../outlines/current/01-basic-mathematics/04-graphs.md)
+[返回全局大纲](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/04-graphs.md)
 
 ## 3.3 最短路
 

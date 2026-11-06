@@ -1,0 +1,78 @@
+\section{基于分隔集的分块}
+\label{sec:graph-separator-blocks}
+
+大图上的计算常常希望“分而治之”：把图拆成几块分别处理，再在块与块的连接处汇总。第~\ref{sec:graph-connectivity-separation}节定义了分隔集：删除一个顶点集$S$后，若某些顶点之间不再有路径，$S$就把它们分隔开。
+
+本节接受一个给定的候选集$S$，检验它是否真的把图拆成了几侧，并把图分成共享接口的局部块。这里只做结构上的分块：怎样找到好的分隔集不在这里讨论，块上的数值怎样沿接口组合放在第~\ref{part:graph-dynamic-programming}部分。
+
+\subsection{问题与思路}
+\label{sec:graph-trav-delete-separator}
+
+输入是无向图$\mathcal G=(V,E)$和一个候选集合$S\subseteq V$。要回答两件事：删除$S$之后，其余顶点分成了几侧，每侧是哪些顶点；以及怎样把原图分成若干块，使每块对应一侧，块与块之间只通过$S$联系，并且原图的每条边都保存在某个块中。是否拆分成功只能由计算结果判断，不能因为输入被称作“分隔集”就默认成立。
+
+办法是先删去$S$求分量，再把$S$加回。删除$S$中的顶点及与它们关联的边，得到$\mathcal G-S$，即$V\setminus S$上的诱导子图。它的连通分量$C_1,\ldots,C_r$就是“各侧”：不同的$C_j$之间在$\mathcal G-S$中没有边，所以原图中从$C_j$到$C_k$（$j\neq k$）的任何路径都必须经过$S$。按$r$的取值有三种结果：$r\geq2$时，$S$把图拆成了$r$侧；$r=1$时，删除$S$后其余顶点仍然连通，$S$没有形成多侧拆分；$r=0$时$S=V$，余图为空，也谈不上拆分。
+
+删除$S$的同时，各分量与$S$之间的边、$S$内部的边也丢失了。要把原图完整地分成几块，还要把$S$加回每一侧，得到\term{局部块}（local block）
+\[
+\mathcal B_j=\mathcal G[C_j\cup S],\qquad j=1,\ldots,r,
+\]
+其中$S$称为各块的公共接口。求各侧正是第~\ref{sec:graph-trav-components-forest}小节的连通分量问题，只是要把$S$中的顶点当作不存在。
+
+\subsection{算法实现}
+\label{sec:graph-trav-separator-implementation}
+
+实现时不必真的从邻接表中删去$S$。算法开始前，用一个布尔数组把$S$中的顶点标记为“屏蔽”；这个数组只是对输入的标注，运行中不再改变。此后的计算就是在未屏蔽的顶点上做第~\ref{sec:graph-trav-components-forest}小节的分量编号，维护的状态是：
+\begin{itemize}
+  \item 标签数组$\operatorname{comp}(\cdot)$：未屏蔽顶点所属的分量编号，$0$表示尚未标记，初始全为$0$；
+  \item 分量个数$r$：初始为$0$；
+  \item 所用遍历的队列或栈，初始为空。
+\end{itemize}
+更新规则与算法~\ref{alg:graph-trav-components}相同，只多了两处跳过：
+\begin{itemize}
+  \item 外层扫描：遇到屏蔽顶点或已标记的顶点跳过；遇到未屏蔽且未标记的顶点$v$，令$r\gets r+1$，置$\operatorname{comp}(v)=r$，从$v$启动遍历。
+  \item 遍历：读到邻居$w$时，若$w$被屏蔽或已标记就不进入；否则置$\operatorname{comp}(w)=r$，把$w$放入队列或栈。
+\end{itemize}
+扫描结束后，标签为$j$的顶点组成$C_j$。再按$r$报告结果，并为每个分量列出局部块的顶点$C_j\cup S$。
+
+\begin{algorithm}[删除候选集后的分量与局部块]
+\label{alg:graph-trav-separator-components}
+输入：无向图的邻接表，候选集合$S\subseteq V$。输出：$\mathcal G-S$的连通分量$C_1,\ldots,C_r$，拆分是否成功（$r\geq2$），以及局部块$\mathcal B_1,\ldots,\mathcal B_r$。
+\begin{enumerate}
+  \item 用一个布尔数组标记$S$中的顶点为“屏蔽”，不修改原邻接表。
+  \item 对未屏蔽的顶点执行算法~\ref{alg:graph-trav-components}：外层扫描跳过屏蔽顶点，遍历时读到屏蔽的邻居一律跳过。
+  \item 输出各分量；若$r\geq2$报告拆分成功，$r=1$报告未拆分，$r=0$报告余图为空。
+  \item 对每个$j$，以$C_j\cup S$为顶点集输出局部块$\mathcal B_j$；其中$S$的顶点和$S$内部的边只记录对原图的引用。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+在贯穿四点图上取$S=\{2,3\}$。屏蔽$2,3$后，外层扫描从$1$出发：$1$的邻居$2,3$都被屏蔽，遍历立即结束，得到$C_1=\{1\}$；扫描到$2,3$时跳过；从$4$出发同样只得到$C_2=\{4\}$。余图有两个分量，因为$\{1,4\}$不是原图的边，见图~\ref{fig:graph-trav-separator-blocks}(a)。$S=\{2,3\}$成功地分隔了$1$和$4$。把$S$加回两侧，得到$\mathcal B_1=\mathcal G[\{1,2,3\}]$与$\mathcal B_2=\mathcal G[\{2,3,4\}]$，都是三角形，共享顶点$2,3$和边$\{2,3\}$，见图~\ref{fig:graph-trav-separator-blocks}(b)。
+
+作为对照，取$S=\{1\}$，删除后剩下的$2,3,4$两两相邻，构成一个三角形，余图只有一个分量，见图~\ref{fig:graph-trav-separator-blocks}(c)，$\{1\}$不是有效的拆分。贯穿图中删去任何单个顶点都不会断开余图：删去$1$或$4$剩下三角形，删去$2$或$3$剩下一条路径，所以它没有割点，至少要删两个顶点才能拆开。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=103.9mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-separator-blocks/figure.pdf}
+  \caption{基于分隔集的分块。黄色顶点为候选删除集，红色虚线为随之删去的边。(a)贯穿四点图删除$S=\{2,3\}$后剩下两个分量$\{1\}$与$\{4\}$；(b)把$S$加回各侧得到两个局部块，两块中的$2,3$是同一批原顶点（点线相连），边$\{2,3\}$被两块共同引用；(c)删除$\{1\}$后余下三角形仍然连通，没有形成拆分。}
+  \label{fig:graph-trav-separator-blocks}
+\end{figure}
+
+\subsection{算法分析}
+\label{sec:graph-trav-blocks-interfaces}
+
+\paragraph{正确性}
+屏蔽$S$后的分量编号就是在$\mathcal G-S$上执行算法~\ref{alg:graph-trav-components}：读到屏蔽邻居不进入，等于删去了与$S$关联的边。由第~\ref{sec:graph-trav-components-forest}小节的分析，得到的$C_1,\ldots,C_r$恰是$\mathcal G-S$的连通分量，按$r$作出的判断也就正确。
+
+局部块保存了原图的全部边。原图的一条边有三种可能：两端都在某个$C_j$中，或一端在$C_j$、一端在$S$中，这两种边都属于$\mathcal B_j$；两端都在$S$中，这样的边属于每一个块。由于不同分量之间没有边，不存在第四种情况。所以原图的全部信息都保存在这些块中，块与块之间只通过$S$发生联系。
+
+块与块之间的联系落在接口顶点上，而各块中的接口顶点是同一批原顶点，不是可以各自独立变化的副本。若以后要给顶点赋值，同一个接口顶点在各块中必须取相同的值；若块中记录了边的数据，$S$内部的边被多个块同时看到，汇总时不能重复计数。因此算法第四步只记录接口顶点和接口边的引用，而不是把原图的一部分真正复制几份后各自修改。
+
+\paragraph{复杂度}
+屏蔽$S$并计算余图分量需要$O(n+m)$时间，输出局部块的存储则要另计：各块顶点数之和为$\sum_j(|C_j|+|S|)=(n-|S|)+r|S|$，接口顶点被重复列出$r$次；$S$内部的边也在每个块中出现一次。$r$和$|S|$都较小时，这部分额外存储可以忽略；接口很大或块很多时，共享引用就更为必要。
+
+\paragraph{适用范围}
+以上计算回答的是“这个给定的$S$是否拆开了图”，用$O(n+m)$时间就能完成。它不回答“最小的拆分集合是什么”。若想通过检验来找最小的分隔集，就要逐个尝试候选集合：大小为$k$的候选集有$\binom{n}{k}$个，每个都要做一次连通分量计算，规模稍大就无法承受。寻找小的分隔集需要另外的方法，它们不是一次连通标记能自动给出的。
+
+即使找到了小的接口，也只说明块与块之间的联系少，并不说明每个块内部简单。例如两个各有$100$个顶点的完全图只共用一个顶点，删除这个顶点就把图拆成两侧，接口大小为$1$，可每个局部块仍是一个$100$个顶点的完全图。
+
+分块的收益取决于后续计算在块内需要做什么。第~\ref{part:graph-dynamic-programming}部分会看到，当计算由许多只涉及少数顶点的局部项组成时，固定接口上的取值后各块可以分别处理，这时接口大小直接决定中间表的规模；第~\ref{chap:general-graph-dp-construction}章再把一次分块推广为多层的树分解。

@@ -1,0 +1,295 @@
+% 第8章第3节：子集累计与 Möbius 反演（子集格与累计；Möbius 反演及四元素算例；反演的计算：逐元素差分；有限偏序集上的推广）。
+
+\section{子集累计与 Möbius 反演}
+\label{sec:comb-cumulative-inversion}
+
+设想每个课程组合有一个总得分：单门课各有自己的贡献，某两门课同时选又会产生额外的配合效果，配合也可能是负的。能观察到的是每个组合的总得分，想知道的却是每个组合\emph{自身}贡献了多少。
+
+卷一计数中的容斥原理由各交集的大小恢复并集的大小，这里做的是同一类“由累计量恢复局部量”的事，只是对象换成了一般的数值。本节只用有限求和与包含关系，不依赖上一节的单调或次模假设，也不是后面选择算法的前提。
+
+\subsection{子集格与累计}
+\label{sec:graph-setfn-subset-lattice}
+
+累计沿包含关系进行，所以先把包含关系画出来。包含关系是幂集上的偏序：每个集合包含自身；$S\subseteq T$与$T\subseteq S$同时成立时$S=T$；包含关系可以传递。有限集合$V$的全部子集连同包含关系称为$V$的\term{子集格}（subset lattice）：两个子集的交是它们最大的公共子集，并是包含两者的最小集合。
+
+图~\ref{fig:comb-mobius-cumulative-local}按元素个数自下而上分层画出$V_0=\{1,2,3,4\}$的子集格，每条连线连接只差一个元素的两个子集，沿连线向上一步就是加入一个元素。图~\ref{fig:graph-setfn-subset-binary-cube}中的立方体正是三元底集的子集格。
+
+从$S$出发沿连线一路向下能到达的子集，恰好是$S$的全部子集，例如从$\{1,3\}$向下只能到达$\{1\}$、$\{3\}$和空集。累计值就沿这些向下的路径收集贡献。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=99.187mm]{figures/01-basic-mathematics/04-graphs/tikz/c4-subset-lattice-cumulative/figure.pdf}
+  \caption{四元素集合$V_0=\{1,2,3,4\}$的子集格与各子集自身的贡献$h$。子集按元素个数自下而上分层，连线连接只差一个元素的两个子集；框内上行为子集，下行为教学设定的贡献。蓝色标出$\{1,3\}$及其全部子集，它们的贡献相加得到累计值$g(\{1,3\})=0+2+2+3=7$；黄色框$\{2,4\}$的自身贡献为负。}
+  \label{fig:comb-mobius-cumulative-local}
+\end{figure}
+
+\paragraph{自身贡献与累计值}
+给每个子集$T$指定一个实数$h(T)$，表示$T$作为整体\emph{自身}带来的贡献：单元素集的贡献是单门课的得分，二元集的贡献是两门课在各自得分之外的配合效果，依此类推。$S$的累计值收集它的全部子集的贡献：
+\begin{equation}
+  g(S)=\sum_{T\subseteq S}h(T).
+  \label{eq:comb-zeta-transform}
+\end{equation}
+$g$与$h$都是$V$上的集合函数。累计不只相加单元素的贡献，$S$内部更大子集的配合贡献也计入其中。
+
+图~\ref{fig:comb-mobius-cumulative-local}的教学设定让四个单项各贡献$2$，$\{1,3\}$另有配合贡献$3$，$\{2,4\}$另有配合贡献$-1$，其余子集（包括空集和全部三元、四元子集）的贡献为$0$。于是
+\[
+  g(\{1,3\})=h(\varnothing)+h(\{1\})+h(\{3\})+h(\{1,3\})=0+2+2+3=7,
+\]
+而两个单项的累计值之和只有$g(\{1\})+g(\{3\})=4$，多出的$3$正是$\{1,3\}$自身的贡献。
+
+反演处理相反方向的问题：已知全部$2^n$个累计值$g(S)$，求全部$2^n$个自身贡献$h(S)$，使它们按式~\eqref{eq:comb-zeta-transform}累计后恰好给出已知的$g$。需要回答的是这样的$h$是否存在、是否唯一，以及怎样算出来。
+
+\subsection{Möbius 反演}
+\label{sec:graph-setfn-mobius-inversion}
+
+先看一列数的情形。若$g_k=h_1+\cdots+h_k$是前缀和，恢复$h_k$只需相邻两项相减：$h_k=g_k-g_{k-1}$。子集格上的累计也是一种“前缀和”，只是$S$的下方不止一个紧邻的子集，而有$|S|$个$S\setminus\{i\}$，每个元素给出一个相减的方向。只沿一个方向相减还不够，各个方向的差会把某些贡献重复减去，需要再加回来。
+
+两元素的情形可以完整写出。$g(\{1,3\})$包含$h(\varnothing)$、$h(\{1\})$、$h(\{3\})$和$h(\{1,3\})$四项。为了只留下$h(\{1,3\})$，先减去$g(\{1\})=h(\varnothing)+h(\{1\})$和$g(\{3\})=h(\varnothing)+h(\{3\})$，两个单项贡献被去掉，但$h(\varnothing)$被多减了一次，再加回$g(\varnothing)=h(\varnothing)$，剩下的恰是
+\[
+  h(\{1,3\})=g(\{1,3\})-g(\{1\})-g(\{3\})+g(\varnothing).
+\]
+
+表~\ref{tab:graph-setfn-mobius-cancellation}逐项记录四个累计值各含哪些贡献、带什么符号：按列相加，$h(\varnothing)$、$h(\{1\})$、$h(\{3\})$的系数都抵消为$0$，只有$h(\{1,3\})$留下系数$1$。
+
+同一个式子也是两次相邻差：
+\[
+  h(\{1,3\})=\bigl(g(\{1,3\})-g(\{3\})\bigr)-\bigl(g(\{1\})-g(\varnothing)\bigr),
+\]
+两个括号各沿“加入元素$1$”的方向相减，括号之间再沿“加入元素$3$”的方向相减。展开后，每个$g(T)$的符号由$T$比$S$少几个元素决定，少一个变一次号。一般情形的公式正是这样，称为\term{Möbius反演}（Möbius inversion）。
+
+\begin{table}[!htb]
+  \centering
+  \caption{$h(\{1,3\})=g(\{1,3\})-g(\{1\})-g(\{3\})+g(\varnothing)$中各项的抵消。每行把一个累计值按式~\eqref{eq:comb-zeta-transform}展开，记下各贡献的系数（已乘上该累计值前的符号），空白为$0$；末行按列相加。}
+  \label{tab:graph-setfn-mobius-cancellation}
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    & $h(\varnothing)$ & $h(\{1\})$ & $h(\{3\})$ & $h(\{1,3\})$ \\
+    \midrule
+    $+g(\{1,3\})$ & $+1$ & $+1$ & $+1$ & $+1$ \\
+    $-g(\{1\})$ & $-1$ & $-1$ & & \\
+    $-g(\{3\})$ & $-1$ & & $-1$ & \\
+    $+g(\varnothing)$ & $+1$ & & & \\
+    \midrule
+    合计 & $0$ & $0$ & $0$ & $1$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{theorem}[子集格上的 Möbius 反演]
+\label{thm:comb-mobius-inversion}
+设$V$为有限集合，$g,h:\mathcal P(V)\to\mathbb R$。若对每个$S\subseteq V$式~\eqref{eq:comb-zeta-transform}成立，则对每个$S\subseteq V$有
+\begin{equation}
+  h(S)=\sum_{T\subseteq S}(-1)^{|S|-|T|}g(T).
+  \label{eq:comb-mobius-inversion}
+\end{equation}
+反过来，若对每个$S$式~\eqref{eq:comb-mobius-inversion}成立，则式~\eqref{eq:comb-zeta-transform}也对每个$S$成立。
+\end{theorem}
+
+\begin{proof}
+把式~\eqref{eq:comb-zeta-transform}代入式~\eqref{eq:comb-mobius-inversion}右侧，得到对全部满足$R\subseteq T\subseteq S$的集合对$(R,T)$的双重和。先固定$T$再取$R$，与先固定$R$再取$T$，遍历的是同一批有限个集合对；有限和只是把这些项全部相加，与分组次序无关，所以可以交换求和次序：
+\[
+  \sum_{T\subseteq S}(-1)^{|S|-|T|}\sum_{R\subseteq T}h(R)
+  =\sum_{R\subseteq S}h(R)\sum_{T:\,R\subseteq T\subseteq S}(-1)^{|S|-|T|}.
+\]
+固定$R$后，满足$R\subseteq T\subseteq S$的$T$由$S\setminus R$中哪些元素被加入决定，即$T=R\cup D$，$D\subseteq S\setminus R$任意，且$|S|-|T|=|S\setminus R|-|D|$。记$q=|S\setminus R|$，按$|D|=j$分组，大小为$j$的$D$有$\binom qj$个，所以内层和等于
+\[
+  \sum_{j=0}^{q}\binom qj(-1)^{q-j}=(-1)^q\sum_{j=0}^{q}(-1)^j\binom qj
+  =\begin{cases}1,&q=0,\\0,&q\geq1,\end{cases}
+\]
+最后一步用组合数的交错和：$q\geq1$时，$q$元集合中偶数大小的子集与奇数大小的子集一样多（固定一个元素，加入或删去它就把两类一一配对），所以$\sum_{j=0}^{q}(-1)^j\binom qj=0$。
+
+内层和只在$R=S$时为$1$，在$R$是$S$的真子集时为$0$，所以真子集上的贡献全部抵消，右侧只剩$h(S)$。表~\ref{tab:graph-setfn-mobius-cancellation}的各列合计正是$S=\{1,3\}$时的这些内层和。
+
+反方向同样直接核对。由式~\eqref{eq:comb-mobius-inversion}给出$h$，代入$\sum_{T\subseteq S}h(T)$并交换求和次序，
+\[
+  \sum_{T\subseteq S}h(T)=\sum_{R\subseteq S}g(R)\sum_{T:\,R\subseteq T\subseteq S}(-1)^{|T|-|R|}.
+\]
+仍写$T=R\cup D$，内层和等于$\sum_{j=0}^{q}(-1)^j\binom qj$，它在$R=S$时只有$D=\varnothing$一项而等于$1$，在$R\neq S$时为$0$。所以右侧等于$g(S)$。
+\end{proof}
+
+定理回答了存在与唯一的问题。对任意给定的$g$，按式~\eqref{eq:comb-mobius-inversion}定义的$h$累计后恰好回到$g$，所以所求的$h$存在；而任何满足式~\eqref{eq:comb-zeta-transform}的$h$都必须等于式~\eqref{eq:comb-mobius-inversion}的右侧，所以它是唯一的。
+
+式~\eqref{eq:comb-zeta-transform}与式~\eqref{eq:comb-mobius-inversion}是一对互逆的变换：从贡献到累计，再从累计回到贡献，不丢失任何信息。
+
+证明中起作用的是组合数的交错和为零，这与容斥原理相同；区别在于容斥使并集中每个元素恰计一次，反演只保留指定子集自身的贡献。
+
+\paragraph{四元素算例}
+仍用指示函数$\mathbb I\{\cdot\}$，沿用图~\ref{fig:comb-mobius-cumulative-local}的设定，累计值可以写成
+\[
+  g(S)=2|S|+3\,\mathbb I\{\{1,3\}\subseteq S\}-\mathbb I\{\{2,4\}\subseteq S\}.
+\]
+其中$2|S|$收集$S$中各单项的贡献，后两项在$S$包含$\{1,3\}$或$\{2,4\}$时计入相应的配合贡献。表~\ref{tab:comb-four-element-mobius}列出全部$16$个累计值，以及只用这些累计值按式~\eqref{eq:comb-mobius-inversion}恢复的贡献。
+
+\begin{table}[!htb]
+  \centering
+  \begin{tabular}{ccc@{\qquad}ccc}
+    \toprule
+    $S$ & $g(S)$ & $h(S)$ & $S$ & $g(S)$ & $h(S)$ \\
+    \midrule
+    $\varnothing$ & $0$ & $0$ & $\{2,3\}$ & $4$ & $0$ \\
+    $\{1\}$ & $2$ & $2$ & $\{2,4\}$ & $3$ & $-1$ \\
+    $\{2\}$ & $2$ & $2$ & $\{3,4\}$ & $4$ & $0$ \\
+    $\{3\}$ & $2$ & $2$ & $\{1,2,3\}$ & $9$ & $0$ \\
+    $\{4\}$ & $2$ & $2$ & $\{1,2,4\}$ & $5$ & $0$ \\
+    $\{1,2\}$ & $4$ & $0$ & $\{1,3,4\}$ & $9$ & $0$ \\
+    $\{1,3\}$ & $7$ & $3$ & $\{2,3,4\}$ & $5$ & $0$ \\
+    $\{1,4\}$ & $4$ & $0$ & $V_0$ & $10$ & $0$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{四元素子集格上的累计值$g$与由式~\eqref{eq:comb-mobius-inversion}恢复的自身贡献$h$。恢复结果与教学设定一致：四个单项各为$2$，$\{1,3\}$为$3$，$\{2,4\}$为$-1$，其余子集（包括全部三元子集和$V_0$）均为$0$。}
+  \label{tab:comb-four-element-mobius}
+\end{table}
+
+逐个套用公式，两个二元子集的贡献按前面的四项公式恢复：
+\[
+  h(\{1,3\})=7-2-2+0=3,\qquad h(\{2,4\})=3-2-2+0=-1.
+\]
+
+三元子集要用到八个累计值。对$S=\{1,2,3\}$，按子集大小依次取三元、二元、一元和空集项，
+\[
+  h(\{1,2,3\})=9-(4+7+4)+(2+2+2)-0=0.
+\]
+虽然$\{1,2,3\}$包含有配合效果的$\{1,3\}$，它的累计值$9$也大于三个单项之和$6$，但多出的$3$已经由$h(\{1,3\})$解释，三门课之间没有新的整体效果，所以三元贡献为$0$。
+
+$\{1,3,4\}$也是如此：$g=9$，恢复出$h=0$。其余两个三元子集同样得到$0$，例如$h(\{2,3,4\})=5-(4+3+4)+(2+2+2)-0=0$，其中$-1$的配合贡献已由$h(\{2,4\})$解释。反演还允许贡献为负，$h(\{2,4\})=-1$就是一例。
+
+\subsection{反演的计算}
+\label{sec:graph-setfn-mobius-computation}
+
+\subsubsection{问题与思路}
+
+输入是全部$2^n$个累计值，输出是全部$2^n$个自身贡献。直接套用式~\eqref{eq:comb-mobius-inversion}，计算$h(S)$要读取$S$的全部$2^{|S|}$个子集上的累计值。
+
+另一种做法是由式~\eqref{eq:comb-zeta-transform}移项逐个求解：
+\[
+  h(S)=g(S)-\sum_{T\subsetneq S}h(T).
+\]
+从$h(\varnothing)=g(\varnothing)$出发，按元素个数从小到大计算，算到$S$时它的全部真子集的$h$都已求出。在四元素算例中，先得到$h(\varnothing)=0$和单项贡献$2$，再得$h(\{1,3\})=7-(0+2+2)=3$等二元贡献，最后$h(\{1,2,3\})=9-(0+2+2+2+0+3+0)=0$。
+
+这种递推同样要对每个$S$遍历它的全部子集。$k$元子集有$\binom nk$个，各有$2^k$个子集，所以两种做法读取的项数都是$\sum_{k=0}^{n}\binom nk2^k=3^n$（二项式定理）。两种做法的共同瓶颈是每个$S$都要单独遍历它的全部子集。
+
+上一小节把单个值$h(\{1,3\})$写成了两次相邻差，这提示可以按元素而不是按子集组织计算。式~\eqref{eq:comb-mobius-inversion}中的符号可以按元素拆开：对$T\subseteq S$，$(-1)^{|S|-|T|}$是$S\setminus T$中每个元素各贡献一个$-1$的乘积。于是交错和可以一个元素一个元素地做：先对全部子集沿“加入元素$1$”的方向取相邻差，再在结果上沿元素$2$的方向取差，依此类推。
+
+每个元素只处理一轮，一轮对$2^{n-1}$对相邻子集各做一次减法，不再为每个$S$单独遍历它的子集。这种做法称为逐元素差分。
+
+\subsubsection{算法实现}
+
+元素的编号$1,\ldots,n$与子集在数组中的位置在开始前确定，运行中不变，不算状态。
+
+\paragraph{子集数组的数据结构}
+数组以子集为下标。沿用第~\ref{sec:graph-setfn-binary-vectors}小节的指示向量，把$S$的指示向量$(x_1,\ldots,x_n)$读成二进制数$\sum_{i=1}^{n}x_i2^{i-1}$，作为$S$在长度为$2^n$的数组中的位置。$S$含元素$i$，当且仅当这个数从低位数起的第$i$位为$1$；这时$S\setminus\{i\}$的位置是它减去$2^{i-1}$。例如$n=3$时$\{1,3\}$的位置是$101_2=5$，$\{1,3\}\setminus\{1\}=\{3\}$的位置是$5-1=4$。依次扫描位置$0,1,\ldots,2^n-1$，挑出第$i$位为$1$的位置，就把含$i$的子集各访问一次，每次用一次减法找到$S\setminus\{i\}$。
+
+\paragraph{逐元素差分的实现}
+算法维护两项状态：
+\begin{itemize}
+  \item 数组$a(\cdot)$：以子集为下标，长度为$2^n$，初值$a(S)=g(S)$；
+  \item 当前元素$i$：本轮处理的元素，初值为$1$。
+\end{itemize}
+第$i$轮按子集是否含$i$分别处理，处理完令$i\gets i+1$：
+\begin{itemize}
+  \item 含$i$的子集$S$：令$a(S)\gets a(S)-a(S\setminus\{i\})$；
+  \item 不含$i$的子集：保持不变。
+\end{itemize}
+本轮读取的$a(S\setminus\{i\})$所在的子集不含$i$，本轮不会被修改，所以更新可以原地进行，不需要另存上一轮的数组。处理完元素$n$后停止，输出$a$。在子集格上看，第$i$轮只沿“加入元素$i$”方向的连线做差，图~\ref{fig:graph-setfn-subset-binary-cube}中同色的一组边就是一轮读取的方向。
+
+\begin{algorithm}[逐元素差分]
+\label{alg:graph-setfn-mobius-coordinate}
+输入：底集$V=\{1,\ldots,n\}$上的全部累计值$g(S)$。输出：全部自身贡献$h(S)$。
+\begin{enumerate}
+  \item 对每个$S\subseteq V$置$a(S)=g(S)$；令$i=1$。
+  \item 对每个含$i$的子集$S$，置$a(S)=a(S)-a(S\setminus\{i\})$；不含$i$的子集不变。
+  \item 若$i<n$，令$i\gets i+1$并回到第2步；否则输出$h(S)=a(S)$。
+\end{enumerate}
+\end{algorithm}
+
+\paragraph{执行过程}
+先在三元子集格$\{1,2,3\}$上执行。四元素设定限制到$\{1,2,3\}$的子集上，仍是同一组累计值与贡献，因为$g(S)$和$h(S)$只读取$S$的子集。初始数组就是累计值：$a(\varnothing)=0$，三个单元素集为$2$，$a(\{1,2\})=4$，$a(\{1,3\})=7$，$a(\{2,3\})=4$，$a(\{1,2,3\})=9$。每轮只改动含被处理元素的四个子集：
+\begin{itemize}
+  \item 处理元素$1$：$\{1\}$为$2-0=2$，$\{1,2\}$为$4-2=2$，$\{1,3\}$为$7-2=5$，$\{1,2,3\}$为$9-4=5$。
+  \item 处理元素$2$：$\{2\}$为$2-0=2$，$\{1,2\}$为$2-2=0$，$\{2,3\}$为$4-2=2$，$\{1,2,3\}$为$5-5=0$。
+  \item 处理元素$3$：$\{3\}$为$2-0=2$，$\{1,3\}$为$5-2=3$，$\{2,3\}$为$2-2=0$，$\{1,2,3\}$为$0-0=0$。
+\end{itemize}
+最终数组就是$h$：单项各为$2$，$h(\{1,3\})=3$，其余为$0$。
+
+$\{1,3\}$的值$7\to5\to5\to3$正是上一小节的两次相邻差：处理元素$1$时减去$g(\{3\})$，处理元素$3$时减去已经差分过的$a(\{1\})=g(\{1\})-g(\varnothing)$。图~\ref{fig:graph-setfn-mobius-coordinate-rounds}画出三轮的状态。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=149.652mm]{figures/01-basic-mathematics/04-graphs/tikz/c4-mobius-coordinate-rounds/figure.pdf}
+  \caption{逐元素差分在三元子集格$\{1,2,3\}$上的状态变化，累计值取本节四元素设定在$\{1,2,3\}$的子集上的值。框内下行是数组$a$的当前值。每一轮中，含被处理元素$i$的子集（黄色）减去下方$S\setminus\{i\}$处的当前值，蓝色粗线连接这一轮读取的两个子集。三轮之后，数组中存的恰是自身贡献$h$。}
+  \label{fig:graph-setfn-mobius-coordinate-rounds}
+\end{figure*}
+
+四元素算例照样做四轮，每轮改动含$i$的$8$个子集，最后的数组与表~\ref{tab:comb-four-element-mobius}中的$h$逐项一致。例如$\{2,4\}$依次为$3,3,1,1,-1$：处理元素$2$时减去$a(\{4\})=2$，处理元素$4$时减去当前的$a(\{2\})=2$。中间各轮的数组只是部分差分，只有最后一轮之后才是$h$。
+
+\subsubsection{算法分析}
+
+\paragraph{正确性}
+上面按元素拆分符号的说法，可以由一个不变式精确表达。记$[i]=\{1,\ldots,i\}$。断言：处理完元素$1,\ldots,i$后，
+\[
+  a(S)=\sum_{\substack{T\subseteq S\\ T\setminus[i]=S\setminus[i]}}(-1)^{|S|-|T|}g(T),
+\]
+即只对那些与$S$在元素$i+1,\ldots,n$上一致的子集$T$做交错求和。$i=0$时条件迫使$T=S$，右侧就是$g(S)$，与初始化一致。
+
+设断言对$i$成立，看第$i+1$轮。若$i+1\notin S$，$a(S)$不变；而$S$的子集都不含$i+1$，“在$i+1,\ldots,n$上一致”与“在$i+2,\ldots,n$上一致”是同一个条件，断言对$i+1$成立。若$i+1\in S$，新值是$a(S)-a(S\setminus\{i+1\})$。前一项求和的$T$与$S$在$i+1,\ldots,n$上一致，因而含$i+1$；后一项求和的$T$与$S\setminus\{i+1\}$一致，因而不含$i+1$，符号$(-1)^{|S|-1-|T|}$再乘以$-1$变成$(-1)^{|S|-|T|}$。两组$T$合起来，恰是与$S$在$i+2,\ldots,n$上一致的全部子集，断言对$i+1$成立。
+
+取$i=n$，条件不再限制$T$，右侧正是式~\eqref{eq:comb-mobius-inversion}，所以输出就是$h$。
+
+\paragraph{复杂度}
+逐元素差分每轮做$2^{n-1}$次减法，共$n2^{n-1}$次；按上面的数据结构，每次找到$S\setminus\{i\}$只需一次整数减法，原地更新只用长度为$2^n$的数组。逐个套用公式与按子集大小递推都需要$3^n$次运算，四元素算例中是$32$次对$81$次。
+
+不过输入本身已有$2^n$个数，三种方式都随$n$指数增长，单个递推式写起来简短并不意味着问题便宜。
+
+\paragraph{累计方向}
+把每一轮的减号换成加号、从$a=h$出发做$n$轮，同样的归纳（不变式中的符号$(-1)^{|S|-|T|}$换成$1$，$g$换成$h$）说明得到的是累计值$g$。例如$\{1,3\}$由$3$经$3+2=5$、$5+2=7$回到$g(\{1,3\})$。所以累计和反演可以用同一套逐元素扫描完成，开销也相同。
+
+\subsection{有限偏序集上的推广}
+\label{sec:graph-setfn-poset-mobius}
+
+反演公式中的系数$(-1)^{|S|-|T|}$只依赖两个子集的相对位置。同样的问题可以在任意有限偏序集$(X,\preceq)$上提出：给每个元素$y$一个数$h(y)$，沿下方累计得$g(x)=\sum_{y\preceq x}h(y)$，再问怎样由$g$恢复$h$。这时系数不再一律是$\pm1$，而由下面的函数确定。
+
+\begin{definition}[Möbius 函数]
+\label{def:graph-setfn-mobius-function}
+设$(X,\preceq)$是有限偏序集，记$y\prec x$表示$y\preceq x$且$y\neq x$。偏序集的\term{Möbius函数}（Möbius function）$\mu$对满足$y\preceq x$的元素对定义为
+\[
+  \mu(y,y)=1,\qquad \mu(y,x)=-\sum_{z:\,y\preceq z\prec x}\mu(y,z)\quad(y\prec x),
+\]
+对不满足$y\preceq x$的元素对取$\mu(y,x)=0$。
+\end{definition}
+
+定义固定区间的下端$y$，从对角值$\mu(y,y)=1$出发向上递推：算$\mu(y,x)$时只用到区间$\{z:y\preceq z\prec x\}$上已经算出的值，而有限偏序集保证递推在有限步内完成。递推式移项后写成
+\begin{equation}
+  \sum_{z:\,y\preceq z\preceq x}\mu(y,z)=0\qquad(y\prec x),
+  \label{eq:graph-setfn-mobius-function-sum}
+\end{equation}
+即每个非平凡区间上的系数之和为零；$y=x$时这个和是$\mu(y,y)=1$。
+
+这一抵消性质足以完成反演，论证分两步。先验证按$\tilde h(x)=\sum_{y\preceq x}\mu(y,x)g(y)$定义的函数累计后回到$g$。对任意$s\in X$，交换有限和的次序，
+\[
+  \sum_{x\preceq s}\tilde h(x)=\sum_{x\preceq s}\sum_{y\preceq x}\mu(y,x)g(y)
+  =\sum_{y\preceq s}g(y)\sum_{x:\,y\preceq x\preceq s}\mu(y,x).
+\]
+由式~\eqref{eq:graph-setfn-mobius-function-sum}，内层和在$y\prec s$时为$0$，在$y=s$时为$1$，所以右侧等于$g(s)$。
+
+再说明满足累计式的$h$只有一个。累计式可以写成$h(x)=g(x)-\sum_{y\prec x}h(y)$，右侧只用到严格位于$x$下方的元素。把有限偏序集的元素排成一列，使每个元素都排在它上方的元素之前（例如反复取出当前剩余元素中的一个极小元），按这个次序逐个计算，$h$的每个值都被$g$唯一确定。$\tilde h$也满足累计式，所以$h=\tilde h$，即
+\[
+  h(x)=\sum_{y\preceq x}\mu(y,x)g(y).
+\]
+
+在子集格上，$\mu(T,S)=(-1)^{|S|-|T|}$满足这个递推：对$T\subsetneq S$，记$q=|S\setminus T|\geq1$，
+\[
+  \sum_{R:\,T\subseteq R\subseteq S}(-1)^{|R|-|T|}=\sum_{j=0}^{q}(-1)^j\binom qj=0.
+\]
+由于递推从$\mu(T,T)=1$出发唯一确定全部值，子集格上的Möbius函数就是$(-1)^{|S|-|T|}$，只取$\pm1$，式~\eqref{eq:comb-mobius-inversion}是一般反演式的特例。
+
+\paragraph{整除偏序}
+图~\ref{fig:graph-setfn-mobius-divisors}是$12$的六个正因数在整除关系下的偏序。从$\mu(1,1)=1$出发，$\mu(1,2)=\mu(1,3)=-1$；区间$\{1,2,4\}$是一条链，$\mu(1,4)=-(1-1)=0$；区间$\{1,2,3,6\}$与两元素的子集格形状相同，$\mu(1,6)=-(1-1-1)=1$；最后$\mu(1,12)=-(1-1-1+0+1)=0$。系数出现了$0$，说明一般偏序上的反演确实不同于子集格上的交错加减。
+
+本小节只作为有限组合结构的补充，不涉及无限偏序和收敛问题，后面的选择算法也不以它为前提。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=52.613mm]{figures/01-basic-mathematics/04-graphs/tikz/c4-mobius-divisor-poset/figure.pdf}
+  \caption{$12$的正因数在整除关系下的偏序，连线连接直接相邻的两个因数，下方整除上方。节点旁的数是$\mu(1,x)$，由$\mu(1,1)=1$（黄色节点）自下而上递推得到。链$1\mid2\mid4$上$\mu(1,4)=0$，与子集格同形的区间$\{1,2,3,6\}$上$\mu(1,6)=1$。}
+  \label{fig:graph-setfn-mobius-divisors}
+\end{figure}

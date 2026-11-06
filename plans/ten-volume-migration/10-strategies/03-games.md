@@ -2,7 +2,7 @@
 
 状态：十卷方案的详细大纲，尚未修改正文。[返回全局大纲](../README.md)。本部分在单方决策之外增加其他参与者的响应，分别研究静态与动态均衡、合作分配、规则设计和策略更新；前置为本卷决策、卷五优化、卷七概率，动态分析按需调用卷九。
 
-来源：[原博弈目录](../source-outline/05-control-decision-and-games/17-games.md)、[当前博弈正文](../../../tex/05-control-decision-and-games/03-games/04-multi-agent-response-and-evolution.tex)。静态私有类型先建立，动态章再增加信念更新；均衡、效率、计算和学习收敛分别判断。
+来源：[原博弈目录](../source-outline/05-control-decision-and-games/17-games.md)、[当前博弈正文](../../../tex_bak/05-control-decision-and-games/03-games/04-multi-agent-response-and-evolution.tex)。静态私有类型先建立，动态章再增加信念更新；均衡、效率、计算和学习收敛分别判断。
 
 ## 10.8 静态博弈与均衡
 

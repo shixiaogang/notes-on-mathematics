@@ -1,0 +1,135 @@
+\section{邻接与路径}
+\label{sec:graph-adjacency-paths}
+
+贯穿图\eqref{eq:graph-conn-running-graph}中顶点$1$和$4$之间没有边，却可以先到$2$或$3$，再到$4$。一步能到谁，由边集直接读出；若干步能到谁，要把边首尾相接。本节从一个顶点的直接邻居出发，把一步的连接延长为行走和路径，由此得到环与可达关系。比较不同路线的总长度是第~\ref{chap:shortest-paths}章的问题，这里只讨论哪些顶点序列允许通行。
+
+\subsection{邻接、邻域与度}
+\label{sec:graph-conn-neighborhoods}
+
+站在一座城市，首先要知道哪些城市与它有直达道路，这样的城市有几座。在无向图中，若$\{i,j\}\in E$，称$i$与$j$\term{邻接}（adjacent），互为邻居。顶点$i$的全部邻居组成它的\term{邻域}（neighborhood）
+\[
+N(i)=\{j\in V:\{i,j\}\in E\},
+\]
+邻居的个数$d_i=|N(i)|$称为$i$的\term{度}（degree）。贯穿图中$N(1)=\{2,3\}$，$N(2)=\{1,3,4\}$，四个顶点的度依次为$2,3,3,2$。度只数直接邻居，经两步才能到达的$4$不计入$N(1)$。
+
+在有向的依赖关系中，还要分清“我直接依赖谁”和“谁直接依赖我”：弧$i\to j$对两端的意义不同。因此分别定义出邻域与入邻域
+\[
+N^+(i)=\{j:(i,j)\in E\},\qquad
+N^-(i)=\{j:(j,i)\in E\},
+\]
+二者的大小$d_i^+$与$d_i^-$分别称为\term{出度}（out-degree）与\term{入度}（in-degree）。图~\ref{fig:graph-conn-neighborhood-degree}在贯穿图和一个小有向图上标出了这些量。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=91.271mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-neighborhood-degree/figure.pdf}
+  \caption{邻域与度。(a)贯穿图中顶点$2$的邻域$N(2)=\{1,3,4\}$（绿色），连接它们的三条边加粗，所以$d_2=3$；顶点旁标出各点的度，四个度之和$10$恰为边数的两倍。(b)有向图$1\to2$、$3\to2$、$2\to4$中，顶点$2$的入邻域$N^-(2)=\{1,3\}$（黄色）与出邻域$N^+(2)=\{4\}$（绿色），入度为$2$，出度为$1$。}
+  \label{fig:graph-conn-neighborhood-degree}
+\end{figure}
+
+\paragraph{度数和与边数}
+考虑所有“顶点—边”配对$(i,e)$，其中$i$是边$e$的端点。按顶点分组，顶点$i$出现在$d_i$个配对中；按边分组，每条边恰有两个端点。两种分组数的是同一批配对，所以
+\begin{equation}
+\sum_{i\in V}d_i=2m.
+\label{eq:graph-conn-handshake}
+\end{equation}
+由此可知度为奇数的顶点个数必是偶数。有向图中每条弧恰好贡献一个出度和一个入度，所以$\sum_i d_i^+=\sum_i d_i^-=m$。
+
+\paragraph{邻域与度的读取}
+给每个顶点准备一个空的邻居集合和一个初始为$0$的计数器，然后逐条读边：读到$\{i,j\}$时，把$j$放进$N(i)$、$i$放进$N(j)$，两个计数器各加$1$。表~\ref{tab:graph-conn-degree-trace}是贯穿图上计数器的变化。每读一条边，度数和加$2$，读完$m$条边就是$2m$，这正是式\eqref{eq:graph-conn-handshake}；最后一列若不等于两倍边数，说明某条边只记了一端。
+
+有向图读到弧$(i,j)$时，把$j$放进$N^+(i)$、$i$放进$N^-(j)$。图~\ref{fig:graph-conn-direction-orientation}(c)的$1\to2\leftarrow3$读完后$N^-(2)=\{1,3\}$，$N^+(2)=\varnothing$；不说明方向，就可能把入邻居误当成下一步可以到达的顶点。这里的度只数结构上的边；边带权时把一个顶点所有邻边的权相加，得到的是另一个量，本部分不使用。
+
+\begin{table}[!htb]
+  \centering
+  \caption{逐条读入贯穿图的边时，四个度计数器的变化。每读一条边，恰有两个计数器各加$1$，度数和每次增加$2$。}
+  \label{tab:graph-conn-degree-trace}
+  \small
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    已读入的边 & $d_1$ & $d_2$ & $d_3$ & $d_4$ & 度数和\\
+    \midrule
+    初始 & $0$ & $0$ & $0$ & $0$ & $0$\\
+    $\{1,2\}$ & $1$ & $1$ & $0$ & $0$ & $2$\\
+    $\{1,3\}$ & $2$ & $1$ & $1$ & $0$ & $4$\\
+    $\{2,3\}$ & $2$ & $2$ & $2$ & $0$ & $6$\\
+    $\{2,4\}$ & $2$ & $3$ & $2$ & $1$ & $8$\\
+    $\{3,4\}$ & $2$ & $3$ & $3$ & $2$ & $10$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{行走、路径与环}
+\label{sec:graph-conn-walks-paths}
+
+走一步就是从当前顶点走到它的一个邻居，走若干步就得到一串相邻两项都邻接的顶点。是否允许重复经过顶点要看用途：反复传播、来回巡视的过程允许重复，一条实际路线通常不允许。
+
+\begin{definition}[行走与路径]
+\label{def:graph-conn-walk-path}
+设$\mathcal G=(V,E)$是无向图。顶点序列$(v_0,\ldots,v_k)$若对每个$r=1,\ldots,k$都有$\{v_{r-1},v_r\}\in E$，就称为从$v_0$到$v_k$的一条\term{行走}（walk），$k$称为它的长度，即经过的边数。若行走中的顶点两两不同，就称为一条简单\term{路径}（path）。
+\end{definition}
+
+单个顶点$(v_0)$是长度为零的行走，也是长度为零的路径。本部分不加修饰的“路径”都指简单路径。
+
+绕一圈回到起点的路线还要与原路折返区分开。首尾相同（$v_0=v_k$）的行走称为\term{闭行走}（closed walk），但闭合不意味着绕成一圈：沿一条边去而复返的$(2,4,2)$是闭行走，却没有提供第二条路线。
+
+因此把长度$k\geq3$、且$v_0,\ldots,v_{k-1}$两两不同的闭行走称为\term{环}（cycle）；长度为$1$的闭行走需要自环，长度为$2$的只能沿同一条边往返，所以要求$k\geq3$。同一个环可以从不同顶点出发、沿两个方向书写，例如$(1,2,3,1)$与$(1,3,2,1)$，我们把经过同一组边的序列看成同一个环。
+
+\paragraph{顶点序列的核对}
+判断一个顶点序列属于哪一类，按定义依次检查：每一步$\{v_{r-1},v_r\}$是否为边，判断行走；从左到右维护“已出现顶点”的集合，看有无重复，判断路径；再要求$k\geq3$、首尾相同且前$k$个顶点不重复，判断环。图~\ref{fig:graph-conn-walk-path-cycle}给出四个结果：$(1,2,3,1,2)$是行走，但第二次读到$1$时重复，不是路径；$(1,2,4)$是路径；$(2,4,2)$是闭行走而不是环；$(1,2,3,1)$是环。三者逐步加强，反过来都不成立：行走便于拼接与计数，路径对应实际路线，环表示存在替代路线。
+
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=136.186mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-walk-path-cycle/figure.pdf}
+  \caption{贯穿图上的四种顶点序列。蓝色粗线是经过的边，边旁数字是经过该边的步序，浅灰色是未经过的边。(a)行走可以重复经过边$\{1,2\}$；(b)路径不重复顶点；(c)沿一条边去而复返得到闭行走，但它不是环；(d)绕三角形一周的环除首尾外不重复顶点。}
+  \label{fig:graph-conn-walk-path-cycle}
+\end{figure*}
+
+\subsection{有向路径与有向无环图}
+\label{sec:graph-conn-dag}
+
+任务依赖要求每一步都顺着箭头走。若顺着箭头走一圈又回到出发的任务，例如$1$等$2$、$2$等$3$、$3$又等$1$，这组任务就无法按任何次序全部完成。把定义~\ref{def:graph-conn-walk-path}中的条件换成$(v_{r-1},v_r)\in E$，就得到有向行走与\term{有向路径}（directed path）。除首尾外顶点两两不同、长度至少为$1$的有向闭行走称为\term{有向环}（directed cycle）；由于没有自环，其长度至少为$2$。
+
+\begin{definition}[有向无环图]
+\label{def:graph-conn-dag}
+不含有向环的有向图称为\term{有向无环图}（directed acyclic graph，DAG）。
+\end{definition}
+
+有向环的最短长度与无向情形不同。图~\ref{fig:graph-conn-directed-cycle-dag}(a)中两条反向弧$i\to j$和$j\to i$是两个不同的对象，$(i,j,i)$构成长度为$2$的有向环；无向图中的$(2,4,2)$两次经过的是同一条边。图(b)的$(1,2,3,1)$每一步都顺着箭头，是长度为$3$的有向环。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=85.937mm]{figures/01-basic-mathematics/04-graphs/tikz/c1-directed-cycle-dag/figure.pdf}
+  \caption{有向环与有向无环图。红色弧组成有向环。(a)两条反向弧构成长度为$2$的有向环；(b)三角形的循环定向含有向环；(c)同一个三角形的另一种定向不含有向环，是有向无环图，尽管它的底层无向图是一个环。}
+  \label{fig:graph-conn-directed-cycle-dag}
+\end{figure}
+
+\paragraph{无环的核对}
+有向环上的每个顶点都有环上的弧进出，所以入度或出度为$0$的顶点不在任何有向环上。图~\ref{fig:graph-conn-directed-cycle-dag}(c)的弧为$1\to2$、$1\to3$、$2\to3$，$1$的入度与$3$的出度为$0$，剩下的顶点$2$不足以构成至少含两个顶点的有向环，所以它是DAG。大图上系统地判断有无有向环，要用第~\ref{sec:graph-dfs}节的深度优先遍历或第~\ref{sec:graph-topological-order}节的拓扑排序。
+
+图(c)是DAG，它的底层无向图却是三角形。拓扑排序要求的正是有向无环；换成“底层无向图无环”这一更强的条件，会把(c)这样完全可以排出次序的依赖错误地排除。
+
+\subsection{可达性}
+\label{sec:graph-conn-reachability}
+
+很多问题只关心从$i$出发能不能到达$j$，而不关心怎么到。若存在从$i$到$j$的行走，称$j$从$i$\term{可达}（reachable）；有向图中要求有向行走。行走首尾相接仍是行走，路径则未必，所以用行走定义更方便。下面的引理说明改用路径定义并无区别。
+
+\begin{lemma}[行走中含有路径]
+\label{lem:graph-conn-walk-contains-path}
+在无向图或有向图中，若存在从$i$到$j$的行走，则存在从$i$到$j$的路径，并且它的顶点和边都取自这条行走。
+\end{lemma}
+
+\begin{proof}
+在从$i$到$j$、顶点和边都取自原行走的所有行走中，取长度最短的一条$(v_0,\ldots,v_k)$。若它不是路径，则有$s<t$使$v_s=v_t$。删去中间段$v_{s+1},\ldots,v_t$，得到$(v_0,\ldots,v_s,v_{t+1},\ldots,v_k)$：原来从$v_t$出发的那一步现在从$v_s=v_t$出发，每一步仍沿原有的边或弧，而长度减少了$t-s>0$，矛盾。
+\end{proof}
+
+\paragraph{从行走中取出路径}
+实际取出路径时，可以从左到右读一遍行走，随读随删。维护当前路径$P$，初始为$(v_0)$，并给$P$上的顶点做标记。读到$v_r$时，若它没有标记，就接到$P$末尾；若已有标记，说明$P$绕回了$v_r$，就把$P$截到$v_r$所在的位置，并清除其后的标记。$P$始终顶点互异、各边取自原行走，读完时就是所求的路径。行走$(1,2,3,1,3,4)$上，$P$依次为$(1)$、$(1,2)$、$(1,2,3)$，读到第二个$1$时截回$(1)$，再变为$(1,3)$、$(1,3,4)$。每个顶点至多接上、删去各一次，工作量与行走长度成正比。
+
+\paragraph{可达关系的性质}
+零长度行走给出自反性，行走首尾相接给出传递性；无向图中把行走倒过来走仍是行走，所以还有对称性。同时满足自反、对称、传递三条的二元关系称为等价关系，所以无向图上的可达关系是等价关系。等价关系的等价类两两不交、并起来恰为全集，下一节据此划分连通分量；等价关系与划分的一般对应，可参考\BookChapterRef{chap:sets-relations-maps}{卷一第~\ref{chap:sets-relations-maps}章}。
+
+这里的性质只说明可达关系是什么。给出两个具体顶点、要判断是否可达，仍需要有组织地访问能走到的顶点，这是第~\ref{sec:graph-bfs}节与第~\ref{sec:graph-dfs}节的任务。
+
+有向图中倒过来走需要反向弧，对称性不再成立：单向链$1\to2\to3$中，$3$从$1$可达，$1$却不从$3$可达。为描述这种单向关系，$N^-(j)$中的顶点称为$j$的直接\term{前驱}（predecessor），$N^+(j)$中的顶点称为直接\term{后继}（successor）；能经一条或多条弧到达$j$的其他顶点称为$j$的\term{祖先}（ancestor），从$j$出发经一条或多条弧能到达的其他顶点称为$j$的\term{后代}（descendant）。本部分约定祖先与后代都不含$j$自身。单向链中$3$的直接前驱只有$2$，祖先是$\{1,2\}$；$1$的后代是$\{2,3\}$。
+
+有向环上的两个不同顶点可以互为祖先，在DAG中这不可能发生：若$i\neq j$互为祖先，两条有向路径拼成长度至少为$2$的有向闭行走$(v_0,\ldots,v_k)$；在所有满足$s<t$、$v_s=v_t$的位置对中取$t-s$最小的一对，$(v_s,\ldots,v_t)$除首尾外不重复顶点，长度又不能为$1$，所以是有向环，矛盾。可达的不对称使有向图的“连通”需要两种定义，这是下一节的内容。

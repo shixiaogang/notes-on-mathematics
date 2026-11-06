@@ -8,6 +8,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = "tex/volumes.json"
+PLANNED = "tex/planned-references.json"
 
 
 def volumes(root=ROOT):
@@ -135,6 +136,14 @@ def references(root=ROOT):
                 result[label] = {"volume": volume["number"], "title": volume["title"],
                                  "slug": volume["slug"], "source": path,
                                  "location": f"第{chapter}章“{chapter_title}”"}
+    # Targets in volumes of the ten-volume plan that are not yet migrated:
+    # their locations follow the plan, so references resolve without old PDFs.
+    planned = root / PLANNED
+    if planned.is_file():
+        for label, item in json.loads(planned.read_text())["labels"].items():
+            if label not in result:
+                result[label] = {"volume": item["volume"], "title": item["title"],
+                                 "slug": "", "location": item["location"], "source": PLANNED}
     return result
 
 

@@ -2,7 +2,7 @@
 
 状态：十卷重组计划的部分安排，尚未实施到正文。围绕一般图上的局部函数计算，先用链和树建立接口递推，再把变量消元与树分解作为等价的构建方式，最后统一完成求值、结果恢复和代价分析。
 
-[返回全局计划](../README.md) · [当前正文提要](../../../outlines/current/01-basic-mathematics/04-graphs.md)
+[返回全局计划](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/04-graphs.md)
 
 构建等价关系按[树宽与消元序的作者报告](https://ics-archive.science.uu.nl/research/techreps/repo/CS-2008/2008-032.pdf)核对；中间函数与袋消息的对应按[Dechter的变量消元论文](https://ics.uci.edu/~csp/r48b.pdf)核对。两种表示的双向转换集中在3.12，数值递推与计算代价集中在3.13。
 
