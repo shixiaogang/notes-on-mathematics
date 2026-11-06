@@ -3,6 +3,7 @@
 test:
 	./tests/check-index-terms.sh
 	python3 -m unittest -v tests/test_target_pdfs.py
+	python3 -m unittest -v tests/test_check_outline.py
 	bash tests/check-build-clean.sh
 	bash tests/check-part-openings.sh
 	bash tests/check-paragraph-statements.sh
