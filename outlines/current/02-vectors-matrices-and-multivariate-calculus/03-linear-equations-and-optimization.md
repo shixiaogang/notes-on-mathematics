@@ -268,11 +268,7 @@
 
 #### 12.3.1 主要思想
 
-1. 设$\bm A$实对称正定，定义Cholesky分解$\bm A=\bm L\bm L^\top$（$\bm L$对角元为正的下三角），说明与LU一样先讲由分解求解、再讲怎样算出$\bm L$。
-
-###### paragraph：由分解求解
-
-1. 令$\bm y=\bm L^\top\bm x$，拆成$\bm L\bm y=\bm b$与$\bm L^\top\bm x=\bm y$；前代公式保留除以$l_{i,i}$，逐行列出$\bm L^\top\bm x=\bm y$（$(i,k)$元为$l_{k,i}$）并给出回代公式，说明同一因子按行、按列读取，无需求逆。
+1. 设$\bm A$实对称正定，定义Cholesky分解$\bm A=\bm L\bm L^\top$（$\bm L$对角元为正的下三角）；说明求解与LU相同，先前代解$\bm L\bm y=\bm b$再回代解$\bm L^\top\bm x=\bm y$，只是须保留除以$l_{i,i}$、$\bm L^\top$的元素取$l_{k,i}$，本小节只讲怎样算出$\bm L$。
 
 ###### paragraph：逐元素等式
 
