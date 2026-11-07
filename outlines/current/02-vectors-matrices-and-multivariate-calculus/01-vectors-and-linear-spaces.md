@@ -1142,41 +1142,37 @@
 
 3. 以$(1,0)^\top$有无穷多个左逆为例，代表的选择留给第~`chap:linear-solution-selection`章。
 
-#### 2.3.4 换基、矩阵等价与相似
+#### 2.3.4 换基与相抵
 
-1. 类比向量坐标随基改变，说明映射的矩阵也随基改变，本小节写出变化规律并判断两个矩阵是否记录同一映射。
+1. 类比向量坐标随基改变，说明映射的矩阵也随基改变，这一小节与下一小节写出变化规律并判断两个矩阵是否记录同一映射。
 
-2. 区分两端各自换基的一般映射（相抵）与两端同时换基的算子（相似），指出相似约束更多，需要更多不变量才能分类。
+2. 区分两端各自换基的一般映射（相抵，本小节）与两端同时换基的算子（相似，下一小节），指出相似约束更多，需要更多不变量才能分类。
 
 3. 观察换基矩阵就是恒等映射在两组基下的矩阵，连续换基相乘即复合公式的特例。
 
-##### 2.3.4.1 一般线性映射的换基与相抵
+4. 设定$T:V\to W$，说明本小节依次求两对基下矩阵的关系、说明它刻画记录同一映射、证明只需比较秩。
 
-1. 说明本小节求两对基下矩阵的关系，说明它刻画记录同一映射，并证明只需比较秩即可判断。
+##### 2.3.4.1 相抵的定义
 
-###### paragraph：换基过程
-
-1. 设定两端的新旧基与换基矩阵$\bm P,\bm Q$，说明各列的含义。
+1. 说明先由换基推导两种记录的关系再给出定义；设定两端的新旧基与换基矩阵$\bm P,\bm Q$及各列含义。
 
 2. 绕道旧基分三步，从新输入坐标求出新输出坐标。
 
 3. 取新输入基向量逐列比较，得$\bm B=\bm Q^{-1}\bm A\bm P$（式`eq:ls-equivalence-transform`），并用$T=\operatorname{id}_W\circ T\circ\operatorname{id}_V$与复合公式解释三个因子。
 
-###### paragraph：相抵的定义
+4. 定义矩阵相抵`def:ls-matrix-equivalence`，说明$\bm Q,\bm P$可以是任意可逆矩阵。
 
-1. 定义矩阵相抵`def:ls-matrix-equivalence`，说明$\bm Q,\bm P$可以是任意可逆矩阵。
+5. 由任一对可逆矩阵都对应一次换基，证明同形矩阵相抵当且仅当记录同一映射。
 
-2. 由任一对可逆矩阵都对应一次换基，证明同形矩阵相抵当且仅当记录同一映射。
+6. 说明右乘$\bm P$、左乘$\bm Q^{-1}$分别对应更换输入基与输出基，初等列、行变换是其最简单的形式。
 
-3. 说明右乘$\bm P$、左乘$\bm Q^{-1}$分别对应更换输入基与输出基，初等列、行变换是其最简单的形式。
+##### 2.3.4.2 相抵的性质
 
-###### paragraph：相抵不变量
+1. 定理`thm:ls-equivalence-invariants`陈述相抵是等价关系、零空间与列空间分别被$\bm P^{-1}$与$\bm Q^{-1}$搬运、秩与零度不变（式`eq:ls-equivalence-invariants`），证明逐条给出。
 
-1. 验证相抵是等价关系，三条性质分别对应不换基、换回原基与连续换基。
+2. 说明等价关系三条对应不换基、换回原基与连续换基，并说明幂、迹因$\bm B$一般非方阵而不在讨论之列。
 
-2. 说明零空间在输入端、列空间在输出端被可逆矩阵搬运，得到秩与零度不变（式`eq:ls-equivalence-invariants`），并说明幂、迹等量因$\bm B$一般非方阵而不讨论。
-
-###### paragraph：相抵的判定
+##### 2.3.4.3 相抵的判据
 
 1. 指出秩相同的同形矩阵一定相抵，证明思路是化为只由秩决定的形状。
 
@@ -1186,43 +1182,37 @@
 
 4. 示例`ex:ls-rank-normal-form-two-by-two`对二阶秩$1$矩阵具体算出$\bm P,\bm Q,\bm Q^{-1}$；图`fig:ls-equivalence-two-sided-bases-flow`说明这些需要两端各自选基才能同时做到。
 
-5. 证明相抵判据`thm:ls-equivalence-criterion`，说明形状固定后秩是判断相抵的唯一依据。
+5. 证明相抵判据`thm:ls-equivalence-criterion`（必要性引用定理`thm:ls-equivalence-invariants`），说明形状固定后秩是判断相抵的唯一依据。
 
 6. 指出化到标准形可交替使用初等行、列变换，数值消元算法留给第~`chap:direct-linear-solvers`章。
 
-##### 2.3.4.2 线性算子的换基与相似
+#### 2.3.5 换基与相似
 
 1. 说明算子两端必须换成同一组新基，本小节由此得到相似关系，讨论不变量与判定。
 
-###### paragraph：换基过程
+##### 2.3.5.1 相似的定义
 
 1. 设定新旧基与换基矩阵$\bm P$。
 
-2. 在三步推导中取$\bm Q=\bm P$，得到$\bm B=\bm P^{-1}\bm A\bm P$（式`eq:linear-algebra-similarity-change-basis`），即式`eq:ls-equivalence-transform`的特例。
+2. 在上一小节的三步推导中取$\bm Q=\bm P$，得到$\bm B=\bm P^{-1}\bm A\bm P$（式`eq:linear-algebra-similarity-change-basis`）。
 
-###### paragraph：相似的定义
+3. 定义矩阵相似`def:ls-matrix-similarity`，按相抵的同样论证说明相似矩阵正是同一算子在两组基下的记录。
 
-1. 定义矩阵相似`def:ls-matrix-similarity`，按相抵的同样论证说明相似矩阵正是同一算子在两组基下的记录。
+4. 说明相似只要求换基矩阵可逆，相似必相抵而反之不然（预告示例`ex:ls-equivalent-not-similar`）。
 
-2. 说明相似只要求换基矩阵可逆，相似必相抵而反之不然（预告示例`ex:ls-equivalent-not-similar`）。
+5. 示例`ex:ls-similarity-diagonal`把$T(x_1,x_2)=(2x_1+x_2,3x_2)$换到基$(\bm e_1,\bm e_1+\bm e_2)$后化为$\operatorname{diag}(2,3)$；图`fig:ls-similarity-change-of-basis-flow`对比标准基下的斜切与新基下沿基方向的伸缩。
 
-3. 示例`ex:ls-similarity-diagonal`把$T(x_1,x_2)=(2x_1+x_2,3x_2)$换到基$(\bm e_1,\bm e_1+\bm e_2)$后化为$\operatorname{diag}(2,3)$；图`fig:ls-similarity-change-of-basis-flow`对比标准基下的斜切与新基下沿基方向的伸缩。
+##### 2.3.5.2 相似的性质
 
-###### paragraph：相似不变量
+1. 说明相似继承相抵不变量，且算子可反复作用而得到更多不变量。
 
-1. 说明同一算子的性质不随基改变，验证相似是等价关系。
+2. 定理`thm:ls-similarity-invariants`陈述等价关系、秩与零度不变（式`eq:ls-similarity-invariants`）、乘积与幂和换基相容（式`eq:ls-similarity-product`）、各$\bm A-c\bm I$相似且秩不变（式`eq:ls-similarity-shifted-rank`）、行列式与迹不变，证明逐条给出。
 
-2. 继承相抵不变量，得秩与零度不变（式`eq:ls-similarity-invariants`）。
+3. 解读各条：反复作用记录同一过程，每个$c$给出一个不变量，可以谈论算子的行列式与迹，并以示例`ex:ls-similarity-diagonal`核对。
 
-3. 由$\bm P\bm P^{-1}$相消得乘积与幂和换基相容（式`eq:ls-similarity-product`）。
+4. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
 
-4. 进而各$\bm A-c\bm I$相似、秩不变（式`eq:ls-similarity-shifted-rank`），每个$c$给出一个不变量。
-
-5. 由行列式乘法性与迹的循环性证明行列式与迹不变，说明可以谈论算子的行列式与迹，并以示例`ex:ls-similarity-diagonal`核对。
-
-6. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
-
-###### paragraph：相似的判定
+##### 2.3.5.3 相似的判据
 
 1. 把相似改写为存在可逆$\bm P$满足$\bm A\bm P=\bm P\bm B$（式`eq:ls-similarity-equation`），强调非零但不可逆的解不构成换基。
 
@@ -1230,7 +1220,7 @@
 
 3. 总结“两端换基相同”的代价，指出完整分类需要Jordan标准形，本书不展开。
 
-#### 2.3.5 多线性映射
+#### 2.3.6 多线性映射
 
 1. 以元素内积、外积有两个输入且对每个输入分别线性引出槽位的概念。
 
