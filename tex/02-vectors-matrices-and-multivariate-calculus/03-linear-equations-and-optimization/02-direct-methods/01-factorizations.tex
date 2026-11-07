@@ -71,15 +71,17 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 
 \subsection{算法实现}
 \label{sec:ls-lu-implementation}
-输入是$\bm A$与$\bm b$，需要预先选定的规则是主元策略。本小节固定使用\term{部分选主元}：在当前列尚未处理的元素中选绝对值最大者作主元，绝对值相同时取行号最小者，使给定数据下的计算过程可以复算。下面逐步写出算法，并在每一步用
+输入是$\bm A$与$\bm b$，输出是$\bm x$。需要预先选定的规则是主元策略，本小节固定使用\term{部分选主元}：在当前列尚未处理的元素中选绝对值最大者作主元，绝对值相同时取行号最小者，使给定数据下的计算过程可以复算。算法由三个模块组成：LU分解由$\bm A$算出$\bm P\bm A=\bm L\bm U$，前代求出$\bm y$，回代求出$\bm x$。下面逐个写出各模块的步骤，并在每一步用
 \[
  \bm A=\begin{bmatrix}1&3&4\\2&2&4\\1&2&5\end{bmatrix},\qquad
  \bm b=\begin{bmatrix}2\\4\\4\end{bmatrix}
 \]
-演示该步的计算。第1—4步由$\bm A$算出$\bm P\bm A=\bm L\bm U$，第5—8步求解。
+演示该步的计算。
 
+\paragraph{LU分解}
+输入$\bm A$，输出$\bm P$、$\bm L$、$\bm U$。消元逐列进行，用$k$记当前处理的列。
 \begin{enumerate}
- \item \textbf{初始化。}令工作矩阵$\bm W=\bm A$，并令$\bm L=\bm I_d$、$\bm P=\bm I_d$。此后对$k=1,\ldots,d-1$依次处理第$k$列，每一列执行第2、3步。
+ \item \textbf{初始化。}令工作矩阵$\bm W=\bm A$，$\bm L=\bm I_d$，$\bm P=\bm I_d$，$k=1$。
 
  \item \textbf{选主元并换行。}在第$k$列的第$k$至$d$行中找出主元所在的行
  \[
@@ -105,22 +107,28 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
  \[
   (3,4)-\tfrac12(2,4)=(2,2),\qquad(2,5)-\tfrac12(2,4)=(1,3),
  \]
- 得$\bm W=\left[\begin{smallmatrix}2&2&4\\0&2&2\\0&1&3\end{smallmatrix}\right]$。再处理$k=2$：按第2步，第二列剩余元素为$(2,1)^\top$，主元已在第二行，无需交换；按第3步，$l_{3,2}=\tfrac12$，第三行的尾部更新为$3-\tfrac12\cdot2=2$，得$\bm W=\left[\begin{smallmatrix}2&2&4\\0&2&2\\0&0&2\end{smallmatrix}\right]$。图~\ref{fig:ls-lu-elimination-steps}用另一个无需换行的三阶矩阵示意这一过程：乘子按被消元素的位置填入$\bm L$。
+ 得$\bm W=\left[\begin{smallmatrix}2&2&4\\0&2&2\\0&1&3\end{smallmatrix}\right]$。
 
- \item \textbf{取出因子。}处理完第$d-1$列后，$\bm W$成为上三角矩阵，取$\bm U=\bm W$。例中
+ \item \textbf{判断是否结束。}若$k<d-1$，令$k\leftarrow k+1$，回到第2步处理下一列。若$k=d-1$，第$d$列下方已没有待消去的元素，所有列都已处理完毕，$\bm W$成为上三角矩阵，取$\bm U=\bm W$，分解结束。
+
+ 例中$d=3$，$k=1<2$，于是令$k=2$回到第2步：第二列剩余元素为$(2,1)^\top$，主元已在第二行，无需交换；按第3步，$l_{3,2}=\tfrac12$，第三行的尾部更新为$3-\tfrac12\cdot2=2$。这时$k=2=d-1$，分解结束，得
  \[
   \bm L=\begin{bmatrix}1&0&0\\\tfrac12&1&0\\\tfrac12&\tfrac12&1\end{bmatrix},\qquad
-  \bm U=\begin{bmatrix}2&2&4\\0&2&2\\0&0&2\end{bmatrix},
+  \bm U=\begin{bmatrix}2&2&4\\0&2&2\\0&0&2\end{bmatrix}.
  \]
  可以直接验证$\bm L\bm U$等于交换前两行后的$\bm A$，即$\bm P\bm A$。这项检查只涉及因子，与右端无关。
+\end{enumerate}
 
+\paragraph{前代}
+输入$\bm P$、$\bm L$与$\bm b$，输出$\bm y$。
+\begin{enumerate}
  \item \textbf{重排右端。}计算$\bm c=\bm P\bm b$，即对$\bm b$作与分解中相同的行交换。例中$\bm c=(4,2,4)^\top$。
 
- \item \textbf{前代求解$\bm L\bm y=\bm c$。}根据式~\eqref{eq:ls-forward-substitution}，由于$l_{i,i}=1$，对$i=1,\ldots,d$依次得
+ \item \textbf{逐个求出$y_i$。}根据式~\eqref{eq:ls-forward-substitution}，由于$l_{i,i}=1$，对$i=1,\ldots,d$依次得
  \[
-  y_i=c_i-\sum_{j<i}l_{i,j}y_j .
+  y_i=c_i-\sum_{j<i}l_{i,j}y_j ;
  \]
- 例中
+ 求出$y_d$后结束。例中
  \[
   \begin{aligned}
   y_1&=c_1=4,\\
@@ -128,12 +136,16 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
   y_3&=c_3-l_{3,1}y_1-l_{3,2}y_2=4-\tfrac12\cdot4-\tfrac12\cdot0=2 .
   \end{aligned}
  \]
+\end{enumerate}
 
- \item \textbf{回代求解$\bm U\bm x=\bm y$。}根据式~\eqref{eq:ls-back-substitution}，对$i=d,\ldots,1$依次得
+\paragraph{回代}
+输入$\bm U$与$\bm y$，输出$\bm x$。
+\begin{enumerate}
+ \item \textbf{逐个求出$x_i$。}根据式~\eqref{eq:ls-back-substitution}，对$i=d,\ldots,1$依次得
  \[
-  x_i=\frac{y_i-\sum_{j>i}u_{i,j}x_j}{u_{i,i}} .
+  x_i=\frac{y_i-\sum_{j>i}u_{i,j}x_j}{u_{i,i}} ;
  \]
- 例中
+ 求出$x_1$后结束。例中
  \[
   \begin{aligned}
   x_3&=\frac{y_3}{u_{3,3}}=\frac22=1,\\
@@ -144,18 +156,9 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 
  \item \textbf{检验。}输出$\bm x$。精确算术下它就是$\bm x_\star$；浮点实现中还应报告缩放残差$\lVert\bm b-\bm A\bm x\rVert/(\lVert\bm A\rVert\lVert\bm x\rVert+\lVert\bm b\rVert)$，它的含义在第~\ref{sec:ls-numerical-stability}节解释。例中$\bm x=(1,-1,1)^\top$，代回得$\bm A\bm x=(2,4,4)^\top=\bm b$，残差为零。
 \end{enumerate}
-第1—4步只依赖$\bm A$。换一个右端时，只需重复第5—8步。
+LU分解只依赖$\bm A$。换一个右端时，只需重做前代与回代。
 
-\begin{figure}[!htb]
-  \centering
-  \includegraphics[width=112mm]{figures/00-shared/mathematical-preliminaries-upper/02-linear-spaces/tikz/comprehension-additions/linear-lu-elimination-steps.pdf}
-  \caption{三阶矩阵的消元与LU因子。左起依次是$\bm A$、消去第一列后的矩阵与$\bm U$；
-  黄色是当前主元，蓝色是待消去的元素，绿色是消出的零。箭头上的乘子等于被消元素除以主元，
-  下方按原位置收集成单位下三角因子$\bm L$，满足$\bm L\bm U=\bm A$。}
-  \label{fig:ls-lu-elimination-steps}
-\end{figure}
-
-上面的演示只在第一轮换行，已存乘子没有受到影响。下例在第二轮再次换行，用来检查第2步中“已存乘子随行交换”这条规则。
+上面的演示只在第一轮换行，已存乘子没有受到影响。下例在第二轮再次换行，用来检查LU分解第2步中“已存乘子随行交换”这条规则。
 
 \begin{example}[第二轮换行时交换已存乘子]
 \label{ex:ls-lu-second-swap}
@@ -178,7 +181,7 @@ $\bm P\bm A$的三行依次是$\bm A$的第三、一、二行。逐行核对：$
 
 \subsection{算法分析}
 \paragraph{乘子与置换的拼合}
-先说明第3步存入的乘子为什么恰好组成$\bm L$，以及第2步为什么要交换已存乘子。第$k$轮全部消元可以写成左乘一个矩阵。令$\bm\ell_k=(0,\ldots,0,l_{k+1,k},\ldots,l_{d,k})^\top$，前$k$个分量为零，则第$k$轮相当于左乘$\bm M_k=\bm I_d-\bm\ell_k\bm e_k^\top$：它把第$k$行的$l_{i,k}$倍从第$i$行减去。因为$\bm e_k^\top\bm\ell_k=0$，有
+先说明LU分解第3步存入的乘子为什么恰好组成$\bm L$，以及第2步为什么要交换已存乘子。第$k$轮全部消元可以写成左乘一个矩阵。令$\bm\ell_k=(0,\ldots,0,l_{k+1,k},\ldots,l_{d,k})^\top$，前$k$个分量为零，则第$k$轮相当于左乘$\bm M_k=\bm I_d-\bm\ell_k\bm e_k^\top$：它把第$k$行的$l_{i,k}$倍从第$i$行减去。因为$\bm e_k^\top\bm\ell_k=0$，有
 \[
  (\bm I_d-\bm\ell_k\bm e_k^\top)(\bm I_d+\bm\ell_k\bm e_k^\top)
  =\bm I_d-\bm\ell_k(\bm e_k^\top\bm\ell_k)\bm e_k^\top=\bm I_d,
@@ -466,122 +469,6 @@ $a_{j,j}=\sum_{k\leq j}l_{j,k}^2$给出$|l_{j,k}|\leq\sqrt{a_{j,j}}$，因子的
 \paragraph{计算代价}
 稠密计算约需$\tfrac13d^3$次运算，存储约$\tfrac12d^2$个元素，利用对称性比直接用LU减少一半。
 
-\section{分块消元}
-\label{sec:ls-block-elimination}
-
-许多方程的未知量天然分成两组，例如网格上的内部点与边界点，或模型参数与约束乘子。若其中一组对应的主块容易求解，就可以先消去这一组，只对另一组解一个较小的方程。分块消元把前三节的分解当作子过程使用。
-
-\subsection{主要思想}
-设非奇异矩阵$\bm A$、右端$\bm b$与待求的$\bm x$按两组未知量分块为
-\[
- \bm A=\begin{bmatrix}\bm B&\bm C\\\bm D&\bm E\end{bmatrix},\quad
- \bm b=\begin{bmatrix}\bm f\\\bm g\end{bmatrix},\quad
- \bm x=\begin{bmatrix}\bm u\\\bm v\end{bmatrix},
-\]
-其中$\bm B\in\mathbb R^{p\times p}$可逆，$\bm E\in\mathbb R^{q\times q}$，$p+q=d$。分块只是输入$\bm A,\bm b$的一种写法，求解目标仍是精确解。
-
-\paragraph{消去第一组未知量}
-第一组方程$\bm B\bm u+\bm C\bm v=\bm f$给出$\bm u=\bm B^{-1}\bm f-\bm B^{-1}\bm C\bm v$；这一消元顺序要求$\bm B$可逆。为了不形成$\bm B^{-1}$，引入$\bm B\bm z=\bm f$与$\bm B\bm Z=\bm C$的解$\bm z\in\mathbb R^p$、$\bm Z\in\mathbb R^{p\times q}$，表达式改写为
-\[
- \bm u=\bm z-\bm Z\bm v .
-\]
-代入第二组方程$\bm D\bm u+\bm E\bm v=\bm g$，得到约化方程
-\begin{equation}
- \bm S\bm v=\bm h,\qquad
- \bm S=\bm E-\bm D\bm Z,\quad
- \bm h=\bm g-\bm D\bm z .
- \label{eq:ls-schur-reduced-system}
-\end{equation}
-$q$阶矩阵$\bm S=\bm E-\bm D\bm B^{-1}\bm C$称为$\bm A$关于被消块$\bm B$的\term{Schur补}（Schur complement）。消去$\bm u$时，系数和右端都要扣除经由$\bm u$传来的部分，所以$\bm S$与$\bm h$必须同时形成。解出$\bm v$后再由$\bm u=\bm z-\bm Z\bm v$恢复第一组未知量。
-
-\paragraph{块三角分解的解释}
-图~\ref{fig:ls-block-elimination-schur}把这一步画成增广分块矩阵的块行变换：第二块行减去$\bm D\bm B^{-1}$乘第一块行后，左下块被消成零，右下块和右端分别换成$\bm S$与$\bm h$，剩下的是块上三角方程。用矩阵乘法写出来，就是第~\ref{sec:ls-lu}节LU分解的分块形式（见定理~\ref{thm:ls-schur-complement}的证明）。小问题与原问题的关系也由此确定：$\bm B$可逆时，原矩阵非奇异当且仅当$\bm S$非奇异；只找到一个可逆主块，并不能保证整个问题唯一可解。当$\bm A$对称正定时，$\bm B$与$\bm S$都对称正定，两次求解都可以复用Cholesky分解。
-
-\begin{figure}[!htb]
-  \centering
-  \includegraphics[width=99.547mm]{figures/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions/tikz/c5-block-elimination-schur/figure.pdf}
-  \caption{分块消元的结构。左为增广分块矩阵$[\bm A\mid\bm b]$，两组未知量的个数分别为$p$与$q$；
-  第二块行减去$\bm D\bm B^{-1}$乘第一块行后，左下块变为零（绿色），右下块与右端变为Schur补$\bm S$及$\bm h$（黄色）。
-  $\bm Z,\bm z$由$\bm B$的因子求得，不形成$\bm B^{-1}$。}
-  \label{fig:ls-block-elimination-schur}
-\end{figure}
-
-\subsection{算法实现}
-\paragraph{用$\bm B$的因子求解}
-先检查分块尺寸，并按$\bm B$的结构调用前面的LU分解、Cholesky分解或分块LDL分解，得到$\bm B$的因子；已有分解时直接复用。$\bm B$只分解一次，然后用这组因子求解$\bm B\bm Z=\bm C$的各列和$\bm B\bm z=\bm f$。它们分别是$\bm B^{-1}\bm C$与$\bm B^{-1}\bm f$，但计算时只做前代与回代，不形成$\bm B^{-1}$。
-
-\paragraph{形成并求解Schur补方程}
-按式~\eqref{eq:ls-schur-reduced-system}形成$\bm S=\bm E-\bm D\bm Z$与$\bm h=\bm g-\bm D\bm z$，再按$\bm S$的结构调用已有的直接法解出$\bm v$。$\bm A$与$\bm B$都非奇异时$\bm S$也非奇异（见定理~\ref{thm:ls-schur-complement}），这一步给出唯一结果。
-
-\paragraph{恢复第一组未知量}
-最后计算$\bm u=\bm z-\bm Z\bm v$，按原分组拼成$\bm x=(\bm u^\top,\bm v^\top)^\top$，完成原方程的求解。
-
-\begin{example}[二阶贯穿例的分块消元]
-\label{ex:ls-block-elimination-run}
-先在二阶贯穿例上走一遍流程，这时每一块都是标量，各步一目了然。取$\bm A=\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$，$\bm b=(1,2)^\top$，令$p=q=1$，即$\bm B=4$，$\bm C=\bm D=1$，$\bm E=3$，$\bm f=1$，$\bm g=2$。第一步用$\bm B$求解，得$\bm Z=\tfrac14$，$\bm z=\tfrac14$。第二步形成约化方程的系数与右端，$\bm S=3-\tfrac14=\tfrac{11}4$，$\bm h=2-\tfrac14=\tfrac74$。第三步解出$v=\tfrac74\big/\tfrac{11}4=\tfrac7{11}$，再恢复$u=\tfrac14-\tfrac14\cdot\tfrac7{11}=\tfrac1{11}$。
-
-代回可验$4\cdot\tfrac1{11}+\tfrac7{11}=1$，$\tfrac1{11}+3\cdot\tfrac7{11}=2$。消元过程还顺带给出了行列式：$\det\bm A=\bm B\cdot\bm S=4\cdot\tfrac{11}4=11$，与下面定理中的公式$\det\bm A=\det\bm B\det\bm S$一致。
-\end{example}
-
-二阶例子中$\bm B$是标量，看不出“一次分解、多个右端”的安排。下例让被消块为二阶，$\bm Z$与$\bm z$需要用同一个分解分别求出。
-
-\begin{example}[消去两个未知量的三阶系统]
-\label{ex:ls-block-elimination-three}
-取
-\[
- \bm A=\begin{bmatrix}4&1&1\\1&3&0\\1&0&2\end{bmatrix},\qquad
- \bm b=\begin{bmatrix}6\\4\\3\end{bmatrix},
-\]
-前两个未知量为$\bm u$，最后一个为$v$，于是$\bm B=\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$，$\bm C=(1,0)^\top$，$\bm D=\bm C^\top$，$\bm E=2$，$\bm f=(6,4)^\top$，$g=3$。$\bm B$对称正定，用同一个分解求解两个右端：$\bm B\bm z=\bm f$给出$\bm z=(\tfrac{14}{11},\tfrac{10}{11})^\top$，$\bm B\bm Z=\bm C$给出$\bm Z=(\tfrac3{11},-\tfrac1{11})^\top$；代回可验$4\cdot\tfrac{14}{11}+\tfrac{10}{11}=6$、$\tfrac{14}{11}+3\cdot\tfrac{10}{11}=4$。
-
-约化方程的系数与右端为$S=2-\tfrac3{11}=\tfrac{19}{11}$、$h=3-\tfrac{14}{11}=\tfrac{19}{11}$，解得$v=1$。恢复得$\bm u=(\tfrac{14}{11},\tfrac{10}{11})^\top-(\tfrac3{11},-\tfrac1{11})^\top=(1,1)^\top$，所以$\bm x=(1,1,1)^\top$，两组原方程的残差均为零。$S>0$与$\bm A$对称正定一致。推导中出现的$\bm B^{-1}$在程序里始终是已存因子上的三角求解。
-\end{example}
-
-\subsection{算法分析}
-\paragraph{正确性}
-按构造，$(\bm u,\bm v)$满足第一组方程，而在$\bm u=\bm z-\bm Z\bm v$下第二组方程恰好等价于$\bm S\bm v=\bm h$；反之，原方程的任何解都满足这两个关系。所以约化方程与原分块方程双向等价，算法给出原方程的解。把消元写成矩阵乘法，还能读出整体可逆性、逆矩阵和正定性。
-
-\begin{theorem}[Schur补的行列式、逆与正定性]
-\label{thm:ls-schur-complement}
-设$\bm B$可逆，$\bm S=\bm E-\bm D\bm B^{-1}\bm C$。则$\det\bm A=\det\bm B\det\bm S$，$\bm A$可逆当且仅当$\bm S$可逆，此时
-\begin{equation}
- \bm A^{-1}=
- \begin{bmatrix}
-  \bm B^{-1}+\bm B^{-1}\bm C\bm S^{-1}\bm D\bm B^{-1}
-  &-\bm B^{-1}\bm C\bm S^{-1}\\
-  -\bm S^{-1}\bm D\bm B^{-1}&\bm S^{-1}
- \end{bmatrix}.
- \label{eq:matrix-analysis-block-inverse}
-\end{equation}
-同理，若$\bm E$可逆，则$\det\bm A=\det\bm E\det(\bm B-\bm C\bm E^{-1}\bm D)$。若$\bm A$对称（$\bm D=\bm C^\top$）且$\bm B\succ0$，则
-\begin{equation}
- \bm A\succ0\quad\Longleftrightarrow\quad
- \bm E-\bm C^\top\bm B^{-1}\bm C\succ0.
- \label{eq:matrix-analysis-schur-positive-definite}
-\end{equation}
-\end{theorem}
-\begin{proof}
-消去左下块再消去右上块，得到
-\[
- \bm A=
- \begin{bmatrix}\bm I&\bm0\\\bm D\bm B^{-1}&\bm I\end{bmatrix}
- \begin{bmatrix}\bm B&\bm0\\\bm0&\bm S\end{bmatrix}
- \begin{bmatrix}\bm I&\bm B^{-1}\bm C\\\bm0&\bm I\end{bmatrix},
-\]
-按分块乘法相乘即可验证。两侧单位块三角因子的行列式为$1$，取行列式得$\det\bm A=\det\bm B\det\bm S$，又$\det\bm B\neq0$，故$\bm A$可逆当且仅当$\bm S$可逆。此时三个因子分别求逆：单位块三角因子的逆只需把非对角块变号，中间因子的逆是$\operatorname{diag}(\bm B^{-1},\bm S^{-1})$，按相反顺序相乘即得式~\eqref{eq:matrix-analysis-block-inverse}。$\bm E$可逆时先消去$\bm v$，同样的论证给出第二个行列式公式。对称时右侧因子是左侧因子的转置，上式写成$\bm A=\bm G\operatorname{diag}(\bm B,\bm S)\bm G^\top$，其中$\bm G$可逆；展开二次型即是对$\bm u$配方：
-\[
- \bm x^\top\bm A\bm x
- =(\bm u+\bm B^{-1}\bm C\bm v)^\top\bm B(\bm u+\bm B^{-1}\bm C\bm v)+\bm v^\top\bm S\bm v .
-\]
-$\bm G^\top$可逆，所以$\bm A\succ0$当且仅当$\operatorname{diag}(\bm B,\bm S)\succ0$；已知$\bm B\succ0$，这又等价于$\bm S\succ0$。
-\end{proof}
-
-\paragraph{数值敏感度}
-误差来自三处：用$\bm B$的因子求$\bm Z$与$\bm z$，形成$\bm S=\bm E-\bm D\bm Z$时的相减，以及约化方程的求解。$\bm B$病态时，$\bm Z$与$\bm z$的误差会传入$\bm S$与$\bm h$，相当于块层面的小主元，这时应换一种分组。
-
-\paragraph{计算代价与消元顺序}
-若$\bm B$稠密，各步合计与对整个$\bm A$作LU同为$(p+q)^3$量级，单纯改写成分块形式并不省事；节省须依赖被消块易于求解（例如块对角，各小块可以分别分解）或保留块较小。消元顺序还影响稀疏性：即使$\bm A$稀疏，$\bm S=\bm E-\bm D\bm Z$一般比$\bm E$稠密，这是块层面的填充。先消哪一组决定了需要分解的矩阵规模、$\bm S$的稠密程度，以及哪一个因子可以在多个右端或多次求解之间复用。
-
 \section{低秩更新下的求解}
 \label{sec:ls-woodbury}
 
@@ -633,7 +520,7 @@ $\bm G^\top$可逆，所以$\bm A\succ0$当且仅当$\operatorname{diag}(\bm B,\
  \bm x=\begin{bmatrix}\tfrac13\\1\end{bmatrix}-\frac8{11}\begin{bmatrix}\tfrac13\\\tfrac12\end{bmatrix}
  =\begin{bmatrix}\tfrac1{11}\\\tfrac7{11}\end{bmatrix},
 \]
-与例~\ref{ex:ls-block-elimination-run}的结果一致，全程没有分解$\bm A$本身。
+代回可验$\bm A\bm x=(\tfrac4{11}+\tfrac7{11},\tfrac1{11}+\tfrac{21}{11})^\top=(1,2)^\top=\bm b$，全程没有分解$\bm A$本身。
 \end{example}
 
 上例的修改是对称的。下例取$\bm U\neq\bm V$，修改后的矩阵不再对称，但计算步骤不变。
@@ -670,7 +557,16 @@ $\bm G^\top$可逆，所以$\bm A\succ0$当且仅当$\operatorname{diag}(\bm B,\
 \end{equation}
 \end{theorem}
 \begin{proof}
-记$\bm Z=\bm A_0^{-1}\bm U$，则$\bm A_0+\bm U\bm C\bm V^\top=\bm A_0(\bm I_d+\bm Z\bm C\bm V^\top)$。对分块矩阵$\left[\begin{smallmatrix}\bm I_d&-\bm Z\\\bm C\bm V^\top&\bm I_k\end{smallmatrix}\right]$分别消去两个单位对角块，由定理~\ref{thm:ls-schur-complement}的两个行列式公式得$\det(\bm I_d+\bm Z\bm C\bm V^\top)=\det(\bm I_k+\bm C\bm V^\top\bm Z)=\det\bm K$，第一个结论成立。$\bm C$可逆时$\bm K=\bm C(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)$，括号内的矩阵随$\bm K$可逆。由上面的等价关系，对任意$\bm b$，新方程的解为$\bm x=\bm u-\bm Z\bm K^{-1}\bm C\bm V^\top\bm u$，其中$\bm u=\bm A_0^{-1}\bm b$；代入$\bm K^{-1}\bm C=(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)^{-1}$，并因$\bm b$任意而去掉右端，即得式~\eqref{eq:matrix-analysis-woodbury}。
+记$\bm Z=\bm A_0^{-1}\bm U$，则$\bm A_0+\bm U\bm C\bm V^\top=\bm A_0(\bm I_d+\bm Z\bm C\bm V^\top)$。分块矩阵$\bm T=\left[\begin{smallmatrix}\bm I_d&-\bm Z\\\bm C\bm V^\top&\bm I_k\end{smallmatrix}\right]$有两种分块三角分解，直接相乘即可验证：
+\[
+ \begin{aligned}
+ \bm T&=\begin{bmatrix}\bm I_d&\bm0\\\bm C\bm V^\top&\bm I_k\end{bmatrix}
+ \begin{bmatrix}\bm I_d&-\bm Z\\\bm0&\bm I_k+\bm C\bm V^\top\bm Z\end{bmatrix}\\
+ &=\begin{bmatrix}\bm I_d+\bm Z\bm C\bm V^\top&-\bm Z\\\bm0&\bm I_k\end{bmatrix}
+ \begin{bmatrix}\bm I_d&\bm0\\\bm C\bm V^\top&\bm I_k\end{bmatrix}.
+ \end{aligned}
+\]
+分块三角矩阵的行列式等于对角块行列式之积，两种分解分别给出$\det\bm T=\det(\bm I_k+\bm C\bm V^\top\bm Z)$与$\det\bm T=\det(\bm I_d+\bm Z\bm C\bm V^\top)$，所以$\det(\bm I_d+\bm Z\bm C\bm V^\top)=\det\bm K$，第一个结论成立。$\bm C$可逆时$\bm K=\bm C(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)$，括号内的矩阵随$\bm K$可逆。由上面的等价关系，对任意$\bm b$，新方程的解为$\bm x=\bm u-\bm Z\bm K^{-1}\bm C\bm V^\top\bm u$，其中$\bm u=\bm A_0^{-1}\bm b$；代入$\bm K^{-1}\bm C=(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)^{-1}$，并因$\bm b$任意而去掉右端，即得式~\eqref{eq:matrix-analysis-woodbury}。
 \end{proof}
 
 判据部分允许$\bm C$奇异，这正是算法只使用$\bm K$、不使用$\bm C^{-1}$的原因。秩一修改时，定理化为一个只含标量分母的公式。
