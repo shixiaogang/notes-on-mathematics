@@ -325,52 +325,73 @@
 
 ### 12.4 分块LDL分解
 
-1. 以鞍点系统为例说明对称不定矩阵的需要：Cholesky开方量可能为负，LU又浪费对称性；分块LDL不开方并在必要时用二阶主元块。
+1. 以带约束二次问题的鞍点系统为例说明对称不定矩阵的需要：Cholesky开方量可能为负，LU又浪费对称性；分块LDL不开方并在必要时用二阶主元块，同时保留对称结构与可解性。
 
 #### 12.4.1 主要思想
 
-1. 设$\bm A$实对称非奇异、不一定正定，目标是构造$\bm P\bm A\bm P^\top=\bm L\bm D\bm L^\top$，$\bm D$由可逆的一阶、二阶对称块组成，对称置换保持对称。
+1. 设$\bm A$实对称非奇异、不一定正定，指出Cholesky开方量可能为负或为零：负数可不开方而把主元连同正负号放入对角因子，零则不能靠对称交换避开（以$\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$为例，对称置换只在对角位置间移动对角元），须把两行两列合成可逆二阶块；由此定义分块LDL分解式`eq:ls-ldlt`$\bm P\bm A\bm P^\top=\bm L\bm D\bm L^\top$，$\bm D$由可逆的一阶、二阶对称块组成。
 
-###### paragraph：标量主元的递推
+2. 由分解记$\bm c=\bm P\bm b$、$\bm w=\bm P\bm x$，把求解拆成前代$\bm L\bm y=\bm c$、块对角方程$\bm D\bm z=\bm y$、回代$\bm L^\top\bm w=\bm z$与还原$\bm x=\bm P^\top\bm w$三段，说明与LU相比只新增中间一步。
 
-1. 对无需交换的标量情形，比较$a_{i,j}=\sum_kl_{i,k}d_kl_{j,k}$得到$d_j$与$l_{i,j}$的递推；说明不开方故$d_j$可负、正负号留在$\bm D$中，但零主元会中断递推。
+###### paragraph：块对角方程
 
-###### paragraph：为什么需要二阶块
-
-1. 以$\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$说明可逆矩阵可能对角元全零，对称置换只在对角位置间移动对角元，故标量主元恒为零；把两行两列合成二阶可逆块才保留可解性。
+1. 说明$\bm D\bm z=\bm y$按对角块分成互不相关的小方程，一阶块直接相除；对二阶块$\bm E$写出两个方程，分别消去$z_2$与$z_1$，得系数$\det\bm E$与显式公式式`eq:ls-ldlt-two-by-two-solve`，块可逆时分母不为零；转向怎样由$\bm A$算出$\bm P,\bm L,\bm D$。
 
 ###### paragraph：一步块消元
 
-1. 把剩余矩阵写成$\left[\begin{smallmatrix}\bm E&\bm C^\top\\\bm C&\bm F\end{smallmatrix}\right]$并设块三角—块对角—块三角的乘积形式，比较左下块得$\bm M\bm E=\bm C$，比较右下块并用$\bm E$对称化简得$\bm S=\bm F-\bm M\bm C^\top=\bm F-\bm C\bm E^{-1}\bm C^\top$；说明实际通过解小方程形成$\bm M$。
+1. 把对称交换后的剩余矩阵写成$\left[\begin{smallmatrix}\bm E&\bm C^\top\\\bm C&\bm F\end{smallmatrix}\right]$，设块三角—块对角—块三角的乘积形式并逐块比较：右上块由$\bm E$对称是左下块的转置，剩下$\bm M\bm E=\bm C$与$\bm M\bm E\bm M^\top+\bm S=\bm F$，用$\bm E$对称化简得式`eq:ls-ldlt-block-step`$\bm S=\bm F-\bm M\bm C^\top$。
 
-###### paragraph：分解与求解
+2. 说明不显式求逆：$\bm M$的每行满足$\bm E\bm m_i^\top=\bm c_i^\top$；一阶块即除以标量，与Cholesky逐列递推相同但不开方、主元可负，二阶块每行按式`eq:ls-ldlt-two-by-two-solve`求解。
 
-1. 对$\bm S$重复并累积置换得分解；求解依次为$\bm L\bm y=\bm P\bm b$、$\bm D\bm z=\bm y$、$\bm L^\top\bm w=\bm z$、$\bm x=\bm P^\top\bm w$，中间一步按块求解。
+###### paragraph：逐块递推
+
+1. 对$\bm S$重复选块与消元，$\bm M$存入$\bm L$、$\bm E$放入$\bm D$，后续交换时已存乘子随之交换（理由同LU），合成置换得式`eq:ls-ldlt`；剩余矩阵为何仍非奇异、所选块为何可逆留到算法分析。
 
 #### 12.4.2 算法实现
 
-1. 给出精确算术可执行的选块规则：首个对角元非零取一阶块；为零则在该列下方取绝对值最大的非零元素（平局取行号小者），对称交换到相邻位置组成二阶块，其行列式$-w_{p,k}^2\neq0$；该列下方全零则报告失败；强调规则只保证构造可进行而不保证稳定。
+1. 说明输入、输出与精确算术下可执行的选块规则：$w_{k,k}\neq0$取一阶块；为零则在第$k$列下方取绝对值最大者$w_{p,k}$（平局取行号最小者），对称交换到第$k+1$位置组成二阶块$\left[\begin{smallmatrix}0&w_{p,k}\\w_{p,k}&w_{p,p}\end{smallmatrix}\right]$；下方全零则报告不适用；强调规则只保证构造可进行而不保证稳定。
 
-###### paragraph：选块与对称交换
+2. 说明算法分为$\bm L\bm D\bm L^\top$分解、前代、块对角求解、回代四个模块（各为一个小小节），并取$\bm A=\left[\begin{smallmatrix}0&1&2\\1&2&4\\2&4&4\end{smallmatrix}\right]$、$\bm b=(1,3,2)^\top$在每一步演示。
 
-1. 初始化$\bm W,\bm L,\bm P$与空的$\bm D$，每轮按规则选块，需要时同时交换$\bm W$的行列、$\bm P$的行和$\bm L$已存乘子的行，写出分块形式。
+##### 12.4.2.1 $\bm L\bm D\bm L^\top$分解
 
-###### paragraph：块消元
+1. 说明以$k$记当前主元块起始位置、$s$记其阶数，维护工作矩阵$\bm W$、乘子矩阵$\bm L$、置换$\bm P$与逐块填入的$\bm D$。
 
-1. 解$\bm M\bm E=\bm C$，把$\bm M$写入$\bm L$、$\bm E$放入$\bm D$，更新剩余矩阵为$\bm F-\bm M\bm C^\top$并只算下三角；下一轮起点前移的步长等于本轮块的阶数。
+2. 第1步初始化$\bm W=\bm A$、$\bm L=\bm P=\bm I$、$\bm D$为空、$k=1$。
 
-###### paragraph：三段求解
+3. 第2步按规则选块并在$s=2$、$p\neq k+1$时对称交换$\bm W$的行列，同时交换$\bm P$的行与$\bm L$已存乘子的行；例中$w_{1,1}=0$、下方$(1,2)^\top$，取$p=3$、$s=2$，写出交换后的$\bm W$与$\bm P$，$\bm L$尚无乘子不变。
 
-1. 前代求$\bm y$，按块求$\bm z$并给出二阶块的显式公式（分母为块行列式），回代求$\bm w$后还原$\bm x=\bm P^\top\bm w$。
-2. 示例（需要二阶块的LDL分解）：$\bm A=\left[\begin{smallmatrix}0&2&1\\2&0&1\\1&1&0\end{smallmatrix}\right]$、$\bm b=(3,3,2)^\top$；按规则选$\bm E=\left[\begin{smallmatrix}0&2\\2&0\end{smallmatrix}\right]$，得$\bm M=(\tfrac12,\tfrac12)$、剩余$-1$；前代、块求解与回代得$\bm x=(1,1,1)^\top$。
-3. 说明上例对角元全零，引出二阶块之后接负主元的例子。
-4. 示例（二阶块后接负主元）：$\bm A=\left[\begin{smallmatrix}0&1&1\\1&0&2\\1&2&3\end{smallmatrix}\right]$、$\bm b=(2,3,6)^\top$；平局取第二行，$\bm E=\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$、$\bm C=(1,2)$，由$\bm M\bm E=\bm C$得$\bm M=(2,1)$、剩余$-1$；前代$\bm y=(2,3,-1)^\top$，块求解$\bm z=(3,2,1)^\top$，回代$\bm x=(1,1,1)^\top$；以$\det\bm A=\det\bm E\cdot(-1)=1$区分块可逆性检查与整体非奇异性。
+4. 第3步取$\bm E,\bm C,\bm F$，按式`eq:ls-ldlt-block-step`逐行解$\bm M\bm E=\bm C$，$\bm M$存入$\bm L$、$\bm E$放入$\bm D$，尾块更新为$\bm F-\bm M\bm C^\top$并把$\bm C,\bm C^\top$置零，只算下三角；例中$\bm E=\left[\begin{smallmatrix}0&2\\2&4\end{smallmatrix}\right]$、$\det\bm E=-4$、$\bm C=(1,4)$，按式`eq:ls-ldlt-two-by-two-solve`得$\bm M=(1,\tfrac12)$、尾块$-1$，写出$\bm W$与$\bm L$。
+
+5. 第4步令$k\leftarrow k+s$，$k\leq d$时回到第2步；例中$k=3$时$w_{3,3}=-1$取一阶块，$\bm C,\bm F$为空，只把$-1$放入$\bm D$，随后$k=4>d$结束。
+
+6. 第5步取出因子：每轮置零使结束时$\bm W$为块对角，即$\bm D$；例中逐项验证$\bm L\bm D\bm L^\top$等于交换后的$\bm W$即$\bm P\bm A\bm P^\top$（如$(3,3)$元$1+2-1=2$），并以$\det\bm E\cdot(-1)=4=\det\bm A$核对。
+
+7. 指出上例第一轮即用二阶块、一阶消元时下方无元素，引出零主元在一阶消元之后才出现的例子，以检查一阶块消元。
+
+8. 示例`ex:ls-ldlt-late-two-by-two`（一阶消元之后出现零主元）：$\bm A=\left[\begin{smallmatrix}1&1&1\\1&1&2\\1&2&1\end{smallmatrix}\right]$；先取一阶块$1$，除以标量得$\bm M=(1,1)^\top$，尾块化为$\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$；再取无需交换的二阶块，得$\bm L$、$\bm D$与$\bm P=\bm I_3$并验证$\bm L\bm D\bm L^\top=\bm A$；对照Cholesky在第二列开方量$1-1^2=0$处中断，并由$\det\bm A=-1<0$说明$\bm A$不定。
+
+##### 12.4.2.2 前代
+
+1. 重排右端$\bm c=\bm P\bm b$，再根据前代公式（$l_{i,i}=1$）对$i=1,\ldots,d$求$y_i$；例中$\bm c=(1,2,3)^\top$，逐个算出$\bm y=(1,2,1)^\top$。
+
+##### 12.4.2.3 块对角求解
+
+1. 按$\bm D$的对角块自上而下求解，一阶块相除、二阶块按式`eq:ls-ldlt-two-by-two-solve`；例中第一块对应$(y_1,y_2)=(1,2)$、第二块$-1$对应$y_3=1$，得$\bm z=(0,\tfrac12,-1)^\top$。
+
+##### 12.4.2.4 回代
+
+1. 根据回代公式取$\bm L^\top$的元素$l_{k,i}$、对角元为1，对$i=d,\ldots,1$计算$w_i=z_i-\sum_{k>i}l_{k,i}w_k$；例中逐个算出$w_3=-1$、$w_2=1$、$w_1=1$。
+
+2. 由$\bm x=\bm P^\top\bm w$还原次序并用原始数据检验；例中交换第二、三个分量得$\bm x=(1,-1,1)^\top$，代回得$\bm A\bm x=\bm b$、残差为零。
 
 #### 12.4.3 算法分析
 
 ###### paragraph：正确性
 
-1. 块消元恒等式可乘开验证，单位块三角因子与对称置换不改变行列式，故每轮剩余矩阵非奇异；若首对角元与其下方全零，则剩余矩阵首行首列全零而奇异，矛盾，所以选块规则总能进行；累积得分解，求解步骤给出原方程的解；负主元只反映二次型有负方向。
+1. 块消元恒等式可由式`eq:ls-ldlt-block-step`乘开验证，单位块三角因子与对称置换不改变行列式，故剩余矩阵行列式为$\det\bm E\cdot\det\bm S$；所选一阶块非零、二阶块行列式$-w_{p,k}^2\neq0$，由$\bm A$非奇异逐轮推出每个$\bm S$非奇异。
+
+2. 若首对角元与其下方全零，则由对称性剩余矩阵首行首列全零而奇异，矛盾，所以选块规则不会中途失败；乘子随交换换行的理由同LU中乘子与置换的拼合，累积得式`eq:ls-ldlt`，三段求解与还原给出原方程的解；负主元或不定二阶块只反映二次型有负方向，不妨碍求解。
 
 ###### paragraph：数值敏感度
 
@@ -382,50 +403,69 @@
 
 ### 12.5 低秩更新下的求解
 
-1. 以增删约束、调整参数为例说明连续求解只差少量修改的方程；复用旧分解、只解低阶系统，节省依赖旧分解已存在且修改秩远小于阶数。
+1. 以增删约束、调整参数为例说明连续求解只差少量修改的方程；复用旧分解、只多解低阶系统，节省依赖旧分解已存在且修改秩远小于阶数。
 
 #### 12.5.1 主要思想
 
-1. 设$\bm A=\bm A_0+\bm U\bm C\bm V^\top$，$\bm A_0$非奇异且已有分解，$k\ll d$；说明$\bm C$吸收系数，$\bm C=\bm I$即$\bm A_0+\bm U\bm V^\top$。
+1. 设$\bm A=\bm A_0+\bm U\bm C\bm V^\top$，$\bm A_0$非奇异且已有分解，$k\ll d$，$\bm A$非奇异；说明更新表示是输入的结构信息，$\bm C$吸收系数，$\bm C=\bm I_k$即$\bm A_0+\bm U\bm V^\top$。
 
 ###### paragraph：辅助变量
 
-1. 令$\bm z=\bm C\bm V^\top\bm x$，原方程变为$\bm A_0\bm x=\bm b-\bm U\bm z$，用旧因子求$\bm u,\bm Z$得$\bm x=\bm u-\bm Z\bm z$；左乘$\bm C\bm V^\top$并移项得$k$阶方程$\bm K\bm z=\bm h$，$\bm K=\bm I+\bm C\bm V^\top\bm Z$、$\bm h=\bm C\bm V^\top\bm u$；总计只需$k+1$次旧因子求解与一个低阶求解。
+1. 指出修改项只经$k$维量$\bm C\bm V^\top\bm x$影响方程，令$\bm z=\bm C\bm V^\top\bm x$，把原方程与$\bm z$的定义合写成以$\bm A_0$为系数的第一个方程和约束$\bm C\bm V^\top\bm x-\bm z=\bm0$。
+
+2. 由第一个方程与旧因子求解式`eq:ls-woodbury-old-solves`（$\bm A_0\bm u=\bm b$、$\bm A_0\bm Z=\bm U$）得修正式`eq:ls-woodbury-correction`$\bm x=\bm u-\bm Z\bm z$，代入第二个方程移项得$k$阶方程式`eq:ls-woodbury-small-system`$\bm K\bm z=\bm h$，$\bm K=\bm I_k+\bm C\bm V^\top\bm Z$、$\bm h=\bm C\bm V^\top\bm u$；总计只需$k+1$次旧因子求解与一个低阶求解，反向等价与$\bm K$的可逆性判据留到算法分析。
 
 ###### paragraph：秩一修改
 
-1. 对$\bm A_0+\bm p\bm q^\top$，记$\bm A_0\bm w=\bm p$，辅助方程退化为$z=\bm q^\top\bm u/(1+\bm q^\top\bm w)$；分母为零表示更新矩阵奇异，分母小提示敏感，低阶运算不自动稳定。
+1. 对$\bm A_0+\bm p\bm q^\top$，记$\bm A_0\bm w=\bm p$，$\bm K$与$\bm h$均为标量，辅助方程退化为一次除法$z=\bm q^\top\bm u/(1+\bm q^\top\bm w)$、$\bm x=\bm u-z\bm w$；分母为零时更新矩阵奇异，回指定理`thm:ls-sherman-morrison`。
 
 #### 12.5.2 算法实现
 
-###### paragraph：用旧因子求解
+1. 说明输入为$\bm A_0$的分解、修改项$\bm U,\bm C,\bm V$与$\bm b$，需预先确定$\bm A_0$的求解方法（通常复用已有分解，否则按结构调用前面各节方法），节省计算的比较以分解已存在为前提。
 
-1. 取得或复用$\bm A_0$的分解，求$\bm A_0\bm u=\bm b$与$\bm A_0\bm Z=\bm U$，说明$\bm Z$记录修改方向经$\bm A_0^{-1}$的作用，代价比较以分解已存在为前提。
+2. 说明算法分为用旧因子求解、形成小系统、求解小系统并修正三个模块（各为一个小小节），并取$\bm A_0=\operatorname{diag}(3,2)$、$\bm U=\bm V=(1,1)^\top$、$\bm C=1$、$\bm b=(1,2)^\top$在每一步演示，更新后矩阵为$\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$。
 
-###### paragraph：形成小系统
+##### 12.5.2.1 用旧因子求解
 
-1. 先算$\bm V^\top\bm Z$与$\bm V^\top\bm u$再左乘$\bm C$，形成$\bm K$与$\bm h$，不形成新的$d$阶矩阵。
+1. 按式`eq:ls-woodbury-old-solves`用$\bm A_0$的因子求$\bm u$；例中$\bm A_0$为对角矩阵，逐个相除得$\bm u=(\tfrac13,1)^\top$。
 
-###### paragraph：求解小系统并修正
+2. 对$\bm U$的$k$列复用同一组因子求$\bm Z$，说明它记录修改方向经$\bm A_0^{-1}$作用后的结果；例中$\bm Z=(\tfrac13,\tfrac12)^\top$。
 
-1. 求解$\bm K\bm z=\bm h$（$\bm K$奇异时停止），计算$\bm x=\bm u-\bm Z\bm z$，每次修正后在更新矩阵下重算原残差。
-2. 示例（秩一更新的计算）：把$\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$写成$\operatorname{diag}(3,2)$加$(1,1)^\top(1,1)$，得$\bm u=(\tfrac13,1)^\top$、$\bm Z=(\tfrac13,\tfrac12)^\top$、$K=\tfrac{11}6$、$h=\tfrac43$、$z=\tfrac8{11}$，修正得$(\tfrac1{11},\tfrac7{11})^\top$，与分块消元例一致且未分解$\bm A$。
-3. 说明上例修改对称，引出$\bm U\neq\bm V$的例子。
-4. 示例（非对称的秩一更新）：$\bm A_0=\operatorname{diag}(2,3)$、$\bm U=(1,1)^\top$、$\bm V=(1,0)^\top$、$\bm b=(4,5)^\top$，更新矩阵$\left[\begin{smallmatrix}3&0\\1&3\end{smallmatrix}\right]$；得$\bm u=(2,\tfrac53)^\top$、$\bm Z=(\tfrac12,\tfrac13)^\top$、$K=\tfrac32$、$h=2$、$z=\tfrac43$，修正得$(\tfrac43,\tfrac{11}9)^\top$并用更新矩阵核验；说明连续更新导致病态或误差积累时应与重新分解比较。
+##### 12.5.2.2 形成小系统
+
+1. 先投影到$k$维，计算$\bm V^\top\bm Z$与$\bm V^\top\bm u$；例中分别为$\tfrac56$与$\tfrac43$。
+
+2. 按式`eq:ls-woodbury-small-system`左乘$\bm C$组装$\bm K$与$\bm h$，全程不形成新的$d$阶矩阵；例中$\bm K=\tfrac{11}6$、$\bm h=\tfrac43$。
+
+##### 12.5.2.3 求解小系统并修正
+
+1. 调用直接法求解$\bm K\bm z=\bm h$，$\bm K$奇异时停止并说明更新矩阵也奇异（定理`thm:ls-woodbury`）；例中$k=1$，一次除法得$z=\tfrac8{11}$。
+
+2. 按式`eq:ls-woodbury-correction`修正得$\bm x=\bm u-\bm Z\bm z$；例中$\bm x=(\tfrac1{11},\tfrac7{11})^\top$。
+
+3. 在更新后的矩阵下重算原残差而非只查辅助方程；例中$\bm A\bm x=(1,2)^\top=\bm b$，残差为零且全程未分解$\bm A$。
+
+4. 指出上例$\bm U=\bm V$看不出两者用途之别，引出$\bm U\neq\bm V$、更新矩阵不对称的例子，检查$\bm U$只进入旧因子求解、$\bm V$只进入投影。
+
+5. 示例`ex:ls-woodbury-nonsymmetric`（非对称的秩一更新）：$\bm A_0=\operatorname{diag}(2,3)$、$\bm U=(1,1)^\top$、$\bm V=(1,0)^\top$、$\bm b=(4,5)^\top$，更新矩阵$\left[\begin{smallmatrix}3&0\\1&3\end{smallmatrix}\right]$；得$\bm u=(2,\tfrac53)^\top$、$\bm Z=(\tfrac12,\tfrac13)^\top$、$K=\tfrac32$、$h=2$、$z=\tfrac43$，修正得$(\tfrac43,\tfrac{11}9)^\top$，用更新矩阵重算原残差为零。
 
 #### 12.5.3 算法分析
 
 ###### paragraph：正确性
 
-1. 补出反方向：由$\bm K\bm z=\bm h$与$\bm x=\bm u-\bm Z\bm z$推出$\bm C\bm V^\top\bm x=\bm z$，从而$\bm A\bm x=\bm b$，小系统与原方程等价；引出矩阵形式。
-2. 定理（Woodbury恒等式）：$\det(\bm A_0+\bm U\bm C\bm V^\top)=\det\bm A_0\det\bm K$，可逆当且仅当$\bm K$可逆；$\bm C$可逆时给出Woodbury恒等式。
-3. 证明：把更新矩阵写成$\bm A_0(\bm I+\bm Z\bm C\bm V^\top)$，用两种分块三角分解与分块三角矩阵的行列式得行列式等式，再由等价关系对任意右端写出逆。
-4. 说明判据允许$\bm C$奇异，这是算法只用$\bm K$的原因；引出秩一情形。
-5. 定理（Sherman–Morrison公式）及证明：取$k=1$代入Woodbury恒等式，可逆当且仅当$1+\bm q^\top\bm A_0^{-1}\bm p\neq0$。
+1. 补出反方向：由$\bm K\bm z=\bm h$与$\bm x=\bm u-\bm Z\bm z$推出$\bm C\bm V^\top\bm x=\bm z$，从而$\bm A\bm x=\bm b$，小系统与原方程等价；对任意右端写成矩阵形式即得可逆性判据与逆矩阵公式。
+
+2. 定理`thm:ls-woodbury`（Woodbury恒等式）：$\det(\bm A_0+\bm U\bm C\bm V^\top)=\det\bm A_0\det\bm K$，可逆当且仅当$\bm K$可逆；$\bm C$也可逆时给出式`eq:matrix-analysis-woodbury`。
+
+3. 证明：把更新矩阵写成$\bm A_0(\bm I+\bm Z\bm C\bm V^\top)$，对辅助分块矩阵$\bm T$用两种分块三角分解与分块三角矩阵的行列式得行列式等式；再由$\bm K=\bm C(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)$与等价关系对任意右端写出逆。
+
+4. 说明判据允许$\bm C$奇异，这是算法只用$\bm K$、不用$\bm C^{-1}$的原因；引出秩一情形。
+
+5. 定理`thm:ls-sherman-morrison`（Sherman–Morrison公式）及证明：取$k=1$代入Woodbury恒等式，可逆当且仅当$1+\bm q^\top\bm A_0^{-1}\bm p\neq0$。
 
 ###### paragraph：数值敏感度
 
-1. 代数恒等式不保证稳定：$\bm K$接近奇异放大误差，$\bm A_0$求解敏感时误差进入结果，$\bm u$与$\bm Z\bm z$相近时相减相消。
+1. 代数恒等式不保证稳定：$\bm K$接近奇异放大误差，$\bm A_0$求解敏感时$\bm u,\bm Z$的误差即使$\bm A$良态也进入结果，$\bm u$与$\bm Z\bm z$相近时相减相消。
 
 ###### paragraph：计算代价
 
@@ -485,181 +525,254 @@
 
 #### 13.1.1 主要思想
 
-1. 输入满列秩$\bm A$（$m\geq d$）与$\bm b$，求唯一最小二乘解$\hat{\bm x}$。
+1. 输入满列秩$\bm A$（$m\geq d$）与$\bm b$，求唯一最小二乘解$\hat{\bm x}$；核心是化为$d$阶方程式`eq:ls-normal-system`$\bm G\hat{\bm x}=\bm c$（$\bm G=\bm A^\top\bm A$、$\bm c=\bm A^\top\bm b$）再用Cholesky求解，下面先说明方程来源、再说明$\bm G,\bm c$的计算。
 
-###### paragraph：从残差正交到正规方程
+###### paragraph：正规方程
 
-1. 依据第11章最优拟合值是正交投影，残差与每一列正交，堆叠$d$个等式得正规方程，说明推导只用正交投影、不用多元求导。
+1. 依据第11章最优拟合值是正交投影，最优残差与每一列正交，把$d$个等式堆叠成向量得式`eq:ls-normal-system`即正规方程式`eq:linear-algebra-normal-equations`，说明推导只用正交投影、不用多元求导，并读出$\bm G$与$\bm c$的元素是列间内积。
 
-###### paragraph：满列秩保证正定
-
-1. 由满列秩得$\bm z^\top\bm G\bm z=\lVert\bm A\bm z\rVert^2>0$，$\bm G$对称正定，可用Cholesky求唯一解；秩亏时论证失效，改用QR或SVD。
+2. 指出满列秩时$\bm G$对称正定（理由留到算法分析），于是分解$\bm G=\bm L\bm L^\top$后先前代解$\bm L\bm y=\bm c$、再回代解$\bm L^\top\hat{\bm x}=\bm y$。
 
 ###### paragraph：按行累计
 
-1. 逐元素展开得$\bm G=\sum_i\bm A_{i,:}^\top\bm A_{i,:}$与$\bm A^\top\bm b=\sum_ib_i\bm A_{i,:}^\top$，每读入一行即可累加，不必保存全部观测；指出代数等价不意味着数值条件相同，条件数平方是引入QR的原因。
+1. 由$\bm a_j^\top\bm a_k=\sum_ia_{i,j}a_{i,k}$得式`eq:ls-gram-row-accumulation`$\bm G=\sum_i\bm A_{i,:}^\top\bm A_{i,:}$、$\bm c=\sum_ib_i\bm A_{i,:}^\top$，每读入一行即可累加、不必保存全部观测，这是数据量大时的优点；代价在精度，条件数平方见算法分析。
 
 #### 13.1.2 算法实现
 
-###### paragraph：形成Gram矩阵
+1. 说明输入、输出且无需预选规则，算法分为形成Gram矩阵与右端、$\bm L\bm L^\top$分解、前代与回代三个模块（各为一个小小节），并取示例`ex:ls-line-least-squares`的直线拟合数据$\bm A=\left[\begin{smallmatrix}1&0\\1&1\\1&2\end{smallmatrix}\right]$、$\bm b=(1,2,2)^\top$在每一步演示，本章QR求解及其三种因子计算沿用这组数据。
 
-1. 从零开始逐行累加$\bm G$与$\bm c$，只累加下三角。
+##### 13.1.2.1 形成Gram矩阵与右端
 
-###### paragraph：$\bm L\bm L^\top$分解
+1. 第1步初始化$\bm G=\bm0$、$\bm c=\bm0$、$i=1$。
 
-1. 对$\bm G$作Cholesky分解，满列秩保证正定前提；出现非正开方量说明秩亏或条件很差，转入QR或SVD。
+2. 第2步按式`eq:ls-gram-row-accumulation`累加第$i$行的外积与右端贡献，只累加下三角；例中列出三行对$\bm G$的增量与对$\bm c$的增量$(1,0)^\top,(2,2)^\top,(2,4)^\top$。
 
-###### paragraph：前代与回代
+3. 第3步判断是否结束；例中三行累加完毕得$\bm G=\left[\begin{smallmatrix}3&3\\3&5\end{smallmatrix}\right]$、$\bm c=(5,6)^\top$。
 
-1. 前代解$\bm L\bm y=\bm c$、回代解$\bm L^\top\hat{\bm x}=\bm y$，次序来自$\bm L(\bm L^\top\hat{\bm x})=\bm c$。
-2. 示例（直线拟合的正规方程法）：沿用第11章直线拟合数据，列出三行对$\bm G$与$\bm c$的增量，得$\bm G=\left[\begin{smallmatrix}3&3\\3&5\end{smallmatrix}\right]$、$\bm c=(5,6)^\top$。
-3. Cholesky得$\bm L=\left[\begin{smallmatrix}\sqrt3&0\\\sqrt3&\sqrt2\end{smallmatrix}\right]$，前代$\bm y=(5/\sqrt3,1/\sqrt2)^\top$，回代$\hat{\bm x}=(7/6,1/2)^\top$。
-4. 用原始数据重算残差$(-\tfrac16,\tfrac13,-\tfrac16)^\top$，验证$\bm A^\top\bm r=\bm0$与$\lVert\bm r\rVert^2=\tfrac16$；说明非零残差符合不相容输入，最小二乘完成的标志是正规残差为零，且不能只凭小系统残差宣布可靠。
+##### 13.1.2.2 $\bm L\bm L^\top$分解
+
+1. 逐列按Cholesky逐列公式先算开方量$\delta_j$并检查为正，再算$l_{j,j}$与下方元素；例中按列算得$\bm L=\left[\begin{smallmatrix}\sqrt3&0\\\sqrt3&\sqrt2\end{smallmatrix}\right]$。
+
+2. 说明满列秩保证每个$\delta_j>0$，若$\delta_j\leq0$则$\bm A$秩亏或条件很差，停止并改用QR求解或SVD求解。
+
+##### 13.1.2.3 前代与回代
+
+1. 前代按$y_i=(c_i-\sum_{k<i}l_{i,k}y_k)/l_{i,i}$求$\bm y$；例中$\bm y=(5/\sqrt3,1/\sqrt2)^\top$。
+
+2. 回代取$\bm L^\top$的元素$l_{k,i}$，对$i=d,\ldots,1$求$\hat x_i$；例中得$\hat x_2=\tfrac12$、$\hat x_1=\tfrac76$。
+
+3. 输出并用原始数据核验$\bm A^\top\bm r=\bm0$；例中残差$\bm r=(-\tfrac16,\tfrac13,-\tfrac16)^\top$与两列正交，$\lVert\bm r\rVert^2=\tfrac16$。
+
+4. 说明残差非零是因为三点不共线、方程不相容，最小二乘完成的标志是$\bm A^\top\bm r=\bm0$而非$\bm r=\bm0$；Cholesky失败或结果对舍入敏感时，不能只凭正规方程小系统的残差小宣布可靠。
 
 #### 13.1.3 算法分析
 
+###### paragraph：满列秩保证正定
+
+1. 由满列秩得$\bm z^\top\bm G\bm z=\lVert\bm A\bm z\rVert^2>0$，$\bm G$对称正定，由定理`thm:ls-cholesky-existence`知开方量都为正；秩亏时存在$\bm A\bm z=\bm0$的非零$\bm z$，$\bm G$只是半正定，论证失效。
+
 ###### paragraph：正确性
 
-1. 两次三角求解给出正规方程，由第11章定理即唯一最小二乘解。
+1. 两次三角求解给出$\bm A^\top\bm A\hat{\bm x}=\bm A^\top\bm b$，由定理`thm:ls-least-squares-solutions`即唯一最小二乘解。
 
 ###### paragraph：数值敏感度
 
-1. 对满列秩矩阵定义$\kappa_2(\bm A)=\sigma_{\max}/\sigma_{\min}$，与方阵定义一致。
-2. 定理（正规方程使条件数平方）及证明：由SVD得$\bm A^\top\bm A=\bm V\operatorname{diag}(\sigma_i^2)\bm V^\top$，其极端特征值为$\sigma_1^2,\sigma_d^2$。
-3. 说明压缩方向在$\bm G$中被压缩两次，累计内积的舍入可能抹掉信息，故适合条件较好的满列秩问题；误差界见第17章。
+1. 对满列秩矩阵定义$\kappa_2(\bm A)=\sigma_{\max}/\sigma_{\min}$，方阵时与第9章的定义一致。
+
+2. 定理`thm:ls-normal-equations-condition-squaring`（正规方程使条件数平方）及证明：由SVD得$\bm A^\top\bm A=\bm V\operatorname{diag}(\sigma_i^2)\bm V^\top$，其极端特征值为$\sigma_1^2,\sigma_d^2$。
+
+3. 说明压缩方向在$\bm G$中被压缩两次，累计内积的舍入可能抹掉信息，代数等价不意味着数值条件相同，这是引入QR的原因；故适合条件较好的满列秩问题，误差界见第17章。
 
 ###### paragraph：计算代价与适用范围
 
-1. 形成$\bm G$可能产生稠密化填充，稠密时总量$O(md^2+d^3)$；秩亏时$\bm G$半正定、Cholesky遇零主元，选解交给SVD路线。
+1. 一行全非零即使$\bm G$稠密，稠密时形成$\bm G$约$md^2$、分解约$d^3/3$，总量$O(md^2+d^3)$；秩亏时正规方程仍刻画全部最小二乘解但$\bm G$半正定、Cholesky遇零主元，选解交给SVD路线。
 
 ### 13.2 QR求解
 
-1. 说明正规方程的精度损失来自形成$\bm A^\top\bm A$，QR求解直接正交三角化；先写共同求解过程，再给三种因子计算方法。
+1. 说明正规方程的精度损失来自形成$\bm A^\top\bm A$，QR求解直接对$\bm A$正交三角化；先写最小二乘与满行秩最小范数解的共同求解过程，再给修正Gram–Schmidt、Householder与Givens三种因子计算方法。
 
 #### 13.2.1 主要思想
 
-1. 输入满列秩$\bm A$与$\bm b$，说明正交变换保持长度，可把最小二乘变成三角方程而不形成$\bm A^\top\bm A$。
+1. 输入满列秩$\bm A$与$\bm b$，写出完整QR分解$\bm A=\bm Q\left[\begin{smallmatrix}\bm R\\\bm0\end{smallmatrix}\right]$、$\bm Q=[\bm Q_1\;\bm Q_2]$，其中$\bm A=\bm Q_1\bm R$是第4章的薄QR、$\bm Q_2$补全标准正交基；正交变换保持长度，把最小二乘变成三角方程而不形成$\bm A^\top\bm A$。
 
-###### paragraph：残差的分解
+###### paragraph：化为三角方程
 
-1. 由第3章薄QR补全为完整$\bm Q=[\bm Q_1\;\bm Q_2]$，把$\bm Q^\top\bm b$分成$\bm c_1,\bm c_2$，由长度保持推出$\lVert\bm A\bm x-\bm b\rVert^2=\lVert\bm R\bm x-\bm c_1\rVert^2+\lVert\bm c_2\rVert^2$，区分可消去与不可拟合部分。
+1. 把$\bm Q^\top\bm b$分成$\bm c_1,\bm c_2$，由长度保持推出残差分解式`eq:ls-qr-residual-split`$\lVert\bm A\bm x-\bm b\rVert^2=\lVert\bm R\bm x-\bm c_1\rVert^2+\lVert\bm c_2\rVert^2$，第二项是不可拟合部分。
 
-###### paragraph：回代与最小残差
-
-1. 逆序展开$\bm R\bm x=\bm c_1$给出回代公式，最小残差为$\lVert\bm c_2\rVert$；薄分解下不可拟合部分即$\bm b-\bm Q_1\bm Q_1^\top\bm b$。
+2. 第一项在三角方程式`eq:ls-qr-triangular-system`$\bm R\hat{\bm x}=\bm c_1$时为零，回代即得$\hat{\bm x}$，最小残差为$\lVert\bm c_2\rVert$；薄分解下不可拟合部分即$\bm b-\bm Q_1\bm Q_1^\top\bm b$，唯一性与最优性回指定理`thm:ls-qr-least-squares`。
 
 ###### paragraph：满行秩的最小范数解
 
-1. 对满行秩$\bm A$分解$\bm A^\top=\bm Q\bm R$，写$\bm x=\bm Q\bm y+\bm w$且$\bm Q^\top\bm w=\bm0$，由$\bm A\bm w=\bm0$得方程只约束$\bm y$，由勾股关系令$\bm w=\bm0$；解释对转置分解是因为最小范数解位于$\operatorname{range}(\bm A^\top)$。
+1. 对满行秩$\bm A$（$m<d$），因最小范数解位于$\operatorname{range}(\bm A^\top)$而分解$\bm A^\top=\bm Q\bm R$；写$\bm x=\bm Q\bm y+\bm w$且$\bm Q^\top\bm w=\bm0$，代入得方程只约束$\bm y$，取$\bm w=\bm0$（理由见算法分析）得式`eq:ls-qr-min-norm`：前代$\bm R^\top\bm y=\bm b$、重建$\bm x_\star=\bm Q\bm y$。
 
 ###### paragraph：只需应用正交因子
 
-1. 说明两个分支只需$\bm Q$或$\bm Q^\top$对向量的作用；三种方法分别提供基向量、反射记录与旋转记录，服务于同一求解逻辑。
+1. 说明两个分支只需$\bm Q$或$\bm Q^\top$对向量的作用；修正Gram–Schmidt直接算出$\bm Q_1$的列，Householder保存反射向量，Givens保存旋转参数，三者服务于同一求解逻辑。
 
 #### 13.2.2 算法实现
 
-###### paragraph：QR分解
+1. 说明输入满列秩$\bm A$与$\bm b$、输出$\hat{\bm x}$，满行秩输入走最后的转置QR分支；只需预选因子计算方法，算法分为QR分解、变换右端、回代三个模块，仍用13.1节直线拟合数据演示。
 
-1. 计算QR分解或保存正交变换记录，具体见后三个小节。
+##### 13.2.2.1 QR分解
 
-###### paragraph：变换右端
+1. 按13.2.4—13.2.6节之一计算$\bm R$并记录正交因子或变换，$r_{j,j}=0$说明秩亏，改用SVD求解。
 
-1. 把同一变换作用于$\bm b$取前$d$个分量得$\bm c_1$，其余分量长度为最小残差；MGS的计算顺序另见13.2.4。
+2. 例中引用修正Gram–Schmidt的结果$\bm q_1=\tfrac1{\sqrt3}(1,1,1)^\top$、$\bm q_2=\tfrac1{\sqrt2}(-1,0,1)^\top$、$\bm R=\left[\begin{smallmatrix}\sqrt3&\sqrt3\\0&\sqrt2\end{smallmatrix}\right]$，说明Householder与Givens给出的$\bm R$至多相差各行符号。
 
-###### paragraph：求解$\bm R\hat{\bm x}=\bm c_1$
+##### 13.2.2.2 变换右端
 
-1. 回代输出$\hat{\bm x}$并以原数据核验正规残差。
+1. 按式`eq:ls-qr-triangular-system`算$\bm c_1=\bm Q_1^\top\bm b$，反射或旋转按分解次序作用于$\bm b$取前$d$个分量，MGS的计算次序见13.2.4节；例中$\bm c_1=(5/\sqrt3,1/\sqrt2)^\top$。
 
-###### paragraph：欠定情形：转置QR
+2. 读出最小残差：用反射或旋转时其余分量即$\bm c_2$；例中补齐$\bm q_3=\tfrac1{\sqrt6}(1,-2,1)^\top$，得$\bm c_2=-1/\sqrt6$、最小残差$1/\sqrt6$。
 
-1. 分解$\bm A^\top$、前代$\bm R^\top\bm y=\bm b$、输出$\bm Q\bm y$并检查$\bm A\bm x=\bm b$与行空间归属；对比经$\bm A\bm A^\top$的做法需要形成Gram矩阵。
-2. 示例（由QR因子求最小二乘解）：$\bm A=\left[\begin{smallmatrix}1&0\\1&1\\0&1\end{smallmatrix}\right]$、$\bm b=(1,1,2)^\top$，给出薄QR因子（计算见MGS例），$\bm c_1=(\sqrt2,4/\sqrt6)^\top$，回代得$\hat{\bm x}=(\tfrac13,\tfrac43)^\top$。
-3. 核验残差$(\tfrac23,-\tfrac23,\tfrac23)^\top$满足$\bm A^\top\bm r=\bm0$，补齐$\bm q_3$读出$\lVert\bm r\rVert=2/\sqrt3$。
-4. 示例（转置QR给出最小范数解）：$\bm A=\left[\begin{smallmatrix}1&0&1\\0&1&1\end{smallmatrix}\right]$、$\bm b=(1,2)^\top$，对$\bm A^\top$正交化得相同的$\bm R$，前代$\bm y=(1/\sqrt2,\sqrt{3/2})^\top$，重建$\bm x_\star=(0,1,1)^\top$。
-5. 由全部解$(1-t,2-t,t)^\top$的范数平方$3(t-1)^2+2$验证最小范数；三角因子出现零对角元时转入SVD。
+##### 13.2.2.3 回代
+
+1. 按回代公式由式`eq:ls-qr-triangular-system`逐个求$\hat x_i$；例中$\hat x_2=\tfrac12$、$\hat x_1=\tfrac76$。
+
+2. 以原数据核验$\bm A^\top(\bm b-\bm A\hat{\bm x})=\bm0$；例中残差$(-\tfrac16,\tfrac13,-\tfrac16)^\top$，长度$1/\sqrt6$与读出的$|\bm c_2|$相同。
+
+3. 指出例中$\bm R$与$\bm c_1$恰是正规方程法的$\bm L^\top$与前代结果$\bm y$，两条路线回代同一个三角方程，区别在于不形成$\bm A^\top\bm A$。
+
+##### 13.2.2.4 欠定情形：转置QR
+
+1. 给出三步：分解$\bm A^\top=\bm Q\bm R$（零对角元则转SVD）、按式`eq:ls-qr-min-norm`前代$\bm R^\top\bm y=\bm b$、重建$\bm x_\star=\bm Q\bm y$并检查$\bm A\bm x_\star=\bm b$与$\bm x_\star\in\operatorname{range}(\bm A^\top)$。
+
+2. 对比经$\bm A\bm A^\top\bm z=\bm b$的做法需要先形成Gram矩阵；指出直线拟合是超定问题、不能演示本分支，引出欠定例子。
+
+3. 示例`ex:ls-qr-min-norm-run`（转置QR给出最小范数解）：$\bm A=\left[\begin{smallmatrix}1&0&1\\0&1&1\end{smallmatrix}\right]$、$\bm b=(1,2)^\top$，对$\bm A^\top$修正Gram–Schmidt得$\bm q_1,\bm q_2$与$\bm R=\left[\begin{smallmatrix}\sqrt2&1/\sqrt2\\0&\sqrt{3/2}\end{smallmatrix}\right]$，前代$\bm y=(1/\sqrt2,\sqrt{3/2})^\top$，重建$\bm x_\star=(0,1,1)^\top$。
+
+4. 由全部解$(1-t,2-t,t)^\top$的范数平方$3(t-1)^2+2$在$t=1$最小，直接确认$\bm x_\star$范数最小。
 
 #### 13.2.3 算法分析
 
 ###### paragraph：正确性
 
-1. 引出合写的定理。
-2. 定理（QR给出最小二乘解与最小范数解）：满列秩时$\bm R^{-1}\bm c_1$是唯一最小二乘解、最小残差$\lVert\bm c_2\rVert$；满行秩时$\bm Q\bm y$是唯一最小范数解。
-3. 证明：（1）由残差分解式；（2）验证$\bm A\bm x_\star=\bm b$且$\bm x_\star\in(\ker\bm A)^\perp$，其他解相差核中向量，由勾股关系范数更大。
+1. 说明两个分支的正确性合写为一个定理。
+
+2. 定理`thm:ls-qr-least-squares`（QR给出最小二乘解与最小范数解）：满列秩时$\bm R^{-1}\bm c_1$是唯一最小二乘解、最小残差$\lVert\bm c_2\rVert$；满行秩时$\bm Q\bm y$是唯一最小范数解。
+
+3. 证明：（1）由正交矩阵保持长度得式`eq:ls-qr-residual-split`，$\bm R$可逆使第一项仅在$\bm R^{-1}\bm c_1$处为零；（2）验证$\bm A\bm x_\star=\bm b$且$\bm x_\star\in(\ker\bm A)^\perp$，其他解相差核中非零向量$\bm w$，由勾股关系范数更大。
 
 ###### paragraph：数值敏感度
 
-1. 区分问题本身的敏感度（第17章）与正交化过程引入的误差，三种实现在工作量、数值正交性与核验方式上不同。
+1. 区分问题本身对数据的敏感度（第17章）与计算QR因子时正交化过程引入的误差，三种实现在工作量、数值正交性与残差核验方式上不同，分别在后三个小节说明。
 
 ###### paragraph：秩亏情形
 
-1. 秩亏时$\bm R$有零对角元不能回代；带列主元QR只给基本解而非最小范数解，故一般秩统一用SVD。
+1. 秩亏时$\bm R$有零对角元不能回代；带列主元QR只取主元变量回代、其余置零，一般给出基本解而非最小范数解，故一般秩统一用SVD。
 
 #### 13.2.4 修正Gram–Schmidt正交化
 
-###### paragraph：主要思想
+##### 13.2.4.1 主要思想
 
-1. 说明MGS把“减去已解释分量”落实为对剩余列的更新，与第3章Gram–Schmidt的区别在于每次投影作用于当前剩余向量。
-2. 推导右视形式：第$j$步取$r_{j,j}=\lVert\bm v_j\rVert$、$\bm q_j=\bm v_j/r_{j,j}$，对$k>j$计算$r_{j,k}=\bm q_j^\top\bm v_k$并更新$\bm v_k$；说明更新保持与已有方向正交，并维持$\bm a_k=\sum_{i\leq j}r_{i,k}\bm q_i+\bm v_k$，最终得$\bm A=\bm Q_1\bm R$；$r_{j,j}=0$表示列相关，满列秩分支不适用。
+1. 按列比较$\bm A=\bm Q_1\bm R$得$\bm a_k=\sum_{i\leq k}r_{i,k}\bm q_i$；以$d=2$为例由第一式得$r_{1,1},\bm q_1$，第二式与$\bm q_1$作内积得$r_{1,2}$，移项后剩余向量的长度与方向给出$r_{2,2},\bm q_2$。
 
-###### paragraph：算法实现与算例
+2. 一般地维护剩余向量$\bm v_k$，每得到一个新方向就从所有未处理列中扣除，得归一化式`eq:ls-mgs-normalize`与更新式`eq:ls-mgs-update`；与第4章Gram–Schmidt的区别只在投影系数用当前剩余向量计算，精确算术中给出同一组因子，有限精度下正交性更好（见算法分析）。
 
-1. 初始化后逐列归一化并更新右侧各列；说明按列组织的左视次序对每列执行相同运算；再正交化时把第二遍系数加到已累计的$\bm R$上以保持$\bm A=\bm Q_1\bm R$。
-2. 右端作为额外一列按同样次序逐次投影得$\bm c_1$，有限精度下不宜改用另算$\bm Q_1^\top\bm b$，最后回代。
-3. 示例（修正Gram–Schmidt的逐步计算）：对QR求解例的$\bm A$计算$r_{1,1}=\sqrt2$、$\bm q_1$、$r_{1,2}=1/\sqrt2$、$\bm v_2=(-\tfrac12,\tfrac12,1)^\top$、$r_{2,2}=\sqrt{3/2}$、$\bm q_2$，得到QR求解例使用的因子。
-4. 右端逐次投影得$c_1=\sqrt2$、$\bm s=(0,0,2)^\top$、$c_2=4/\sqrt6$，回代得$\hat{\bm x}=(\tfrac13,\tfrac43)^\top$；分别核验$\bm Q_1^\top\bm Q_1=\bm I$、$\bm Q_1\bm R=\bm A$与正规残差为零。
+3. 把右端当作额外一列按同样次序扣除得式`eq:ls-mgs-rhs`，全部扣除后$\bm s$即最小二乘残差，$\bm c_1$交给式`eq:ls-qr-triangular-system`回代。
 
-###### paragraph：算法分析
+##### 13.2.4.2 算法实现
 
-1. 精确算术中对剩余向量与原始列的内积相同，故修正形式给出相同QR分解，由QR定理得最小二乘解。
-2. 有限精度下近相关列的剩余向量很短，舍入放大导致失去正交性，需再正交化；正交性与重构质量须分开检查，后者小不保证前者小，损失程度与条件数有关（第17章）；主要工作约$2md^2$。
+1. 说明输入、输出且无需预选规则，逐列维护剩余向量、$\bm R$的已算元素与右端剩余$\bm s$，仍用直线拟合数据演示。
+
+2. 第1步初始化$\bm v_k=\bm a_k$、$\bm R=\bm0$、$\bm s=\bm b$、$j=1$，写出例中的$\bm v_1,\bm v_2,\bm s$。
+
+3. 第2步按式`eq:ls-mgs-normalize`归一化，$r_{j,j}=0$说明列相关，停止并改用SVD；例中$r_{1,1}=\sqrt3$、$\bm q_1=\tfrac1{\sqrt3}(1,1,1)^\top$。
+
+4. 第3步按式`eq:ls-mgs-update`扣除新方向，并按式`eq:ls-mgs-rhs`更新右端；例中$r_{1,2}=\sqrt3$、$\bm v_2=(-1,0,1)^\top$、$c_1=5/\sqrt3$、$\bm s=(-\tfrac23,\tfrac13,\tfrac13)^\top$。
+
+5. 第4步判断是否结束；例中$j=2$时得$r_{2,2}=\sqrt2$、$\bm q_2$，只处理右端得$c_2=1/\sqrt2$、$\bm s=(-\tfrac16,\tfrac13,-\tfrac16)^\top$，写出$\bm R$与$\bm c_1$，核验$\bm q_1^\top\bm q_2=0$与$\sqrt3\bm q_1+\sqrt2\bm q_2=\bm a_2$，剩下的$\bm s$正是长度$1/\sqrt6$的拟合残差。
+
+6. 第5步回代求解$\bm R\hat{\bm x}=\bm c_1$；例中$\bm R,\bm c_1$与13.2节算法实现所用相同，得$\hat{\bm x}=(\tfrac76,\tfrac12)^\top$。
+
+7. 补充说明：$\bm Q_1$、$\bm R$与剩余向量只是内部状态；按列组织的次序对每列执行相同运算；某列扣除后明显变短时再正交化，并把第二遍系数加到已累计的$r_{i,j}$上以保持$\bm A=\bm Q_1\bm R$；右端须按式`eq:ls-mgs-rhs`逐次扣除，不宜另算$\bm Q_1^\top\bm b$。
+
+##### 13.2.4.3 算法分析
+
+1. 精确算术中更新后$\bm v_k$与$\bm q_j$及此前各方向正交，各$\bm q_i$两两正交，并维持$\bm a_k=\sum_{i\leq j}r_{i,k}\bm q_i+\bm v_k$，最终得$\bm A=\bm Q_1\bm R$；对剩余向量与原始列的内积相同，故给出与原Gram–Schmidt相同的QR分解且$c_i=\bm q_i^\top\bm b$，由定理`thm:ls-qr-least-squares`得最小二乘解。
+
+2. 有限精度下近相关列的剩余向量很短，舍入影响被放大而失去正交性，这是再正交化处理的情形；正交性$\lVert\bm Q_1^\top\bm Q_1-\bm I\rVert$与重构质量$\lVert\bm A-\bm Q_1\bm R\rVert$须分开检查，后者小不保证前者小，损失程度与条件数有关（第17章）；主要工作约$2md^2$。
 
 #### 13.2.5 Householder反射
 
-###### paragraph：主要思想
+##### 13.2.5.1 主要思想
 
-1. 提出把列段$\bm y$映到坐标轴的问题，介绍Householder反射$\bm H=\bm I-2\bm v\bm v^\top/(\bm v^\top\bm v)$的镜面反射含义，它对称正交，只需选好$\bm v$。
-2. 图：$\bm y=(2,1)^\top$与其像$-\sqrt5\bm e_1$关于超平面$\bm v^\perp$对称，二者之差为$\bm v$，反射保持长度。
-3. 由长度保持得$\alpha=\pm\lVert\bm y\rVert$，取$\bm v=\bm y-\alpha\bm e_1$并计算$\bm v^\top\bm v=2(\bm y^\top\bm y-\alpha y_1)$、$\bm v^\top\bm y=\bm y^\top\bm y-\alpha y_1$，验证$\bm H\bm y=\alpha\bm e_1$。
-4. 说明符号选择：$\alpha$与$y_1$同号时首分量相近数相减，故取$\alpha=-s\lVert\bm y\rVert$、$\bm v=\bm y+s\lVert\bm y\rVert\bm e_1$使首分量为同号相加；用$\tau=2/(\bm v^\top\bm v)$与$\bm H\bm Z=\bm Z-\bm v(\tau\bm v^\top\bm Z)$作用，不形成稠密$\bm H$。
+1. 写出$\bm Q^\top=\bm H_d\cdots\bm H_1$，提出把列段$\bm y\neq\bm0$映到第一坐标轴的问题，介绍Householder反射$\bm H=\bm I-2\bm v\bm v^\top/(\bm v^\top\bm v)$是以$\bm v$为法向的超平面的镜面反射，它对称正交，只需选好$\bm v$。
 
-###### paragraph：算法实现与算例
+2. 图`fig:ls-householder-reflection`：$\bm y=(2,1)^\top$与其像$-\sqrt5\bm e_1$关于超平面$\bm v^\perp$对称，二者之差为$\bm v$，圆弧表示反射保持长度。
 
-1. 初始化工作矩阵与右端，保持列顺序，按列重复两步。
-2. 第一步构造并保存反射记录；$\bm y=\bm0$取恒等变换并记录秩亏，下方已为零时也可保持不变。
-3. 第二步把反射作用于剩余子块与右端，每个向量只需一次内积与一次更新；结束后检查对角元并回代，余下分量长度为最小残差。
-4. 示例（一步反射完成的三角化）：$\bm A=\left[\begin{smallmatrix}3&1\\4&3\\0&0\end{smallmatrix}\right]$、$\bm b=(4,7,2)^\top$，$\bm v=(8,4,0)^\top$、$\tau=1/40$，写出$\bm H$；第二列与右端分别更新为$(-3,1,0)^\top$与$(-8,1,2)^\top$，第二列无需反射，回代得$\hat{\bm x}=(1,1)^\top$，不可拟合分量为2；核验正交性与$\bm A^\top\bm r=\bm0$，并说明负对角元不影响求解，统一符号须同时调整行与右端。
-5. 示例（直线拟合的Householder三角化）第一段：第一步$\bm v=(1+\sqrt3,1,1)^\top$，给出首列、第二列与右端的更新结果，并以长度平方$3,5,9$不变核验。
-6. 第二段：第二步反射后两行，得$\bm R=\left[\begin{smallmatrix}-\sqrt3&-\sqrt3\\0&-\sqrt2\end{smallmatrix}\right]$与$\bm c_1$，回代得$(7/6,1/2)^\top$，$|c_3|=1/\sqrt6$为最小残差，$\bm R$与正规方程例的$\bm L^\top$只差行符号。
+3. 由长度保持得$\alpha=\pm\lVert\bm y\rVert$，展开$\bm H\bm y=\alpha\bm e_1$知$\bm y-\alpha\bm e_1$须是$\bm v$的倍数，故取$\bm v=\bm y-\alpha\bm e_1$，系数等于1的验证交给算法分析中的引理。
 
-###### paragraph：算法分析
+4. 说明实际取$\alpha=-s\lVert\bm y\rVert$得式`eq:ls-householder`，使$v_1$为两个同号数相加（理由见算法分析）；作用于向量时用$\tau=2/(\bm v^\top\bm v)$与式`eq:ls-householder-apply`，只需一次内积与一次更新，不形成稠密$\bm H$；第$k$步嵌入为$\bm H_k=\operatorname{diag}(\bm I_{k-1},\bm H)$。
 
-1. 引理（Householder反射）及证明：$\bm H$对称且$\bm H^2=\bm I$，由$\bm v^\top\bm v=2\bm v^\top\bm y>0$得$\bm H\bm y=-s\lVert\bm y\rVert\bm e_1$。
-2. 说明嵌入后的反射只作用于第$k$行以下，保持旧零结构，$d$步后得到以$\bm Q^\top=\bm H_d\cdots\bm H_1$的QR分解，由QR定理得最小二乘解。
-3. 同号符号避免相消；Householder QR后向稳定、所得$\bm Q$在舍入范围内正交，工作量约$2md^2-\tfrac23d^3$；列主元可辅助识别近相关列，但秩亏的最小范数选择仍交给SVD。
+##### 13.2.5.2 算法实现
+
+1. 说明输入、输出与预选的符号规则$s$，保持列顺序、不选列主元，逐列维护工作矩阵$\bm F$与右端$\bm c$，仍用直线拟合数据演示并在每列处理后给出当前值。
+
+2. 第1步初始化$\bm F=\bm A$、$\bm c=\bm b$、$k=1$。
+
+3. 第2步取列段$\bm y=\bm F_{k:m,k}$按式`eq:ls-householder`构造并保存$\bm v,\tau$；$\bm y=\bm0$说明列相关，停止改用SVD，下方已为零则取恒等跳过第3步；例中$\bm v=(1+\sqrt3,1,1)^\top$、$\bm v^\top\bm v=6+2\sqrt3$、$\tau=1/(3+\sqrt3)$。
+
+4. 第3步按式`eq:ls-householder-apply`把反射作用于剩余子块与右端，第$k$列直接成为$(-s\lVert\bm y\rVert,0,\ldots)^\top$；例中写出更新后的$\bm F$与$\bm c=(-5/\sqrt3,1/\sqrt3,1/\sqrt3)^\top$，并以两列与右端长度平方$3,5,9$不变核验。
+
+5. 第4步判断是否结束；例中$k=2$时$\lVert\bm y\rVert=\sqrt2$，反射只作用于后两行，得$\bm F$的上三角部分$\left[\begin{smallmatrix}-\sqrt3&-\sqrt3\\0&-\sqrt2\end{smallmatrix}\right]$与$\bm c=(-5/\sqrt3,-1/\sqrt2,-1/\sqrt6)^\top$。
+
+6. 第5步取$\bm R=\bm F_{1:d,1:d}$检查对角元后回代，$\lVert\bm c_{d+1:m}\rVert$为最小残差；例中得$\hat{\bm x}=(\tfrac76,\tfrac12)^\top$、$|c_3|=1/\sqrt6$。
+
+7. 指出例中$\bm R$与正规方程法的$\bm L^\top$只差各行符号，负对角元不影响求解，统一为正对角须同时变号$\bm R$的行与右端相应分量。
+
+##### 13.2.5.3 算法分析
+
+1. 引理`lem:ls-householder-reflection`（Householder反射）及证明：$\bm H$对称且$\bm H^2=\bm I$，由$\bm v^\top\bm v=2\bm v^\top\bm y>0$得$\bm H\bm y=-s\lVert\bm y\rVert\bm e_1$。
+
+2. 每个$\bm H_k$只作用于第$k$行以下，保持旧零结构，$d$步后得到$\bm Q^\top=\bm H_d\cdots\bm H_1$的QR分解，由定理`thm:ls-qr-least-squares`得最小二乘解。
+
+3. 说明符号选择避免$y_1-\alpha$的相消；Householder QR后向稳定（第17章），所得$\bm Q$在舍入范围内正交，工作量约$2md^2-\tfrac23d^3$；列主元可辅助辨认近相关列，但秩亏的最小范数选择仍交给SVD。
 
 #### 13.2.6 Givens旋转
 
-###### paragraph：主要思想
+##### 13.2.6.1 主要思想
 
-1. 说明对角线下非零元很少时每次只消一个元素更经济，介绍Givens旋转只混合两行，并以图与反射对照。
-2. 图：Givens旋转沿圆弧、Householder反射沿角平分线把$(2,1)^\top$映到$(\sqrt5,0)^\top$，区分行列式为$+1$的旋转与对称正交的反射。
-3. 由$-s\alpha+c\beta=0$得$(c,s)$与$(\alpha,\beta)$平行，结合$c^2+s^2=1$与$\rho>0$得$\rho=\sqrt{\alpha^2+\beta^2}$、$c=\alpha/\rho$、$s=\beta/\rho$，并验证$c\alpha+s\beta=\rho$；零向量取恒等。
-4. 写出两行同时更新的公式，强调必须读取同一对旧行，右端同样更新。
+1. 对照Householder一次消去整列，说明下方非零元很少时每次只消一个元素更经济，Givens旋转只混合两行、其余坐标不变，正交因子为一串旋转之积。
 
-###### paragraph：算法实现与算例
+2. 图`fig:ls-givens-householder-elimination`：Givens旋转沿圆弧、Householder反射沿角平分线把$(2,1)^\top$映到$(\sqrt5,0)^\top$，区分行列式为$+1$的旋转与对称正交的反射，并注明图中反射取相反符号。
 
-1. 初始化$\bm F,\bm t$，按列、自下而上用相邻两行消元。
-2. 构造旋转：零元素跳过，否则计算$\rho,c,s$，用缩放或hypot避免溢出，不会除以零。
-3. 用临时量旋转两行尾段与右端，保存旋转顺序即保存$\bm Q$，完成后回代并以原数据检查残差。
-4. 新增观测行的更新：用$\bm R$的各行依次旋转消去新行，约$3d^2$次运算且不需旧观测，对比重新处理的$O(md^2)$。
-5. 示例（一次旋转完成的三角化）：沿用Householder一步例，$f_{3,1}=0$跳过，用前两行以$c=\tfrac35$、$s=\tfrac45$消去$4$，第二列更新为$3,1$，右端为$8,1$。
-6. 得到$\left[\begin{smallmatrix}5&3\\0&1\\0&0\end{smallmatrix}\right]$与$(8,1,2)^\top$，回代得$(1,1)^\top$，残差仍为$(0,0,2)^\top$；与反射对照，正交因子与对角符号不同而解与最小残差相同。
-7. 示例（直线拟合的Givens三角化）第一段：第一列先用第2、3行再用第1、2行旋转，给出各次$\rho,c,s$与两行结果。
-8. 第二段：第二列用第2、3行消元，得$\bm R=\left[\begin{smallmatrix}\sqrt3&\sqrt3\\0&\sqrt2\end{smallmatrix}\right]$与$\bm t_{1:2}=(5/\sqrt3,1/\sqrt2)^\top$，回代得$(7/6,1/2)^\top$，$\bm R$恰为Cholesky因子$\bm L^\top$，$|t_3|=1/\sqrt6$。
+3. 二维问题由$-s\alpha+c\beta=0$得$(c,s)$与$(\alpha,\beta)$平行，结合$c^2+s^2=1$与$\rho>0$得式`eq:ls-givens`$\rho=\sqrt{\alpha^2+\beta^2}$、$c=\alpha/\rho$、$s=\beta/\rho$；说明这里的$s$与Householder符号无关，零向量取恒等。
 
-###### paragraph：算法分析
+4. 写出两行同时更新的式`eq:ls-givens-rows`，右端同样更新；三角化逐列、自下而上用相邻两行消元，零不被破坏的理由见算法分析。
 
-1. 旋转正交且给出$(\rho,0)$；处理第$k$列时前$k-1$列的零与已消的零不被后续旋转破坏，结束时得到QR分解，由QR定理得最小二乘解。
+##### 13.2.6.2 算法实现
+
+1. 说明输入、输出与预选的消元次序（按列、列内$i=m,\ldots,k+1$用相邻两行），维护$\bm F$与右端$\bm t$（避免与$c$混淆），先给三角化与回代、再给新增观测的更新，仍用直线拟合数据并写成增广列。
+
+###### paragraph：三角化与回代
+
+1. 第1步初始化$\bm F=\bm A$、$\bm t=\bm b$、$k=1$、$i=m$，写出增广矩阵。
+
+2. 第2步构造旋转：$f_{i,k}=0$跳过，否则按式`eq:ls-givens`算$\rho,c,s$，用缩放或hypot避免上溢下溢；例中$k=1,i=3$时$\alpha=\beta=1$、$\rho=\sqrt2$、$c=s=1/\sqrt2$。
+
+3. 第3步按式`eq:ls-givens-rows`旋转两行尾段与右端并保存参数，强调先用临时量保存旧值，否则不再是旋转；例中写出第2、3行的结果。
+
+4. 第4步推进$i$与$k$；例中用第1、2行以$\rho=\sqrt3$、$c=1/\sqrt3$、$s=\sqrt{2/3}$完成第一列，再用第2、3行以$\rho=\sqrt2$、$c=\sqrt3/2$、$s=\tfrac12$消去$f_{3,2}$，写出最终增广矩阵。
+
+5. 第5步回代并用原数据检查残差；例中$\bm R$恰为Cholesky因子$\bm L^\top$、$\bm t_{1:2}$恰为前代结果$\bm y$，得$\hat{\bm x}=(\tfrac76,\tfrac12)^\top$，$|t_3|=1/\sqrt6$为最小残差。
+
+###### paragraph：新增观测的更新
+
+1. 提出问题：已有$\bm R$与$\bm c_1$，新到观测行$\bm w^\top$与右端$\eta$，要求不重新处理旧观测而得到新的最小二乘解。
+
+2. 第1步把新行排在$[\bm R\mid\bm c_1]$下方；例中在三点之外新增点$(3,3)$，即$\bm w=(1,3)^\top$、$\eta=3$。
+
+3. 第2步对$k=1,\ldots,d$用$\bm R$的第$k$行旋转消去新行第$k$个元素，同时旋转右端；例中$k=1$时$\rho=2$、$c=\sqrt3/2$、$s=\tfrac12$，$k=2$时$\rho=\sqrt5$、$c=\sqrt{2/5}$、$s=\sqrt{3/5}$，写出各次两行结果。
+
+4. 第3步回代：例中$\bm R=\left[\begin{smallmatrix}2&3\\0&\sqrt5\end{smallmatrix}\right]$、$\bm c_1=(4,3/\sqrt5)^\top$，得$\hat{\bm x}=(\tfrac{11}{10},\tfrac35)^\top$，与对四点直接求最小二乘相同，残差平方和由$\tfrac16$增至$\tfrac16+\tfrac1{30}=\tfrac15$。
+
+5. 说明更新约需$3d^2$次运算且不需旧观测，重新处理全部$m+1$条观测则需$O(md^2)$。
+
+##### 13.2.6.3 算法分析
+
+1. 旋转正交且给出$(\rho,0)$；处理第$k$列时前$k-1$列的零与列内已消的零不被后续旋转改动，结束时得到QR分解，由定理`thm:ls-qr-least-squares`得最小二乘解；新增观测的更新同理是对全部$m+1$条观测的正交三角化，残差平方和只增加新行最后剩余分量的平方。
+
 2. Givens QR后向稳定，稠密时约$3md^2-d^3$次运算、约为Householder的1.5倍；带状、上Hessenberg与局部更新需要的旋转少得多，选择依据是矩阵结构与更新方式。
 
 ### 13.3 SVD求解
@@ -668,52 +781,53 @@
 
 #### 13.3.1 主要思想
 
-1. 从输入、输出两组标准正交方向说明$\bm A$只是逐坐标伸缩：可拟合坐标除以奇异值，零空间坐标取零得最小范数。
-2. 图：$m=4,d=3,r=2$时右端变到左奇异坐标、可拟合坐标缩放、零奇异方向取零并由右奇异向量还原。
+1. 输入任意$\bm A$与$\bm b$、$\operatorname{rank}\bm A=r$，用完整SVD说明在输入、输出两组标准正交方向下$\bm A$只是逐坐标乘以$\sigma_i$。
+
+2. 图`fig:ls-svd-solve-coordinates`：$m=4,d=3,r=2$时右端变到左奇异坐标，前$r$个坐标可拟合、其余留在残差中，可拟合坐标除以奇异值、零奇异方向取零，再由右奇异向量还原。
 
 ###### paragraph：目标在奇异坐标下分离
 
-1. 用完整SVD与$\bm z=\bm V^\top\bm x$、$\bm c=\bm U^\top\bm b$把残差平方写成$\sum_{i\leq r}(c_i-\sigma_iz_i)^2+\sum_{i>r}c_i^2$，指出$z_{r+1},\ldots,z_d$不出现在目标中。
+1. 用$\bm z=\bm V^\top\bm x$、$\bm c=\bm U^\top\bm b$把残差平方写成式`eq:ls-svd-coordinate-split`$\sum_{i\leq r}(c_i-\sigma_iz_i)^2+\sum_{i>r}c_i^2$，指出$z_{r+1},\ldots,z_d$不出现在目标中。
 
 ###### paragraph：逐个坐标求解
 
-1. 各平方项独立，对正奇异值取$z_i=c_i/\sigma_i$，输出端$i>r$的分量不可拟合，最小二乘解的全部自由度是输入零空间坐标。
+1. 各平方项互不耦合，对正奇异值取$z_i=c_i/\sigma_i$，输出端$i>r$的分量不可拟合，最小二乘解的全部自由度是输入零空间坐标。
 
 ###### paragraph：取最小范数
 
-1. 由$\lVert\bm x\rVert=\lVert\bm z\rVert$令自由坐标为零，得$\bm x_\star=\sum_{i\leq r}(\bm u_i^\top\bm b/\sigma_i)\bm v_i$，并读出“投影—取逆—重建”的执行顺序。
+1. 由$\lVert\bm x\rVert=\lVert\bm z\rVert$令自由坐标为零，得式`eq:ls-svd-solution`$\bm x_\star=\sum_{i\leq r}(\bm u_i^\top\bm b/\sigma_i)\bm v_i$，读出“投影—取逆—重建”的执行顺序，它等于伪逆作用于右端的证明见算法分析。
 
 #### 13.3.2 算法实现
 
-1. 输入任意$\bm A,\bm b$、无额外规则，按精确秩描述；数值秩判定与截断小奇异值属于第17章。
+1. 说明输入任意$\bm A,\bm b$、输出$\bm x_\star$、无额外规则，按精确秩描述，数值秩判定与截断小奇异值属于第17章；算法分为计算SVD、由奇异坐标求解两个模块（各为一个小小节），并取$\bm A=\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$、$\bm b=(1,3)^\top$演示，方程不相容且秩为1、最小二乘解不唯一。
 
-###### paragraph：计算SVD
+##### 13.3.2.1 计算SVD
 
 1. 调用数值SVD取得紧凑形式$\bm U_r\bm\Sigma_r\bm V_r^\top$，$\bm A=\bm0$时直接输出零。
 
-###### paragraph：投影右端
+2. 例中$\bm A=2\bm u_1\bm v_1^\top$、$\sigma_1=2$、$\bm u_1=\bm v_1=\tfrac1{\sqrt2}(1,1)^\top$，补齐的$\bm u_2=\bm v_2=\tfrac1{\sqrt2}(1,-1)^\top$对应零奇异值、不进入薄分解。
 
-1. 计算$c_i=\bm u_i^\top\bm b$，说明其余方向上的部分留在残差中。
+##### 13.3.2.2 由奇异坐标求解
 
-###### paragraph：按奇异值缩放
+1. 第1步投影右端$c_i=\bm u_i^\top\bm b$，其余方向上的部分留在残差中；例中$c_1=2\sqrt2$，被舍弃分量$\bm u_2^\top\bm b=-\sqrt2$。
 
-1. 对正奇异值计算$z_i=c_i/\sigma_i$，零奇异方向不参与除法。
+2. 第2步只对正奇异值缩放$z_i=c_i/\sigma_i$；例中$z_1=\sqrt2$。
 
-###### paragraph：还原原变量
+3. 第3步按式`eq:ls-svd-solution`还原$\bm x_\star=\bm V_r\bm z$；例中$\bm x_\star=(1,1)^\top$。
 
-1. 由$\bm x_\star=\bm V_r\bm z$还原，只用因子对向量的作用，不形成伪逆。
-2. 示例（秩一矩阵的SVD求解）：$\bm A=\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$、$\bm b=(1,3)^\top$，$\sigma_1=2$，依次得$c_1=2\sqrt2$、$z_1=\sqrt2$、$\bm x_\star=(1,1)^\top$；核对残差与列空间正交、长度等于$\bm u_2$分量、$\bm x_\star$与核正交，全部解$(1+t,1-t)^\top$在$t=0$最小。
-3. 说明上例为方阵，引出输出端有两个不可拟合方向的高矩阵例子。
-4. 示例（秩亏且不相容的高矩阵）：$\bm A=\left[\begin{smallmatrix}1&1\\0&0\\0&0\end{smallmatrix}\right]$、$\bm b=(2,1,0)^\top$，$\sigma_1=\sqrt2$、$\bm u_1=\bm e_1$、$\bm v_1=(1,1)^\top/\sqrt2$，得$c_1=2$、$z_1=\sqrt2$、$\bm x_\star=(1,1)^\top$。
-5. 残差$(0,1,0)^\top$来自输出端第二坐标，输入零空间为$(1,-1)^\top$方向，全部解范数平方$2+2t^2$在$t=0$最小；以$\bm A^\top\bm r=\bm0$与$\bm x_\star\perp\ker\bm A$分别核验两种性质。
+4. 第4步用原数据核验$\bm A^\top(\bm b-\bm A\bm x_\star)=\bm0$与$\bm x_\star\perp\ker\bm A$；例中拟合值$(2,2)^\top$取两观测平均，残差$(-1,1)^\top$与列空间正交、长度$\sqrt2$等于$|\bm u_2^\top\bm b|$，全部解$(1+t,1-t)^\top$的范数平方$2+2t^2$在$t=0$最小。
+
+5. 说明全过程只用因子对向量的作用，不形成伪逆。
 
 #### 13.3.3 算法分析
 
 ###### paragraph：正确性
 
-1. 引出四步算出的正是伪逆作用于右端。
-2. 定理（SVD求解给出$\bm A^\dagger\bm b$）：输出等于$\bm A^\dagger\bm b$，是唯一最小范数最小二乘解。
-3. 证明：与第11章伪逆公式逐项相同，最优性由第11章定理给出；也可直接验证残差与列空间正交且解位于$(\ker\bm A)^\perp$。
+1. 引出上述过程算出的正是伪逆作用于右端。
+
+2. 定理`thm:ls-svd-solve`（SVD求解给出$\bm A^\dagger\bm b$）：输出等于$\bm A^\dagger\bm b$，是唯一最小范数最小二乘解。
+
+3. 证明：与伪逆公式式`eq:matrix-analysis-pseudoinverse`逐项相同，最优性由定理`thm:matrix-analysis-pseudoinverse-minimum-norm`给出；也可直接验证残差与列空间正交且解位于$(\ker\bm A)^\perp$，由定理`thm:ls-minimum-norm-representative`得范数最小。
 
 ###### paragraph：数值敏感度
 
@@ -721,42 +835,55 @@
 
 #### 13.3.4 加权最小二乘
 
-###### paragraph：主要思想
+##### 13.3.4.1 主要思想
 
-1. 由第11章加权目标出发，把$\bm M=\bm R^\top\bm R$代入得$\lVert\bm R\bm A\bm x-\bm R\bm b\rVert^2$；强调Cholesky写作$\bm L\bm L^\top$时须取$\bm R=\bm L^\top$，取$\bm L$则得$\bm L^\top\bm L\neq\bm M$。
-2. 说明变换只作用于观测端、未知量不变，所以$\widetilde{\bm A}^\dagger\widetilde{\bm b}$是加权解中欧氏范数最小的代表，权矩阵度量残差而非系数。
+1. 由第11章加权目标出发，把$\bm M=\bm R^\top\bm R$代入得白化式`eq:ls-weighted-whitening`$\lVert\bm R\bm A\bm x-\bm R\bm b\rVert^2$，对$\widetilde{\bm A}=\bm R\bm A$、$\widetilde{\bm b}=\bm R\bm b$调用SVD求解。
 
-###### paragraph：算法实现与算例
+2. 说明$\bm R$的取法：Cholesky写作$\bm L\bm L^\top$时须取$\bm R=\bm L^\top$（取$\bm L$得$\bm L^\top\bm L\neq\bm M$），对角权取平方根，权以协方差逆$\bm\Gamma^{-1}$给出时分解$\bm\Gamma=\bm L\bm L^\top$、取$\bm R=\bm L^{-1}$并用前代求$\widetilde{\bm A},\widetilde{\bm b}$而不求逆。
 
-1. 第一步构造权因子：一般权用Cholesky取$\bm R=\bm L^\top$，对角权取平方根，权以协方差逆$\bm\Gamma^{-1}$给出时分解$\bm\Gamma=\bm L\bm L^\top$并取$\bm R=\bm L^{-1}$。
-2. 第二步白化数据，协方差形式下用前代求$\widetilde{\bm A},\widetilde{\bm b}$而不求逆。
-3. 第三步对白化数据调用SVD（满列秩时也可QR），无须恢复变量，最后用原数据检查加权正规残差与$\bm x_\star\perp\ker\bm A$。
-4. 示例（两种权重下的白化求解）：沿用第11章的$\bm A=(1,1)^\top$、$\bm b=(2,1)^\top$、$\bm M=\operatorname{diag}(1,4)$，白化后用单列QR得$x_\star=6/5$，与加权正规方程一致；等权$\bm M=\bm I$时同样步骤给出欧氏解$3/2$，说明权重只改变送入求解器的数据。
-5. 说明上例满列秩、解唯一，引出秩亏例以同时观察权重改变拟合值与伪逆选最小范数。
-6. 示例（秩亏的加权最小二乘）：$\bm A=\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$、$\bm b=(0,2)^\top$、$\bm M=\operatorname{diag}(1,3)$，白化后唯一正奇异值$2\sqrt2$，左右奇异向量为$(1,\sqrt3)^\top/2$与$(1,1)^\top/\sqrt2$。
-7. 投影系数3，重建得$\bm x_\star=(\tfrac34,\tfrac34)^\top$，拟合值$\tfrac32$是$0$与$2$按$1:3$的加权平均；残差$(-\tfrac32,\tfrac12)^\top$满足$\bm A^\top\bm M\bm r=\bm0$、加权残差平方为3，核方向$(1,-1)^\top$上分量为零。
+3. 说明变换只作用于观测端、未知量不变，白化后的解无须变换回去，它为何是加权解中欧氏范数最小的代表见算法分析；权矩阵度量残差而非系数。
 
-###### paragraph：算法分析
+##### 13.3.4.2 算法实现
 
-1. 变换前后目标逐点相等、未知量与范数不变，故最优解集与最小范数代表相同；$\bm R$可逆使$\ker\widetilde{\bm A}=\ker\bm A$；数值敏感度取决于$\bm R\bm A$，权重可能改善或恶化条件。
+1. 说明输入、输出且无额外规则，取$\bm A=\left[\begin{smallmatrix}1&1\\1&1\end{smallmatrix}\right]$、$\bm b=(0,2)^\top$、$\bm M=\operatorname{diag}(1,3)$演示：系数矩阵与SVD求解例相同，秩为1、加权解不唯一，两观测权重比$1:3$。
+
+2. 第1步按三种形式之一构造权因子；例中$\bm R=\operatorname{diag}(1,\sqrt3)$。
+
+3. 第2步按式`eq:ls-weighted-whitening`白化数据，协方差形式改用前代；例中写出$\widetilde{\bm A}$与$\widetilde{\bm b}=(0,2\sqrt3)^\top$。
+
+4. 第3步对白化数据调用SVD求解（满列秩时也可QR）；例中唯一正奇异值$2\sqrt2$，左右奇异向量为$\tfrac12(1,\sqrt3)^\top$与$\tfrac1{\sqrt2}(1,1)^\top$，投影得3，缩放并还原得$\bm x_\star=(\tfrac34,\tfrac34)^\top$。
+
+5. 第4步用原数据核验加权正规残差与$\bm x_\star\perp\ker\bm A$；例中拟合值$\tfrac32$是$0$与$2$按$1:3$的加权平均而非普通平均1，残差$(-\tfrac32,\tfrac12)^\top$满足$\bm A^\top\bm M\bm r=\bm0$、加权残差平方为3，核方向$(1,-1)^\top$上分量为零。
+
+##### 13.3.4.3 算法分析
+
+1. 变换前后目标逐点相等、未知量与范数不变，故最优解集与最小范数代表相同（定理`thm:ls-weighted-least-squares`）；$\bm R$可逆使$\ker\widetilde{\bm A}=\ker\bm A$；数值敏感度取决于$\bm R\bm A$，权重可能改善或恶化条件，应在变换后的系统上判断。
 
 #### 13.3.5 齐次最小二乘
 
-###### paragraph：主要思想
+##### 13.3.5.1 主要思想
 
-1. 由第11章齐次最小二乘出发，说明单位长度约束排除零解，核心是选择伸缩最小的方向。
-2. 用完整右奇异基写$\bm x=\bm V\bm z$，定义伸缩量$\hat\sigma_i$（含宽矩阵多出的零伸缩方向），由$\bm A\bm v_i$两两正交得目标$\sum\hat\sigma_i^2z_i^2$是加权平均，最小值为最小伸缩量；单重时最优方向为$\pm\bm v_d$，重数大于一或零空间多维时报告整个最优子空间。
+1. 由第11章齐次最小二乘出发，说明它是$\bm b=\bm0$的情形，单位长度约束排除零解，核心是选择被$\bm A$伸缩得最小的方向。
 
-###### paragraph：算法实现与算例
+2. 用完整右奇异基写$\bm x=\bm V\bm z$，定义伸缩量$\hat\sigma_i=\lVert\bm A\bm v_i\rVert$（含$m<d$时多出的零伸缩方向），由$\bm A\bm v_i$两两正交得式`eq:ls-homogeneous-coordinates`，目标是平方伸缩量的加权平均、不小于$\hat\sigma_d^2$，在$\hat{\bm x}=\pm\bm v_d$处达到；何时还在别的方向达到留到算法分析。
 
-1. 第一步取得完整右因子并按伸缩量排序，检查维数与秩；宽矩阵须补齐右零空间，不能机械取薄SVD最后一列；不经$\bm A^\top\bm A$的特征分解。
-2. 第二步输出$\bm v_d$（有零空间时取零空间单位向量，否则取最小正奇异值方向），已是单位向量；重复时只是最优子空间中的一个选择，$\pm$表示同一比例。
-3. 示例（齐次最小二乘的两种情形）第一段：$\bm A=\left[\begin{smallmatrix}3&0\\0&1\\0&0\end{smallmatrix}\right]$，目标$1+8x_1^2$在$x_1=0$最小，得$(0,\pm1)^\top$、最小残差1，并说明零向量不满足约束。
-4. 第二段：$\bm A=\left[\begin{smallmatrix}1&0&0\\0&2&0\end{smallmatrix}\right]$，薄SVD只给$\bm e_2,\bm e_1$，补齐后得$\bm e_3$使残差为零；只看正奇异值会取$\bm e_1$而得到残差1。
+##### 13.3.5.2 算法实现
 
-###### paragraph：算法分析
+1. 说明输入、输出且无额外规则，取$\bm A=\left[\begin{smallmatrix}3&0\\0&1\\0&0\end{smallmatrix}\right]$演示。
 
-1. 正确性由第11章定理（单位球面上的最小值为$\bm A^\top\bm A$的最小特征值）及加权平均论证给出；方向的敏感度由谱间隙控制，可用第9章子空间扰动界估计，重复时方向不唯一；检验按第11章进行。
+2. 第1步取得完整右因子并按伸缩量排序、检查维数与秩；$m<d$时须补齐右零空间，不能机械取薄SVD最后一列，也不经$\bm A^\top\bm A$的特征分解；例中两列正交，$\sigma_1=3,\sigma_2=1$，$\bm V=\bm I$，$m>d$无须补齐。
+
+3. 第2步输出$\hat{\bm x}=\bm v_d$（有零空间时为零空间单位向量，否则为最小正奇异值方向），已是单位向量，$\pm\hat{\bm x}$表示同一比例；例中$\hat{\bm x}=\bm e_2$、$\lVert\bm A\hat{\bm x}\rVert=1$。
+
+4. 第3步核验单位长度与最小伸缩量；例中约束下目标为$1+8x_1^2$，在$x_1=0$最小，最小残差为1，并说明零向量不满足约束。
+
+5. 指出上例$m>d$、薄SVD已列出全部右奇异向量，引出$m<d$时第1步必须补齐的例子。
+
+6. 示例`ex:ls-homogeneous-svd-run`（宽矩阵的齐次最小二乘）：$\bm A=\left[\begin{smallmatrix}1&0&0\\0&2&0\end{smallmatrix}\right]$，薄SVD只给$\bm e_2,\bm e_1$，补齐后得$\bm e_3$使残差为零；只看正奇异值而取$\bm e_1$则残差为1，漏掉真正的最小方向。
+
+##### 13.3.5.3 算法分析
+
+1. 正确性由定理`thm:ls-homogeneous-minimizers`（单位球面上的最小值为$\bm A^\top\bm A$的最小特征值）给出，加权平均论证进一步刻画全部最优解：最小伸缩量单重时只有$\pm\bm v_d$，重数大于一或零空间多维时应报告整个最优子空间；方向的敏感度由谱间隙控制，可用第9章子空间扰动界估计，检验按第11章进行。
 
 ### 13.4 方法选择与结果检验
 
