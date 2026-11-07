@@ -1295,7 +1295,7 @@
 
 2. 说明第~`sec:ls-normed-spaces`节给出范数公理与例子，说明第1章的坐标范数满足公理，并证明有限维范数等价，使后面的概念可在任意范数下定义且与范数无关。
 
-3. 说明第~`sec:multivariable-open-closed-sets`节定义开集、闭集与有界集，第~`sec:multivariable-limits-continuity`节定义收敛并证明完备性、收敛子列与子空间闭性，再讨论级数的极限与联合极限，第~`sec:multivariable-continuity`节研究连续性、闭有界集上的最值与一致连续，第~`sec:ls-derived-norms`节定义矩阵范数与商范数；指出第~`chap:linear-recurrence-stability`章的矩阵幂与Neumann级数、第~`chap:stationary-iterations`章的迭代与第~`chap:multivariate-differentiation`章的微分都使用这套分析基础。
+3. 说明第~`sec:multivariable-open-closed-sets`节定义开集、闭集与有界集，第~`sec:multivariable-limits-continuity`节定义收敛并证明完备性、子空间闭性与收敛子列，再讨论级数的极限与联合极限，第~`sec:multivariable-continuity`节研究连续性、闭有界集上的最值与一致连续，第~`sec:ls-derived-norms`节定义矩阵范数与商范数；指出第~`chap:linear-recurrence-stability`章的矩阵幂与Neumann级数、第~`chap:stationary-iterations`章的迭代与第~`chap:multivariate-differentiation`章的微分都使用这套分析基础。
 
 4. 交代依赖与范围：依赖前两章的线性运算、基与坐标，以及一元分析中的数列极限、确界与最值定理；只讨论有限维空间，收敛与连续性适用于一般映射；指出无限维函数空间中范数等价、完备性与最近点存在都可能失败，跨卷注明可参考卷四“函数空间”一章（`chap:functional-analysis-and-approximation`）。
 
@@ -1387,7 +1387,7 @@
 
 1. 说明本节用范数描述“接近”，许多结论可逐坐标归结为一元结果，列出所用的一元结论（数列极限运算法则、Bolzano--Weierstrass定理与最值定理、一致连续性、柯西收敛准则），跨卷注明可参考卷一“极限与连续”一章（`chap:limits-continuity`），并约定本章用到时只说明结论与条件。
 
-2. 说明本节在有限维赋范空间中任取范数讨论，由范数等价结论与范数无关；依次讨论序列的收敛、有限维空间中收敛的性质（完备性、有界序列的收敛子列、子空间闭性）、级数的极限与映射的联合极限，连续性留到下一节；这些概念适用于一般映射。
+2. 说明本节在有限维赋范空间中任取范数讨论，由范数等价结论与范数无关；依次讨论序列的收敛、有限维空间中收敛的性质（完备性、子空间闭性、有界序列的收敛子列）、级数的极限与映射的联合极限，连续性留到下一节；这些概念适用于一般映射。
 
 #### 3.3.1 向量列与矩阵列的收敛
 
@@ -1413,7 +1413,7 @@
 
 #### 3.3.2 有限维空间中收敛的性质
 
-1. 说明有限维空间中的收敛还有三条一元情形熟悉的性质：彼此接近的序列收敛、有界序列有收敛子列、子空间包含其中序列的极限，证明都归结为有限个坐标上的实数列结论。
+1. 说明有限维空间中的收敛还有三条一元情形熟悉的性质：彼此接近的序列收敛、子空间包含其中序列的极限、有界序列有收敛子列，证明都归结为有限个坐标上的实数列结论。
 
 ##### 3.3.2.1 完备性
 
@@ -1433,17 +1433,17 @@
 
 3. 说明完备性使第~`sec:ls-vector-matrix-series`节的级数、第~`chap:linear-recurrence-stability`章的矩阵幂与第~`chap:stationary-iterations`章的迭代只需证明柯西性即可断定极限存在。
 
-##### 3.3.2.2 有界序列的收敛子列
-
-1. 说明逐坐标使用Bolzano--Weierstrass定理（与范数等价证明中的下界一步相同），有界性给出收敛子列，闭性保证极限在集合内；给出定理`thm:multivariable-bolzano-weierstrass`及逐坐标抽取子列的证明，极限由逐坐标判据与闭集序列判据得到。
-
-2. 指出有限维闭有界集具有与闭区间相同的子列性质，由范数等价在任意范数下成立，一般度量空间中紧致与序列紧致的关系属于度量空间的一般理论，不展开。
-
-##### 3.3.2.3 子空间的闭性
+##### 3.3.2.2 子空间的闭性
 
 1. 从“点与子空间任意接近能否推出属于子空间”进入，陈述并证明定理`thm:ls-subspace-closed`：扩充基后补充方向的坐标恒为零，逐坐标收敛保持为零。
 
 2. 与完备性相互印证；定义点到子空间的距离$d(\bm x,U)$，取距离趋零的子空间序列并由闭性得$d(\bm x,U)=0$当且仅当$\bm x\in U$，供商范数使用。
+
+##### 3.3.2.3 有界序列的收敛子列
+
+1. 说明逐坐标使用Bolzano--Weierstrass定理（与范数等价证明中的下界一步相同），有界性给出收敛子列，闭性保证极限在集合内；给出定理`thm:multivariable-bolzano-weierstrass`及逐坐标抽取子列的证明，极限由逐坐标判据与闭集序列判据得到。
+
+2. 指出有限维闭有界集具有与闭区间相同的子列性质，由范数等价在任意范数下成立，一般度量空间中紧致与序列紧致的关系属于度量空间的一般理论，不展开。
 
 #### 3.3.3 级数的极限
 
@@ -1767,9 +1767,9 @@
 
 2. 说明正交性写在非对角元里：对角对应两两正交，单位矩阵对应标准正交。图`fig:ls-gram-matrix-coefficients`把两个向量的内积排成数表。
 
-#### 4.4.3 Gram矩阵与半正定矩阵
+#### 4.4.3 Gram矩阵的半正定性
 
-###### paragraph：Gram矩阵的半正定性
+###### paragraph：Gram矩阵半正定
 
 1. 由二次型等于线性组合的长度平方，说明Gram矩阵半正定，且正定当且仅当向量线性无关；正定时可逆。
 
@@ -1975,19 +1975,19 @@
 
 ## 第5章 对偶空间
 
-正文入口：[05-dual-spaces.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces.tex)，章内依次输入[01-linear-functionals.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/01-linear-functionals.tex)、[02-dual-maps.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/02-dual-maps.tex)、[03-dual-norms.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/03-dual-norms.tex)、[04-inner-product-representation.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/04-inner-product-representation.tex)、[05-adjoints.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/05-adjoints.tex)与[06-summary.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/06-summary.tex)。
+正文入口：[05-dual-spaces.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces.tex)，章内依次输入[01-linear-functionals.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/01-linear-functionals.tex)、[02-representation.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/02-representation.tex)、[03-dual-maps.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/03-dual-maps.tex)、[04-dual-norms.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/04-dual-norms.tex)、[05-adjoints.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/05-adjoints.tex)与[06-summary.tex](../../../tex/02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces/05-dual-spaces/06-summary.tex)。
 
 1. 以多项式取值、信号取样、加权和与坐标为例引出把对象读成一个数的作用，提出三个问题：全部读取组成什么空间，读取怎样随线性映射在两端之间传递，一个读取有多大。
 
-2. 说明前两节只用线性运算：第~`sec:ls-dual-space`节建立对偶空间与对偶基，第~`sec:ls-dual-map`节研究输出端读取传回输入端，在坐标下即转置。
+2. 说明第~`sec:ls-dual-space`节建立对偶空间与对偶基，第~`sec:ls-riesz-representation`节借内积把读取写成与固定向量的内积。
 
-3. 说明后三节加入度量结构：第~`sec:ls-dual-norms`节用范数度量读取的大小，第~`sec:ls-riesz-representation`节用内积把读取写成向量，第~`sec:ls-adjoints`节把对偶映射改写为伴随并定义自伴、正交与正规算子。
+3. 说明第~`sec:ls-dual-map`节研究读取经线性映射传回输入端（坐标下即转置），第~`sec:ls-dual-norms`节用范数度量读取的大小，第~`sec:ls-adjoints`节把对偶映射改写为伴随、推出运算规则，并按算子与伴随的关系分类。
 
 4. 交代依赖：第~`chap:linear-representation`章的基、坐标与线性映射，第~`chap:normed-spaces`章的范数与诱导矩阵范数，第~`chap:inner-product-spaces`章的内积、Gram矩阵与标准正交基；只讨论有限维空间，无限维中并非每个线性泛函都连续。
 
-### 5.1 线性泛函与对偶基
+### 5.1 线性泛函
 
-###### paragraph：线性泛函
+###### paragraph：线性泛函的定义
 
 1. 定义线性泛函即陪域为$\mathbb R$的线性映射，以取值、积分、坐标读取与加权和为正例。
 
@@ -2011,7 +2011,21 @@
 
 4. 推出换基时坐标按$\bm P^{-1}$、读取系数按$\bm P$变化，二者相消使读数不变。
 
-### 5.2 对偶映射
+### 5.2 线性泛函的表示
+
+1. 从欧氏内积下读取即与系数向量的内积进入，借标准正交基构造表示向量并证明唯一，得到有限维Riesz表示定理`thm:ls-riesz-representation`。
+
+2. 说明表示对应是$V^*$到$V$的线性双射，标准正交基的对偶基就是自身，图`fig:ls-dual-basis-readout`中的红色箭头即对偶读取的表示向量。
+
+3. 说明表示向量依赖内积而读取本身不依赖：加权内积下为$\bm M^{-1}\bm a$；示例`ex:ls-riesz-integral-two-point`中积分读取在两点内积下对应常数$\tfrac12$（梯形公式对一次函数精确）。
+
+###### paragraph：复空间中的表示
+
+1. 按复内积约定把线性泛函写成$\langle\bm v,\bm x\rangle$，给出标准正交基下的表示向量$\sum_j\overline{\varphi(\bm q_j)}\bm q_j$，说明表示对应共轭线性。
+
+2. 以$\mathbb C$上$\varphi(z)=(1+\mathrm i)z$对应$v=1-\mathrm i$核验，说明共轭来自内积约定。
+
+### 5.3 对偶映射
 
 1. 由“先作用再读取”定义对偶映射$T'f=f\circ T$（式`eq:ls-dual-map-def`），证明它线性、方向与$T$相反且$(S\circ T)'=T'\circ S'$，强调它不是求逆。
 
@@ -2029,9 +2043,9 @@
 
 3. 对$T'$用秩零度定理得$\operatorname{rank}\bm A^\top=\operatorname{rank}\bm A$。
 
-4. 指出读取的大小由第~`sec:ls-dual-norms`节的对偶范数回答，读取写成与固定向量的内积由第~`sec:ls-riesz-representation`节回答。
+4. 指出读取的大小由下一节的对偶范数回答，有了内积后对偶映射随读取的内积表示变成第~`sec:ls-adjoints`节的伴随。
 
-### 5.3 对偶范数
+### 5.4 对偶范数
 
 1. 从线性泛函是对向量的读取、误差只知落在范数球内时一次读取$\bm z^\top\bm r$最多变化多少进入，定义对偶范数`def:linear-algebra-dual-norm`（式`eq:linear-algebra-dual-norm-definition`）。
 
@@ -2045,21 +2059,19 @@
 
 6. 归纳：$\ell_\infty$预算对应$\ell_1$计量、$\ell_2$对应$\ell_2$。
 
-6. 示例`ex:ls-weighted-dual-norm`对加权$\ell_1$范数$\sum_jw_j|r_j|$换元$s_j=w_jr_j$化回$\ell_1$情形，得$\lVert\bm z\rVert_*=\max_j|z_j|/w_j$；以$\bm z=(2,-1)^\top$在权重$(1,1)$与$(4,1)$下分别得$2$与$1$，说明读取的代数表达不变而大小随原范数改变。
+7. 示例`ex:ls-weighted-dual-norm`对加权$\ell_1$范数$\sum_jw_j|r_j|$换元$s_j=w_jr_j$化回$\ell_1$情形，得$\lVert\bm z\rVert_*=\max_j|z_j|/w_j$；以$\bm z=(2,-1)^\top$在权重$(1,1)$与$(4,1)$下分别得$2$与$1$，说明读取的代数表达不变而大小随原范数改变。
 
-7. 结论：讨论误差放大必须先说明所用范数；内积范数下的对偶范数在5.4由表示向量得到；一般有限维空间上的$\lVert\varphi\rVert_*$即取$W=\mathbb R$的算子范数，无限维代数对偶与连续对偶之别留给函数空间章。
+8. 结论：讨论误差放大必须先说明所用范数；一般有限维空间上的$\lVert\varphi\rVert_*$即取$W=\mathbb R$的算子范数，无限维代数对偶与连续对偶之别留给函数空间章。
 
-### 5.4 线性泛函的内积表示
+###### paragraph：内积诱导范数下的对偶范数
 
-1. 从欧氏内积下读取即与系数向量的内积进入，借标准正交基构造表示向量并证明唯一，得到有限维Riesz表示定理`thm:ls-riesz-representation`。
-
-2. 说明表示对应是$V^*$到$V$的线性双射，标准正交基的对偶基就是自身，图`fig:ls-dual-basis-readout`中的红色箭头即对偶读取的表示向量。
-
-3. 说明表示向量依赖内积而读取本身不依赖：加权内积下为$\bm M^{-1}\bm a$；示例`ex:ls-riesz-integral-two-point`中积分读取在两点内积下对应常数$\tfrac12$（梯形公式对一次函数精确）。
-
-4. 由Cauchy--Schwarz不等式证明单位球上读取的最大值$\lVert\varphi\rVert_*=\lVert\bm v_\varphi\rVert$，欧氏内积下即$\ell_2$范数自对偶。
+由Cauchy--Schwarz不等式与第~`sec:ls-riesz-representation`节的表示向量证明$\lVert\varphi\rVert_*=\lVert\bm v_\varphi\rVert$，欧氏内积下即$\ell_2$范数自对偶。
 
 ### 5.5 伴随与特殊线性算子
+
+1. 说明有了内积，读取换成表示向量后对偶映射变成内积空间之间的伴随；本节依次给出定义与坐标计算、运算规则，并按算子与伴随的关系分类。
+
+#### 5.5.1 伴随的定义
 
 1. 从对偶映射把读取$f$传回为$f\circ T$、再把读取换成表示向量进入，给出伴随定义`def:linear-algebra-adjoint`（式`eq:ls-adjoint-pairing`）。
 
@@ -2069,37 +2081,67 @@
 
 4. 示例`ex:ls-weighted-adjoint`在$\operatorname{diag}(4,1)$加权内积下算出伴随矩阵$\left[\begin{smallmatrix}0&0\\4&0\end{smallmatrix}\right]\neq\bm A^\top$并直接核对；说明差别来自读取与向量的对应随内积改变，并把四个基本子空间的正交关系推广为$\ker T^\star=(\operatorname{im}T)^\perp$、$\ker T=(\operatorname{im}T^\star)^\perp$。
 
-###### paragraph：伴随的运算规则
+###### paragraph：复空间中的伴随
 
-1. 由配对定义推出伴随对加法、数乘、复合（次序反转）与二次伴随的规则，图`fig:ls-adjoint-action-transfer`示意配对从输出端搬回输入端。
+给出复伴随在标准正交基下为$\bm A^*$、一般基下为$\bm M_V^{-1}\bm A^*\bm M_W$，与代数对偶映射的$\bm A^\top$区分。
 
-2. 示例`ex:ls-adjoint-not-inverse`以$2\operatorname{id}$的伴随为自身而逆为$\tfrac12\operatorname{id}$说明伴随不是逆。
+#### 5.5.2 伴随的运算规则
 
-###### paragraph：自伴、正交与正规算子
+1. 说明各条规则都由配对等式与唯一性推出，并给出唯一性判别原则：$\langle\bm x,A\bm y\rangle=\langle\bm x,B\bm y\rangle$对一切$\bm x,\bm y$成立则$A=B$（取$\bm x=A\bm y-B\bm y$）。
 
-1. 说明下面四类算子都由$T$与$T^\star$之间的一个等式规定。
+###### paragraph：和与数乘
 
-2. 定义自伴算子（标准正交基下对应对称矩阵）与反自伴算子（对应反对称矩阵），由$\langle T\bm x,\bm x\rangle=-\langle T\bm x,\bm x\rangle$说明反自伴算子把每个向量送到与它正交的方向，以平面上旋转直角的矩阵为例。
+由内积对第一变量线性验证$(T+S)^\star=T^\star+S^\star$与$(cT)^\star=cT^\star$，说明取伴随本身是线性运算。
 
-3. 由$Q^\star Q=\operatorname{id}$定义保持内积的正交算子，对应正交矩阵，并由方阵单侧逆即逆得$Q^{-1}=Q^\star$。
+###### paragraph：复合
 
-4. 定义正规算子$TT^\star=T^\star T$，说明自伴、反自伴与正交算子都正规，以示例`ex:ls-weighted-adjoint`中的$\bm A$在欧氏内积下不正规为反例；谱性质留到第~`chap:eigen-spectral-decomposition`章。
+把$TS$的作用分两步移到内积右侧得$(TS)^\star=S^\star T^\star$，解释次序反转：最外层的$T$先被移走，它的伴随落在最里层。
 
-###### paragraph：复空间中的泛函表示与伴随
+###### paragraph：伴随的伴随
 
-1. 按复内积约定把线性泛函写成$\langle\bm v,\bm x\rangle$，给出标准正交基下的表示向量$\sum_j\overline{\varphi(\bm q_j)}\bm q_j$，说明表示对应共轭线性。
+由实内积对称，$T$满足$T^\star$的配对等式，得$T^{\star\star}=T$。
 
-2. 以$\mathbb C$上$\varphi(z)=(1+\mathrm i)z$对应$v=1-\mathrm i$核验，说明共轭来自内积约定。
+###### paragraph：恒等映射与逆
 
-3. 给出复伴随在标准正交基下为$\bm A^*$、一般基下为$\bm M_V^{-1}\bm A^*\bm M_W$，与代数对偶映射的$\bm A^\top$区分，并定义Hermitian（自伴）矩阵与酉矩阵。
+说明$\operatorname{id}^\star=\operatorname{id}$，对$T^{-1}T=\operatorname{id}_V$与$TT^{-1}=\operatorname{id}_W$取伴随，得$T^\star$可逆且$(T^\star)^{-1}=(T^{-1})^\star$。
+
+###### paragraph：坐标下的形式
+
+1. 标准正交基下各规则即转置的运算规则；一般基下用$\bm M_V^{-1}\bm A^\top\bm M_W$验证复合规则，中间的Gram矩阵相消；图`fig:ls-adjoint-action-transfer`示意配对从输出端搬回输入端。
+
+2. 示例`ex:ls-adjoint-not-inverse`以$2\operatorname{id}$的伴随为自身而逆为$\tfrac12\operatorname{id}$说明伴随不是逆，二者相等恰是正交算子的条件。
+
+#### 5.5.3 按伴随对算子分类
+
+1. 说明算子的伴随仍是同一空间上的算子，可与$T$、$-T$、$T^{-1}$比较，由此得到几类算子，且类别依赖所用内积。
+
+###### paragraph：自伴算子：$T^\star=T$
+
+定义自伴算子，说明作用可在内积两侧自由移动，标准正交基下对应对称矩阵、一般基下条件为$\bm M\bm A$对称，以正交投影$\bm P_U$为例。
+
+###### paragraph：反自伴算子：$T^\star=-T$
+
+定义反自伴算子（对应反对称矩阵），由$\langle T\bm x,\bm x\rangle=0$说明它把向量送到正交方向，以直角旋转为例，并给出任一算子分成自伴与反自伴两部分之和。
+
+###### paragraph：正交算子：$T^\star=T^{-1}$
+
+由$Q^\star Q=\operatorname{id}$定义保持内积的正交算子，由方阵单侧逆即逆得$Q^{-1}=Q^\star$，对应正交矩阵。
+
+###### paragraph：正规算子：$TT^\star=T^\star T$
+
+定义正规算子，说明前三类都正规，以$\left[\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right]$在欧氏内积下不正规为反例。
+
+###### paragraph：复空间中的对应
+
+说明复空间中自伴矩阵满足$\bm A=\bm A^*$、保持内积的方阵为酉矩阵，谱性质留到第~`chap:eigen-spectral-decomposition`章。
 
 ### 5.6 本章小结
 
-1. 回应章首三个问题：线性读取组成对偶空间，读取经对偶映射在两端传递，读取的大小由对偶范数度量。
+1. 回应章首三个问题：线性读取组成对偶空间，读取经对偶映射在两端传递，读取的大小由对偶范数度量；有了内积，读取还可以写成向量。
 
 2. 回顾纯线性部分：对偶空间与原空间同维，对偶基是坐标读取，对偶映射在对偶基下是转置并再次给出行秩等于列秩。
 
 3. 回顾对偶范数：读取在单位球上的最大绝对值即误差受限时的最大变化，$\ell_p$与$\ell_q$对偶，须先说明误差所用的范数。
 
-4. 回顾内积部分：Riesz表示把读取写成唯一向量，内积诱导范数下对偶范数即表示向量的长度；伴随在标准正交基下是转置、一般基下计入Gram矩阵；自伴、正交与正规算子由伴随定义，为第~`chap:eigen-spectral-decomposition`章的谱定理作准备。
+4. 回顾内积部分：Riesz表示把读取写成唯一向量，内积诱导范数下对偶范数即表示向量的长度；伴随在标准正交基下是转置、一般基下计入Gram矩阵，运算规则与转置相同并由配对等式和唯一性推出；按$T^\star$与$T$、$-T$、$T^{-1}$的关系分出自伴、反自伴、正交与正规算子，为第~`chap:eigen-spectral-decomposition`章的谱定理作准备。
 
