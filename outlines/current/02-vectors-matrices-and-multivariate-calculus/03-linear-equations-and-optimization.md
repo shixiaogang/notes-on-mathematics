@@ -187,43 +187,59 @@
 
 #### 12.2.1 主要思想
 
-1. 设$\bm A$为$d$阶非奇异方阵，求唯一精确解$\bm x_\star$；说明用行消元得到上三角$\bm U$，乘子收集为单位下三角$\bm L$，行交换累积为置换$\bm P$，给出LU分解$\bm P\bm A=\bm L\bm U$，并预告依次推导一次消元、分解的拼合与求解。
+1. 设$\bm A$为$d$阶非奇异方阵，求唯一精确解$\bm x_\star$；假设已得到LU分解$\bm P\bm A=\bm L\bm U$（$\bm P$置换、$\bm L$单位下三角、$\bm U$非奇异上三角），分解的计算留到下一小节。
 
-###### paragraph：一次消元的乘子与尾部更新
+2. 两边左乘$\bm P$只重排方程，记$\bm c=\bm P\bm b$得$\bm L\bm U\bm x=\bm c$；令$\bm y=\bm U\bm x$，拆成先解$\bm L\bm y=\bm c$、再解$\bm U\bm x=\bm y$两个三角方程。
 
-1. 在工作矩阵$\bm W$的第$k$轮，主元换到第$k$行后，为消去$w_{i,k}$令$w_{i,k}-l_{i,k}w_{k,k}=0$，推出乘子$l_{i,k}=w_{i,k}/w_{k,k}$；同一行操作作用于后续列得$w_{i,j}\leftarrow w_{i,j}-l_{i,k}w_{k,j}$；说明前$k-1$列保持为零，故只更新右下角尾块，乘子存入被消位置，构成$\bm L$的第$k$列。
+###### paragraph：前代：求解$\bm L\bm y=\bm c$
 
-###### paragraph：消元矩阵与分解
+1. 为供Cholesky复用，按一般下三角矩阵逐行列出方程组；由第一个方程得$y_1$，第二个方程移项得$y_2$，一般第$i$个方程移项除以$l_{i,i}$得前代公式$y_i=(c_i-\sum_{j<i}l_{i,j}y_j)/l_{i,i}$；说明按$i=1,\ldots,d$顺序计算，LU中$l_{i,i}=1$可省除法。
 
-1. 把第$k$轮写成左乘$\bm M_k=\bm I-\bm\ell_k\bm e_k^\top$，由$\bm e_k^\top\bm\ell_k=0$验证$\bm M_k^{-1}=\bm I+\bm\ell_k\bm e_k^\top$；不交换时由$\bm M_{d-1}\cdots\bm M_1\bm A=\bm U$及交叉项$\bm e_j^\top\bm\ell_k=0$（$j<k$）消失，得到$\bm L=\bm I+\sum_k\bm\ell_k\bm e_k^\top$，说明乘子按位置填入即可。
-2. 有行交换时，利用$\bm P_k\bm e_j=\bm e_j$（$j<k$）推出$\bm P_k\bm M_j=(\bm I-(\bm P_k\bm\ell_j)\bm e_j^\top)\bm P_k$，把置换逐个移到右侧得$\bm P\bm A=\bm L\bm U$；由此导出实现规则：后续交换两行时，$\bm L$已完成的前$k-1$列必须同时交换这两行，否则乘子不再对应原方程。
+###### paragraph：回代：求解$\bm U\bm x=\bm y$
 
-###### paragraph：前代与回代
+1. 由$\bm U$非奇异知对角元非零，逐行列出方程组；由最后一个方程得$x_d$，倒数第二个方程移项得$x_{d-1}$，一般第$i$个方程得回代公式$x_i=(y_i-\sum_{j>i}u_{i,j}x_j)/u_{i,i}$，按$i=d,\ldots,1$顺序计算。
 
-1. 令$\bm c=\bm P\bm b$、$\bm y=\bm U\bm x$，把方程拆成$\bm L\bm y=\bm c$与$\bm U\bm x=\bm y$；从第一行起逐个求解，给出前代公式$y_i=(c_i-\sum_{j<i}l_{i,j}y_j)/l_{i,i}$，说明右侧只用已算分量，LU中$l_{i,i}=1$可省除法。
-2. 上三角方程从最后一行起给出回代公式$x_i=(y_i-\sum_{j>i}u_{i,j}x_j)/u_{i,i}$；结合图说明前代自上而下、回代自下而上的依赖方向，后面各节直接调用二者，换右端只需重做两次代入。
+2. 结合图说明前代自上而下、回代自下而上的依赖方向，后面各节直接调用二者，换右端只需重做两次代入。
+
 3. 图：四阶下三角与上三角方程中计算$y_3$与$x_2$时所用元素与已算分量，标出除数与计算方向。
 
 #### 12.2.2 算法实现
 
-1. 说明输入$\bm A,\bm b$与主元策略，固定使用部分选主元（取绝对值最大者，平局取行号最小者）以便复算，算法分为分解、前代、回代三步。
+1. 说明输入$\bm A,\bm b$与部分选主元规则（取绝对值最大者，平局取行号最小者），并取$\bm A=\left[\begin{smallmatrix}1&3&4\\2&2&4\\1&2&5\end{smallmatrix}\right]$、$\bm b=(2,4,4)^\top$在每一步演示；第1—4步得分解，第5—8步求解。
 
-###### paragraph：LU分解
+2. 第1步初始化$\bm W=\bm A$、$\bm L=\bm P=\bm I$，对$k=1,\ldots,d-1$执行第2、3步。
 
-1. 初始化$\bm W=\bm A$、$\bm L=\bm P=\bm I$，第$k$轮找使$|w_{r,k}|$最大的行并交换$\bm W$、$\bm P$及$\bm L$已存乘子的两行；主元为零时停止并报告非奇异前提不成立，引用定理说明非奇异时不会发生。
-2. 对$i>k$计算乘子并更新尾部、令被消元素为零，强调使用工作矩阵当前值；完成后取$\bm U=\bm W$，并以图示意乘子按位置填入$\bm L$。
-3. 图：三阶矩阵消元的各阶段，标出主元、待消元素与消出的零，乘子收集为$\bm L$并满足$\bm L\bm U=\bm A$。
+3. 第2步选主元行$r=\arg\max_{k\leq i\leq d}|w_{i,k}|$，交换$\bm W$、$\bm P$及$\bm L$已存乘子的两行，主元为零时停止；例中$k=1$时$r=2$，写出交换后的$\bm W$与$\bm P$。
 
-###### paragraph：前代与回代
+4. 第3步由$w_{i,k}-l_{i,k}w_{k,k}=0$得乘子$l_{i,k}=w_{i,k}/w_{k,k}$与尾块更新$w_{i,j}\leftarrow w_{i,j}-l_{i,k}w_{k,j}$，乘子存入$\bm L$，说明只改变尾块、使用当前值；例中$k=1$得乘子$\tfrac12,\tfrac12$与更新后的两行，$k=2$无需交换、乘子$\tfrac12$，得上三角$\bm W$；引用图示意乘子按位置填入$\bm L$。
 
-1. 计算$\bm c=\bm P\bm b$，依次前代、回代并输出$\bm x$；说明浮点实现还要报告缩放残差$\lVert\bm b-\bm A\bm x\rVert/(\lVert\bm A\rVert\lVert\bm x\rVert+\lVert\bm b\rVert)$，其含义见第16章。
-2. 示例（部分选主元LU的三步计算）：$\bm A=\left[\begin{smallmatrix}1&3&4\\2&2&4\\1&2&5\end{smallmatrix}\right]$、$\bm b=(2,4,4)^\top$，首轮交换前两行得乘子$\tfrac12,\tfrac12$，次轮无需交换得乘子$\tfrac12$，写出$\bm P,\bm L,\bm U$；前代得$\bm y=(4,0,2)^\top$，回代得$\bm x=(1,-1,1)^\top$并代回核验。
-3. 指出上例只在首轮换行，引出检查“已存乘子随行交换”规则的第二个例子。
-4. 示例（第二轮换行时交换已存乘子）：$\bm A=\left[\begin{smallmatrix}0&2&1\\1&1&0\\2&0&1\end{smallmatrix}\right]$、$\bm b=(3,2,3)^\top$；首轮把第三行换到首行，乘子$\tfrac12$与$0$，后两行变为$(0,1,-\tfrac12)$与$(0,2,1)$。
-5. 次轮交换后两行并同时交换已存乘子，再以乘子$\tfrac12$消元得$\bm L$与$\bm U=\left[\begin{smallmatrix}2&0&1\\0&2&1\\0&0&-1\end{smallmatrix}\right]$；逐行核对$\bm L\bm U=\bm P\bm A$，并说明若忘记交换乘子，乘出的第二行$(1,2,\tfrac32)$不是$\bm P\bm A$的任一行。
-6. 右端经两次交换为$(3,3,2)^\top$，前代得$\bm y=(3,3,-1)^\top$，回代得$\bm x=(1,1,1)^\top$，代回原方程核验。
+5. 第4步取$\bm U=\bm W$，写出例中的$\bm L,\bm U$并验证$\bm L\bm U=\bm P\bm A$。
+
+6. 第5步重排右端$\bm c=\bm P\bm b$，例中$\bm c=(4,2,4)^\top$。
+
+7. 第6步根据前代公式（$l_{i,i}=1$）得$y_i=c_i-\sum_{j<i}l_{i,j}y_j$，例中逐个算出$\bm y=(4,0,2)^\top$。
+
+8. 第7步根据回代公式得$x_i=(y_i-\sum_{j>i}u_{i,j}x_j)/u_{i,i}$，例中逐个算出$\bm x=(1,-1,1)^\top$。
+
+9. 第8步输出并检验，说明浮点实现报告缩放残差（含义见第16章），例中代回残差为零；指出第1—4步只依赖$\bm A$，换右端只重复第5—8步。
+
+10. 图：三阶矩阵消元的各阶段，标出主元、待消元素与消出的零，乘子收集为$\bm L$并满足$\bm L\bm U=\bm A$。
+
+11. 指出上面的演示只在首轮换行，引出检查第2步“已存乘子随行交换”规则的第二个例子。
+
+12. 示例（第二轮换行时交换已存乘子）：$\bm A=\left[\begin{smallmatrix}0&2&1\\1&1&0\\2&0&1\end{smallmatrix}\right]$、$\bm b=(3,2,3)^\top$；首轮把第三行换到首行，乘子$\tfrac12$与$0$，后两行变为$(0,1,-\tfrac12)$与$(0,2,1)$。
+
+13. 次轮交换后两行并同时交换已存乘子，再以乘子$\tfrac12$消元得$\bm L$与$\bm U=\left[\begin{smallmatrix}2&0&1\\0&2&1\\0&0&-1\end{smallmatrix}\right]$；逐行核对$\bm L\bm U=\bm P\bm A$，并说明若忘记交换乘子，乘出的第二行$(1,2,\tfrac32)$不是$\bm P\bm A$的任一行。
+
+14. 右端经两次交换为$(3,3,2)^\top$，前代得$\bm y=(3,3,-1)^\top$，回代得$\bm x=(1,1,1)^\top$，代回原方程核验。
 
 #### 12.2.3 算法分析
+
+###### paragraph：乘子与置换的拼合
+
+1. 说明第3步的乘子为何恰好组成$\bm L$：把第$k$轮写成左乘$\bm M_k=\bm I-\bm\ell_k\bm e_k^\top$，由$\bm e_k^\top\bm\ell_k=0$验证$\bm M_k^{-1}=\bm I+\bm\ell_k\bm e_k^\top$；不交换时交叉项消失，得到$\bm L=\bm I+\sum_k\bm\ell_k\bm e_k^\top$。
+
+2. 有行交换时，利用$\bm P_k\bm e_j=\bm e_j$（$j<k$）推出$\bm P_k\bm M_j=(\bm I-(\bm P_k\bm\ell_j)\bm e_j^\top)\bm P_k$，把置换逐个移到右侧得$\bm P\bm A=\bm L\bm U$，并由此解释第2步交换已存乘子的规则。
 
 ###### paragraph：正确性
 
