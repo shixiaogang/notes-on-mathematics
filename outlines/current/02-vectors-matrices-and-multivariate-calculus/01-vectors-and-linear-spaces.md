@@ -1168,9 +1168,15 @@
 
 ##### 2.3.4.2 相抵的性质
 
-1. 定理`thm:ls-equivalence-invariants`陈述相抵是等价关系、零空间与列空间分别被$\bm P^{-1}$与$\bm Q^{-1}$搬运、秩与零度不变（式`eq:ls-equivalence-invariants`），证明逐条给出。
+1. 说明相抵矩阵记录同一映射，性质不随基改变，下面逐条给出。
 
-2. 说明等价关系三条对应不换基、换回原基与连续换基，并说明幂、迹因$\bm B$一般非方阵而不在讨论之列。
+2. 定理`thm:ls-equivalence-relation`证明相抵是等价关系，三条对应不换基、换回原基与连续换基。
+
+3. 定理`thm:ls-equivalence-subspaces`证明零空间与列空间分别被$\bm P^{-1}$与$\bm Q^{-1}$搬运。
+
+4. 定理`thm:ls-equivalence-invariants`由维数不变得出秩与零度不变（式`eq:ls-equivalence-invariants`）。
+
+5. 说明幂、迹因$\bm B$一般非方阵而不在讨论之列。
 
 ##### 2.3.4.3 相抵的判据
 
@@ -1204,13 +1210,19 @@
 
 ##### 2.3.5.2 相似的性质
 
-1. 说明相似继承相抵不变量，且算子可反复作用而得到更多不变量。
+1. 说明相似继承相抵不变量，且算子可反复作用而得到更多不变量，设定$\bm B=\bm P^{-1}\bm A\bm P$。
 
-2. 定理`thm:ls-similarity-invariants`陈述等价关系、秩与零度不变（式`eq:ls-similarity-invariants`）、乘积与幂和换基相容（式`eq:ls-similarity-product`）、各$\bm A-c\bm I$相似且秩不变（式`eq:ls-similarity-shifted-rank`）、行列式与迹不变，证明逐条给出。
+2. 定理`thm:ls-similarity-relation`证明相似是等价关系。
 
-3. 解读各条：反复作用记录同一过程，每个$c$给出一个不变量，可以谈论算子的行列式与迹，并以示例`ex:ls-similarity-diagonal`核对。
+3. 定理`thm:ls-similarity-invariants`由相似必相抵得秩与零度不变（式`eq:ls-similarity-invariants`）。
 
-4. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
+4. 定理`thm:ls-similarity-powers`证明乘积与幂和换基相容（式`eq:ls-similarity-product`），说明反复作用记录同一过程。
+
+5. 定理`thm:ls-similarity-shifted-rank`证明各$\bm A-c\bm I$相似且秩不变（式`eq:ls-similarity-shifted-rank`），每个$c$给出一个不变量。
+
+6. 定理`thm:ls-similarity-det-trace`由行列式乘法性与迹的循环性证明二者不变，说明可以谈论算子的行列式与迹，并以示例`ex:ls-similarity-diagonal`核对。
+
+7. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
 
 ##### 2.3.5.3 相似的判据
 
