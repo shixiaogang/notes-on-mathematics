@@ -767,7 +767,7 @@
 
 2. 按误差位置把问题分成两类：固定矩阵、输入带误差；矩阵本身带误差。
 
-3. 说明两节分工：9.1节由精确增量与最坏方向得到绝对、相对与矩阵条件数；9.2节给出特征值与奇异值的区间、由谱隙控制的子空间偏转，以及一般方阵对特征基条件的依赖。
+3. 说明各节分工：9.1节由精确增量与最坏方向得到绝对、相对与矩阵条件数；9.2、9.3节给出对称矩阵特征值的区间与由谱隙控制的特征子空间偏转；9.4、9.5节说明一般方阵的特征值取决于特征基条件、特征方向偏转还受非正规程度影响；9.6、9.7节借对称增广给出奇异值区间与奇异子空间的间隙界。
 
 4. 交代依赖（谱定理、Schur形、SVD读数），强调结论都是有限扰动界、不需要微分。
 
@@ -839,21 +839,19 @@
 
 12. 指出方程解的完整误差界见第~`sec:ls-numerical-sensitivity`节，求逆的一阶响应见第~`sec:multivariable-inverse-perturbation`节；下一节改变矩阵本身，各输出另有敏感性度量。
 
-### 9.2 谱与奇异值的扰动
+### 9.2 对称矩阵特征值的扰动
 
 1. 从矩阵本身也来自数据进入，提出在预算$\lVert\bm E\rVert_2\leq\varepsilon$下哪些谱结论可靠。
 
-2. 说明三种输出各需相应的界，并给出本节顺序。
+2. 说明谱值、子空间方向与秩亏是不同的输出，给出9.2—9.7节按对称矩阵、一般方阵、任意矩阵的奇异值分组的顺序。
 
 3. 强调都是有限变化界，一阶响应留给第22章（第~`sec:multivariable-eigenvalue-differential`节与第~`sec:multivariable-eigenvector-differential`节）。
 
-#### 9.2.1 对称矩阵特征值的扰动
+4. 设定对称的$\bm S$与$\bm E$、按降序配对比较，目标是每个特征值的区间与正负性。
 
-1. 设定对称的$\bm S$与$\bm E$、按降序配对比较，目标是每个特征值的区间与正负性。
+5. 用图`fig:ls-perturbation-ellipse`说明半轴对应特征值、主轴对应特征方向，本节先处理前者。
 
-2. 用图`fig:ls-perturbation-ellipse`说明半轴对应特征值、主轴对应特征方向，本小节先处理前者。
-
-###### paragraph：有序特征值的比较
+#### 9.2.1 有序特征值的比较
 
 1. 由Cauchy--Schwarz得同一单位向量上二次型值相差不超过$\lVert\bm E\rVert_2$，指出难点是两个矩阵的特征方向不同。
 
@@ -867,7 +865,7 @@
 
 6. 说明证明只用谱分解、维数公式与同方向比较，没有求二次型的极值，也不要求特征值分开。
 
-###### paragraph：最小最大原理
+#### 9.2.2 最小最大原理
 
 1. 说明同一论证给出不依赖特征向量的刻画。
 
@@ -879,7 +877,7 @@
 
 5. 称其为最小最大原理，说明Weyl界也可由它推出；$k=1,d$时化为单位球面上的极值，第17章称$\bm x^\top\bm S\bm x/\bm x^\top\bm x$为Rayleigh商并研究它；与迹极值（刻画前$k$个特征值之和）区分。
 
-###### paragraph：谱值区间与正定性保证
+#### 9.2.3 谱值区间与正定性保证
 
 1. 读出误差区间$[\lambda_k(\bm S)-\varepsilon,\lambda_k(\bm S)+\varepsilon]$，适用于重特征值，但它是绝对误差界。
 
@@ -891,49 +889,11 @@
 
 5. 指出第~`sec:multivariable-local-condition-number`节再用该例，第~`sec:multivariable-eigenvalue-differential`节研究简单特征值分支的一阶响应。
 
-#### 9.2.2 奇异值的扰动与秩判断
-
-1. 说明秩、可逆性与最佳低秩误差由奇异值决定，本小节把区间移到奇异值上。
-
-###### paragraph：奇异值的误差区间
-
-1. 指出长方矩阵没有特征值，引入对称增广矩阵$\bm H(\bm A)$。
-
-2. 陈述引理`lem:ls-symmetric-augmentation-spectrum`，证明由完整SVD构造$\bm w_i^\pm$得特征值$\pm\sigma_i$与$|m-n|$个零，验证构成标准正交特征基。
-
-3. 续证$\lVert\bm H(\bm A)\rVert_2=\lVert\bm A\rVert_2$。
-
-4. 陈述并证明奇异值的Weyl界`thm:ls-weyl-singular-value`（式`eq:matrix-analysis-singular-value-perturbation`）：对增广矩阵用Weyl界。
-
-5. 写出真实奇异值所在的非负区间。
-
-6. 由第17章将证明的最小谱范数距离$\sigma_{k+1}$（定理`thm:matrix-analysis-best-low-rank`）得最优低秩误差的移动不超过$\varepsilon$，并提醒取得它的方向是否稳定留到下一小节。
-
-###### paragraph：秩保证与可逆性的边界
-
-1. 说明区间不含零给出秩的下界，陈述并证明定理`thm:ls-singular-value-rank-guarantee`。
-
-2. 说明反方向不成立：区间含零时既不能排除也不能断言秩亏。
-
-3. 区分精确秩与有效秩：$\operatorname{diag}(1,0)+t\bm e_2\bm e_2^\top$说明精确秩对任意小扰动跳变，可靠的是大于$\varepsilon$的奇异值个数；按阈值确定数值秩留到第~`sec:ls-pseudoinverse-rank-change`节。
-
-4. 提出使可逆矩阵奇异的最小扰动问题，陈述定理`thm:ls-distance-to-singularity`。
-
-5. 说明证明分两步。
-
-6. 下界：$\lVert\bm E\rVert_2<\sigma_n$时由最小奇异值下界与三角不等式得零空间平凡；可达：$\bm E_*=-\sigma_n\bm u_n\bm v_n^\top$；相对距离$1/\kappa_2$；证明后指出它是最佳低秩逼近$k=n-1$的特例，直接证明只用最小奇异值下界。
-
-7. 给出条件数的另一种解释，限定为允许任意谱范数扰动，结构化扰动只得下界；以$\bm E=\bm A$说明超过$\sigma_n$的扰动不一定使矩阵奇异。
-
-8. 示例`ex:ls-diagonal-distance-to-singularity`取$\operatorname{diag}(1,s)$核对可逆性边界。
-
-9. 指出离奇异近不代表第一奇异方向不稳定，方向稳定性由间隙$1-s$决定。
-
-#### 9.2.3 特征子空间的扰动
+### 9.3 对称矩阵特征子空间的扰动
 
 1. 指出特征值误差小时方向仍可能变化很大，先建立子空间距离，再检查谱隙。
 
-###### paragraph：子空间的距离
+#### 9.3.1 子空间的距离
 
 1. 说明比较对象应是子空间本身，从两条直线的夹角与投影残差$\sin\theta$进入（图`fig:ls-principal-angles-subspaces`）。
 
@@ -957,7 +917,7 @@
 
 11. 续证下界：取$\bm X$的第一右奇异向量构造$\bm z=\bm Q\bm a$。
 
-###### paragraph：谱隙控制的偏转界
+#### 9.3.2 谱隙控制的偏转界
 
 1. 引入原谱隙$\delta$，在$\varepsilon<\delta/2$下由Weyl界证明截断处仍分开、两子空间唯一。
 
@@ -973,7 +933,7 @@
 
 7. 指出证明只用单侧谱分离，目标组位于谱中间时须另作处理。
 
-8. 把交叉间隔换成事先可检查的$\varepsilon/(\delta-\varepsilon)\leq2\varepsilon/\delta$，说明谱隙在分母上。
+8. 把交叉间隔换成事先可检查的$\varepsilon/(\delta-\varepsilon)\leq2\varepsilon/\delta$，并记为式`eq:ls-gap-subspace-budget`，说明谱隙在分母上。
 
 9. 示例`ex:ls-gap-direction-rotation`取$\operatorname{diag}(1+\delta,1)$与交叉扰动，精确求出$\tan2\theta=2t/\delta$。
 
@@ -981,41 +941,135 @@
 
 11. 把精确转角与界比较，$t\ll\delta$时两端约为$t/\delta$；图`fig:matrix-analysis-gap-direction`画出增量与转角随谱隙的变化。
 
-###### paragraph：重根、奇异子空间与低秩近似
+#### 9.3.3 重特征值与子空间内部的基
 
 1. 说明谱隙只需存在于目标组与组外之间：$\operatorname{diag}(2,2,0)$的前二维子空间稳定。
 
 2. 但平面内单个特征向量不稳定，子空间内部基的变化与子空间的变化须区分。
 
-3. 借对称增广把奇异子空间化为特征子空间，说明要求奇异值间隙$\delta_\sigma>0$并保证$\sigma_k>0$的原因。
+3. 指出对称矩阵所选特征子空间的稳定性只取决于目标组与组外的间隙，转入一般方阵。
 
-4. 写出增广矩阵前$k$个特征子空间的投影$\bm P_{\bm H}$的分块形式。
-
-5. 在$\varepsilon<\delta_\sigma/2$下得左、右奇异子空间投影之差不超过$4\varepsilon/\delta_\sigma$。
-
-6. 对照最优误差$\sigma_{k+1}$总是稳定而所用方向只在有间隙时稳定，指出第~`sec:ls-truncated-svd-ridge`节选截断位置时两者都要看。
-
-#### 9.2.4 一般方阵的谱敏感性
+### 9.4 一般方阵特征值的扰动
 
 1. 说明对称结构使特征值可排序并由二次型在特征子空间上刻画，一般方阵没有这些性质，改问扰动后特征值离原谱多远，约定复欧氏范数。
 
-2. 陈述并证明Bauer--Fike定理`thm:ls-bauer-fike`。
+#### 9.4.1 Bauer--Fike界
 
-3. 区分$\kappa_2(\bm V)$与$\kappa_2(\bm A)$：$\operatorname{diag}(1,s)$的特征值不敏感而$\kappa_2(\bm A)$可很大。
+1. 陈述并证明Bauer--Fike定理`thm:ls-bauer-fike`。
 
-4. 反过来，$\left[\begin{smallmatrix}1&1\\0&1+\eta\end{smallmatrix}\right]$趋于$\bm A_0$时$\kappa_2(\bm A)$有界、求逆不敏感。
+2. 区分$\kappa_2(\bm V)$与$\kappa_2(\bm A)$：$\operatorname{diag}(1,s)$的特征值不敏感而$\kappa_2(\bm A)$可很大。
 
-5. 但特征向量趋于平行，$\kappa_2(\bm V)\geq1/\eta$，界变宽；非正交特征基是敏感的来源，对称时与Weyl界同量级。
+#### 9.4.2 特征基的条件
 
-6. 列出使用这个界的三点注意。
+1. 指出特征基条件数与矩阵条件数可以相差很远。
 
-7. 反例`ex:ls-jordan-eigenvalue-sensitivity`：$\left[\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right]$加$t$后特征值移动$\sqrt t$，不存在比例常数，$t<0$时实特征值消失。
+2. 反过来，$\left[\begin{smallmatrix}1&1\\0&1+\eta\end{smallmatrix}\right]$趋于$\bm A_0$时$\kappa_2(\bm A)$有界、求逆不敏感。
 
-8. 说明缺少可对角化条件时特征值变化的量级可与扰动不同，有限变化界须连同结构与分离条件使用。
+3. 但特征向量趋于平行，$\kappa_2(\bm V)\geq1/\eta$，界变宽；非正交特征基是敏感的来源，对称时与Weyl界同量级。
 
-9. 节末综合三类结论，并把反复作用交给第10章。
+4. 列出使用这个界的三点注意。
 
-### 9.3 本章小结
+#### 9.4.3 不可对角化的情形
+
+1. 反例`ex:ls-jordan-eigenvalue-sensitivity`：$\left[\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right]$加$t$后特征值移动$\sqrt t$，不存在比例常数，$t<0$时实特征值消失。
+
+2. 说明缺少可对角化条件时特征值变化的量级可与扰动不同，有限变化界须连同结构与分离条件使用。
+
+3. 以特征方向是否同样受影响引出下一节。
+
+### 9.5 一般方阵特征子空间的扰动
+
+1. 说明对称矩阵的偏转只由谱隙控制，一般方阵特征向量不正交，所选方向的偏转还取决于其余部分的非正规程度。
+
+2. 约定只讨论实特征值与实特征向量。
+
+#### 9.5.1 不变子空间的分块形式
+
+1. 取$k$维不变子空间的标准正交基并补成正交矩阵，由$\bm Q_2^\top\bm A\bm Q_1=\bm0$得分块上三角形，$\bm A_{22}$含其余特征值。
+
+2. 对比对称情形$\bm A_{12}=\bm0$、$\bm A_{22}$对称，一般情形$\bm A_{22}$不必正规。
+
+3. 写出向量与不变子空间的夹角$\sin\theta=\lVert\bm Q_2^\top\bm w\rVert_2/\lVert\bm w\rVert_2$，$k=1$时即主夹角。
+
+#### 9.5.2 特征方向的偏转界
+
+1. 陈述并证明定理`thm:ls-invariant-subspace-deflection`：由$(\bm A_{22}-\mu\bm I)\bm Q_2^\top\bm w=-\bm Q_2^\top\bm E\bm w$得$\sin\theta=\lVert(\bm A_{22}-\mu\bm I)^{-1}\bm Q_2^\top\bm E\bm w\rVert_2/\lVert\bm w\rVert_2\leq\lVert(\bm A_{22}-\mu\bm I)^{-1}\rVert_2\lVert\bm E\rVert_2$。
+
+2. 说明界不要求可对角化或特征值次序，关键是$\lVert(\bm A_{22}-\mu\bm I)^{-1}\rVert_2$的大小。
+
+3. 对称情形化为扰动与$\mu$到组外特征值距离之比，对应交叉间隔$\gamma$。
+
+4. $\bm A_{22}$可对角化时多出因子$\kappa_2(\bm W)$，与Bauer--Fike同源；接近不可对角化时可远大于间隔的倒数。
+
+#### 9.5.3 非正规性放大偏转
+
+1. 示例`ex:ls-nonnormal-eigenvector-deflection`取含$\left[\begin{smallmatrix}1&c\\0&1\end{smallmatrix}\right]$的三阶矩阵与扰动$t\bm e_3\bm e_1^\top$：特征值$0$不动、间隔为$1$，特征方向偏转约$t\sqrt{1+c^2}$，并与定理的等式核对。
+
+2. 总结一般方阵须同时检查非正规程度，转入借对称增广处理的奇异值与奇异子空间。
+
+### 9.6 一般矩阵奇异值的扰动
+
+1. 说明秩、可逆性与最佳低秩误差由奇异值决定，本节把区间移到奇异值上。
+
+#### 9.6.1 奇异值的误差区间
+
+1. 指出长方矩阵没有特征值，引入对称增广矩阵$\bm H(\bm A)$。
+
+2. 陈述引理`lem:ls-symmetric-augmentation-spectrum`，证明由完整SVD构造$\bm w_i^\pm$得特征值$\pm\sigma_i$与$|m-n|$个零，验证构成标准正交特征基。
+
+3. 续证$\lVert\bm H(\bm A)\rVert_2=\lVert\bm A\rVert_2$。
+
+4. 陈述并证明奇异值的Weyl界`thm:ls-weyl-singular-value`（式`eq:matrix-analysis-singular-value-perturbation`）：对增广矩阵用Weyl界。
+
+5. 写出真实奇异值所在的非负区间。
+
+6. 由第17章将证明的最小谱范数距离$\sigma_{k+1}$（定理`thm:matrix-analysis-best-low-rank`）得最优低秩误差的移动不超过$\varepsilon$，并提醒取得它的方向是否稳定留到下一小节。
+
+#### 9.6.2 秩保证
+
+1. 说明区间不含零给出秩的下界，陈述并证明定理`thm:ls-singular-value-rank-guarantee`。
+
+2. 说明反方向不成立：区间含零时既不能排除也不能断言秩亏。
+
+3. 区分精确秩与有效秩：$\operatorname{diag}(1,0)+t\bm e_2\bm e_2^\top$说明精确秩对任意小扰动跳变，可靠的是大于$\varepsilon$的奇异值个数；按阈值确定数值秩留到第~`sec:ls-pseudoinverse-rank-change`节。
+
+#### 9.6.3 到奇异矩阵的距离
+
+1. 提出使可逆矩阵奇异的最小扰动问题，陈述定理`thm:ls-distance-to-singularity`。
+
+2. 说明证明分两步。
+
+3. 下界：$\lVert\bm E\rVert_2<\sigma_n$时由最小奇异值下界与三角不等式得零空间平凡；可达：$\bm E_*=-\sigma_n\bm u_n\bm v_n^\top$；相对距离$1/\kappa_2$；证明后指出它是最佳低秩逼近$k=n-1$的特例，直接证明只用最小奇异值下界。
+
+4. 给出条件数的另一种解释，限定为允许任意谱范数扰动，结构化扰动只得下界；以$\bm E=\bm A$说明超过$\sigma_n$的扰动不一定使矩阵奇异。
+
+5. 示例`ex:ls-diagonal-distance-to-singularity`取$\operatorname{diag}(1,s)$核对可逆性边界。
+
+6. 指出离奇异近不代表第一奇异方向不稳定，方向稳定性由间隙$1-s$决定。
+
+### 9.7 一般矩阵奇异子空间的扰动
+
+1. 说明奇异值总是稳定而奇异子空间可能转动，本节借对称增广移植谱隙界并对比最优误差与方向。
+
+#### 9.7.1 截断处的奇异值间隙
+
+1. 借对称增广把奇异子空间化为特征子空间，说明要求奇异值间隙$\delta_\sigma>0$并保证$\sigma_k>0$的原因。
+
+2. 写出增广矩阵前$k$个特征子空间的投影$\bm P_{\bm H}$的分块形式。
+
+#### 9.7.2 由增广矩阵读出的偏转界
+
+1. 陈述并证明定理`thm:ls-singular-subspace-gap`：对增广矩阵用式`eq:ls-gap-subspace-budget`，取投影之差的对角块，得左、右奇异子空间投影之差不超过$2\varepsilon/(\delta_\sigma-\varepsilon)\leq4\varepsilon/\delta_\sigma$。
+
+2. 以$\operatorname{diag}(1,s)$说明第一奇异方向由间隙$1-s$控制而与最小奇异值无关，并联系半正定时与特征子空间的一致。
+
+#### 9.7.3 最优误差与最优方向
+
+1. 对照最优误差$\sigma_{k+1}$总是稳定而所用方向只在有间隙时稳定，指出第~`sec:ls-truncated-svd-ridge`节选截断位置时两者都要看。
+
+2. 节末综合9.2—9.7节的结论，并把反复作用交给第10章。
+
+### 9.8 本章小结
 
 1. 回应章首问题：先分清误差位置，再分清关心的输出。
 
@@ -1025,7 +1079,7 @@
 
 4. 归纳子空间偏转的谱隙界及重根、奇异子空间的情形。
 
-5. 归纳一般方阵的Bauer--Fike界与不可对角化时的不成比例变化。
+5. 归纳一般方阵的Bauer--Fike界、不可对角化时的不成比例变化，以及特征方向偏转受$\lVert(\bm A_{22}-\mu\bm I)^{-1}\rVert_2$控制。
 
 6. 总结判断可靠性须同时说明结构、分离条件与预算，一阶响应在第22章，并转入第10章。
 
