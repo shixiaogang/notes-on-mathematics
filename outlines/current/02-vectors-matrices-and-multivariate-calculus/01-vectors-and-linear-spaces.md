@@ -856,13 +856,19 @@
 
 ###### paragraph：线性无关
 
-1. 从同一对象有两组系数说明存在冗余，两组系数相减化为零向量的非平凡表示，据此定义线性无关与线性相关（式`eq:linear-algebra-independence-relation`）。
+1. 指出张成不管表示方法有几种，以$\bm u=(1,0)^\top$、$\bm v=(1,1)^\top$、$\bm w=(2,1)^\top$为例：目标$(3,2)^\top$既是$\bm u+2\bm v$又是$\bm v+\bm w$，原因是$\bm w=\bm u+\bm v$没有带来新方向。
 
-2. 说明线性相关时某个向量可由其余向量表示；在$\mathbb R^m$中线性无关即齐次方程只有零解，并预告Gram矩阵判据（第~`sec:ls-gram-orthogonality`节）。
+2. 两种写法相减得$\bm u+\bm v-\bm w=\bm0$，说明一般规律：表示不唯一与零向量有系数不全为零的表示互相推出，因此判断冗余只需看能否非平凡地组合出零向量。
 
-3. 示例`ex:ls-nearly-collinear-independence`先验证$\bm c_1,\bm q$线性无关，再得出$\varepsilon\neq0$时贯穿例两列线性无关、$\varepsilon=0$时相关。
+3. 给出线性无关与线性相关的定义（式`eq:linear-algebra-independence-relation`），并用“谁也不能被其余向量凑出来”作直观说明。
 
-4. 据此区分线性无关这一精确的是非判断与描述接近退化程度的“几乎同向”，后者要用夹角或Gram矩阵衡量（近共线，第~`sec:ls-inner-product-definition`节）。
+4. 双向论证：线性相关时取非零系数除开移项，某个向量是其余向量的组合（如$\bm w=\bm u+\bm v$）；反之移项得系数含$1$的零表示；故线性相关恰好意味着某个向量多余，删去不改变张成空间。
+
+5. 给出简单判断：含零向量的组必相关，两个向量相关当且仅当共线；在$\mathbb R^m$中线性无关即$\bm V\bm a=\bm0$只有零解，以上例的$2\times3$矩阵与非零解$(1,1,-1)^\top$核对。
+
+6. 示例`ex:ls-nearly-collinear-independence`说明近共线不能凭观感判断，先验证$\bm c_1,\bm q$线性无关，再得出$\varepsilon\neq0$时贯穿例两列线性无关、$\varepsilon=0$时相关。
+
+7. 据此区分线性无关这一只答“是”或“否”的判断与两列接近程度的描述，后者要用夹角等度量另行刻画。
 
 ###### paragraph：表示的存在与唯一
 
