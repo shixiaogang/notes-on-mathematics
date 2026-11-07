@@ -1108,63 +1108,87 @@
 
 #### 2.3.3 单射、满射与可逆性
 
-1. 把由输出唯一还原输入分成单射与满射两个条件。
+1. 把“每个输出都能唯一还原输入”拆成单射与满射两个要求，两者都成立即双射（可逆），并指出可用核与像检验。
 
-2. 证明单射等价于核为零、满射等价于像为全空间，并用秩零度定理换成维数条件。
+###### paragraph：单射与核
 
-3. 说明维数相等时单射、满射、双射等价；维数不同时不可能满射或不可能单射，故只有等维映射才可能可逆。
+由$T\bm x=T\bm y$等价于$\bm x-\bm y\in\ker T$，证明单射当且仅当核为零。
 
-4. 汇总方阵可逆、零空间为零、秩为$n$、列（行）线性无关的等价链，预告行列式判据（第~`sec:ls-determinant-invertibility`节）。
+###### paragraph：满射与像
 
-5. 据此不借行列式再证方阵单侧逆即逆（第~`sec:ls-square-one-sided-inverse`节），并证明方阵乘积可逆时两因子都可逆。
+说明满射即像为整个输出空间，并用秩零度定理把两条判据改写为$\operatorname{rank}T=\dim V$与$\operatorname{rank}T=\dim W$。
 
-6. 示例`ex:ls-kernel-invertibility`用核判断对角矩阵与$\left[\begin{smallmatrix}2&1\\0&3\end{smallmatrix}\right]$的可逆性。
+###### paragraph：维数与可逆性
+
+1. 由秩不超过两端维数的较小者，说明$\dim V<\dim W$不可能满射、$\dim V>\dim W$不可能单射，故只有等维映射才可能可逆，矩形矩阵满秩也只能是单射或满射之一。
+
+2. 说明维数相等时两个秩条件合一，单射、满射与可逆互相等价，只需检查其一。
+
+###### paragraph：方阵的可逆判据
+
+1. 汇总方阵可逆、零空间为零、秩为$n$、列（行）线性无关的等价链，并预告行列式判据（第~`sec:ls-determinant-invertibility`节）。
+
+2. 示例`ex:ls-kernel-invertibility`用核判断对角矩阵与$\left[\begin{smallmatrix}2&1\\0&3\end{smallmatrix}\right]$的可逆性，并按二阶公式写出后者的逆。
+
+3. 不借行列式推出第一个结论：方阵的单侧逆就是逆（第~`sec:ls-square-one-sided-inverse`节曾用行列式证明）。
+
+4. 推出第二个结论：方阵乘积可逆时两个因子都可逆。
 
 ###### paragraph：单侧逆
 
-1. 维数不同时构造单射的左逆（像上读回、补空间上任意规定）与满射的右逆（为输出基选原输入再延拓），说明它们一般不唯一。
+1. 维数不同时构造单射的左逆（像上读回、补空间上任意规定）与满射的右逆（为输出基选原像再延拓），说明它们一般不唯一。
 
-2. 证明矩阵有左逆当且仅当满列秩、有右逆当且仅当满行秩，以$(1,0)^\top$有无穷多个左逆为例，代表的选择留给第~`chap:linear-solution-selection`章。
+2. 证明矩阵有左逆当且仅当满列秩、有右逆当且仅当满行秩。
+
+3. 以$(1,0)^\top$有无穷多个左逆为例，代表的选择留给第~`chap:linear-solution-selection`章。
 
 #### 2.3.4 换基、矩阵等价与相似
 
-1. 类比坐标随基改变，说明映射的矩阵也随基改变，本小节写出这种变化并判断两个矩阵何时记录同一映射。
+1. 类比向量坐标随基改变，说明映射的矩阵也随基改变，本小节写出变化规律并判断两个矩阵是否记录同一映射。
 
-2. 说明先讨论两端各自换基的一般映射（相抵），再讨论两端同时换基的算子（相似）；约束减少自由度，相似需要更多不变量。
+2. 区分两端各自换基的一般映射（相抵）与两端同时换基的算子（相似），指出相似约束更多，需要更多不变量才能分类。
 
-3. 观察换基矩阵就是恒等映射在两组基下的矩阵，连续换基公式即复合公式的特例。
+3. 观察换基矩阵就是恒等映射在两组基下的矩阵，连续换基相乘即复合公式的特例。
 
 ##### 2.3.4.1 一般线性映射的换基与相抵
 
-1. 说明本小节求两对基下矩阵的关系，证明它刻画记录同一映射，并说明秩是判断相抵的唯一依据。
+1. 说明本小节求两对基下矩阵的关系，说明它刻画记录同一映射，并证明只需比较秩即可判断。
 
 ###### paragraph：换基过程
 
-1. 设定两端的新旧基与换基矩阵$\bm P,\bm Q$，说明绕道旧基分三步求新输出坐标。
+1. 设定两端的新旧基与换基矩阵$\bm P,\bm Q$，说明各列的含义。
 
-2. 逐步写出三步，逐列比较得$\bm B=\bm Q^{-1}\bm A\bm P$（式`eq:ls-equivalence-transform`），并用$T=\operatorname{id}_W\circ T\circ\operatorname{id}_V$与复合公式解释三个因子。
+2. 绕道旧基分三步，从新输入坐标求出新输出坐标。
+
+3. 取新输入基向量逐列比较，得$\bm B=\bm Q^{-1}\bm A\bm P$（式`eq:ls-equivalence-transform`），并用$T=\operatorname{id}_W\circ T\circ\operatorname{id}_V$与复合公式解释三个因子。
 
 ###### paragraph：相抵的定义
 
 1. 定义矩阵相抵`def:ls-matrix-equivalence`，说明$\bm Q,\bm P$可以是任意可逆矩阵。
 
-2. 由任一可逆矩阵都是换基矩阵证明反方向，得出同形矩阵相抵当且仅当记录同一映射，并把初等列、行变换对应为输入、输出基的更换。
+2. 由任一对可逆矩阵都对应一次换基，证明同形矩阵相抵当且仅当记录同一映射。
+
+3. 说明右乘$\bm P$、左乘$\bm Q^{-1}$分别对应更换输入基与输出基，初等列、行变换是其最简单的形式。
 
 ###### paragraph：相抵不变量
 
 1. 验证相抵是等价关系，三条性质分别对应不换基、换回原基与连续换基。
 
-2. 说明零空间在输入端、列空间在输出端被可逆矩阵搬运，得到秩与零度不变（式`eq:ls-equivalence-invariants`），并指出幂、迹等只对算子有意义的量不在讨论之列。
+2. 说明零空间在输入端、列空间在输出端被可逆矩阵搬运，得到秩与零度不变（式`eq:ls-equivalence-invariants`），并说明幂、迹等量因$\bm B$一般非方阵而不讨论。
 
 ###### paragraph：相抵的判定
 
-1. 提出秩相同的同形矩阵一定相抵，证明思路是化为只由秩决定的形状。
+1. 指出秩相同的同形矩阵一定相抵，证明思路是化为只由秩决定的形状。
 
-2. 取核的基扩充为输入基，证明新增的$r$个向量的像线性无关且张成像，再扩充为输出基，得到秩标准形（式`eq:ls-rank-normal-form`）。
+2. 输入端取核的基扩充为基，证明新增的$r$个向量的像线性无关且张成像。
 
-3. 示例`ex:ls-rank-normal-form-two-by-two`对二阶秩$1$矩阵具体算出$\bm P,\bm Q,\bm Q^{-1}$（并列于同一行公式）；图`fig:ls-equivalence-two-sided-bases-flow`说明只有两端各自选基才能同时做到这些。
+3. 输出端把这些像扩充为基，得到秩标准形（式`eq:ls-rank-normal-form`）。
 
-4. 证明相抵判据`thm:ls-equivalence-criterion`，说明秩是固定形状下相抵的完整不变量；化到标准形可用初等行变换配合初等列变换，数值消元算法留给第~`chap:direct-linear-solvers`章。
+4. 示例`ex:ls-rank-normal-form-two-by-two`对二阶秩$1$矩阵具体算出$\bm P,\bm Q,\bm Q^{-1}$；图`fig:ls-equivalence-two-sided-bases-flow`说明这些需要两端各自选基才能同时做到。
+
+5. 证明相抵判据`thm:ls-equivalence-criterion`，说明形状固定后秩是判断相抵的唯一依据。
+
+6. 指出化到标准形可交替使用初等行、列变换，数值消元算法留给第~`chap:direct-linear-solvers`章。
 
 ##### 2.3.4.2 线性算子的换基与相似
 
@@ -1172,33 +1196,37 @@
 
 ###### paragraph：换基过程
 
-1. 在三步推导中取$\bm Q=\bm P$，得到$\bm B=\bm P^{-1}\bm A\bm P$（式`eq:linear-algebra-similarity-change-basis`），即式`eq:ls-equivalence-transform`的特例。
+1. 设定新旧基与换基矩阵$\bm P$。
+
+2. 在三步推导中取$\bm Q=\bm P$，得到$\bm B=\bm P^{-1}\bm A\bm P$（式`eq:linear-algebra-similarity-change-basis`），即式`eq:ls-equivalence-transform`的特例。
 
 ###### paragraph：相似的定义
 
-1. 定义矩阵相似`def:ls-matrix-similarity`，证明相似矩阵正是同一算子在两组基下的记录。
+1. 定义矩阵相似`def:ls-matrix-similarity`，按相抵的同样论证说明相似矩阵正是同一算子在两组基下的记录。
 
 2. 说明相似只要求换基矩阵可逆，相似必相抵而反之不然（预告示例`ex:ls-equivalent-not-similar`）。
 
-3. 示例`ex:ls-similarity-diagonal`把$T(x_1,x_2)=(2x_1+x_2,3x_2)$换到基$(\bm e_1,\bm e_1+\bm e_2)$后化为$\operatorname{diag}(2,3)$；说明两个新基方向只被伸缩、不被转向；图`fig:ls-similarity-change-of-basis-flow`对比标准基下的斜切与新基下沿基方向的伸缩。
+3. 示例`ex:ls-similarity-diagonal`把$T(x_1,x_2)=(2x_1+x_2,3x_2)$换到基$(\bm e_1,\bm e_1+\bm e_2)$后化为$\operatorname{diag}(2,3)$；图`fig:ls-similarity-change-of-basis-flow`对比标准基下的斜切与新基下沿基方向的伸缩。
 
 ###### paragraph：相似不变量
 
-1. 验证相似是等价关系。
+1. 说明同一算子的性质不随基改变，验证相似是等价关系。
 
 2. 继承相抵不变量，得秩与零度不变（式`eq:ls-similarity-invariants`）。
 
-3. 由$\bm P\bm P^{-1}$相消得乘积与幂和换基相容（式`eq:ls-similarity-product`），进而各$\bm A-c\bm I$的秩不变（式`eq:ls-similarity-shifted-rank`）。
+3. 由$\bm P\bm P^{-1}$相消得乘积与幂和换基相容（式`eq:ls-similarity-product`）。
 
-4. 由行列式乘法性与迹的循环性证明行列式与迹不变，以示例`ex:ls-similarity-diagonal`核对，说明可以谈论算子的行列式与迹。
+4. 进而各$\bm A-c\bm I$相似、秩不变（式`eq:ls-similarity-shifted-rank`），每个$c$给出一个不变量。
 
-5. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
+5. 由行列式乘法性与迹的循环性证明行列式与迹不变，说明可以谈论算子的行列式与迹，并以示例`ex:ls-similarity-diagonal`核对。
+
+6. 预告特征值与特征多项式也是相似不变量（第~`sec:ls-eigen-similarity-invariance`节），并指出长度与夹角不是相似不变量。
 
 ###### paragraph：相似的判定
 
-1. 把相似改写为存在可逆$\bm P$满足$\bm A\bm P=\bm P\bm B$（式`eq:ls-similarity-equation`），强调非零但不可逆的解不是换基。
+1. 把相似改写为存在可逆$\bm P$满足$\bm A\bm P=\bm P\bm B$（式`eq:ls-similarity-equation`），强调非零但不可逆的解不构成换基。
 
-2. 说明不变量只给否定判据；示例`ex:ls-equivalent-not-similar`以$\bm I_2$与$\bm J$秩、行列式、迹相同而$c=1$时平移后的秩不同（且单位矩阵只与自身相似）说明相抵而不相似。
+2. 说明不变量只给否定判据，反之不成立；示例`ex:ls-equivalent-not-similar`以$\bm I_2$与$\bm J$秩、行列式、迹相同而$c=1$时移位后的秩不同（且单位矩阵只与自身相似）说明相抵而不相似。
 
 3. 总结“两端换基相同”的代价，指出完整分类需要Jordan标准形，本书不展开。
 
