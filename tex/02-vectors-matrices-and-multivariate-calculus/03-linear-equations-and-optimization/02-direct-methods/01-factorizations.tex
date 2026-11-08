@@ -27,7 +27,15 @@
  l_{d,1}y_1+l_{d,2}y_2+\cdots+l_{d,d}y_d&=c_d .
  \end{aligned}
 \]
-第一个方程只含$y_1$，得$y_1=c_1/l_{1,1}$。第二个方程中$y_1$已经求出，移项后得$y_2=(c_2-l_{2,1}y_1)/l_{2,2}$。一般地，第$i$个方程是
+第一个方程只含$y_1$，得
+\[
+ y_1=\frac{c_1}{l_{1,1}} .
+\]
+第二个方程中$y_1$已经求出，移项后得
+\[
+ y_2=\frac{c_2-l_{2,1}y_1}{l_{2,2}} .
+\]
+一般地，第$i$个方程是
 \[
  \sum_{j<i}l_{i,j}y_j+l_{i,i}y_i=c_i ,
 \]
@@ -48,7 +56,15 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
  u_{d,d}x_d&=y_d .
  \end{aligned}
 \]
-这次最后一个方程只含$x_d$，得$x_d=y_d/u_{d,d}$。倒数第二个方程中$x_d$已经求出，得$x_{d-1}=(y_{d-1}-u_{d-1,d}x_d)/u_{d-1,d-1}$。一般地，第$i$个方程是
+这次最后一个方程只含$x_d$，得
+\[
+ x_d=\frac{y_d}{u_{d,d}} .
+\]
+倒数第二个方程中$x_d$已经求出，得
+\[
+ x_{d-1}=\frac{y_{d-1}-u_{d-1,d}x_d}{u_{d-1,d-1}} .
+\]
+一般地，第$i$个方程是
 \[
  u_{i,i}x_i+\sum_{j>i}u_{i,j}x_j=y_i ,
 \]
@@ -75,12 +91,12 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 
 算法由三个模块组成，下面依次给出：LU分解由$\bm A$算出$\bm P\bm A=\bm L\bm U$，前代求出$\bm y$，回代求出$\bm x$。
 
-下面逐个写出各模块的步骤，并在每一步用
+下面逐个写出各模块的步骤，每一步都用以下数据演示该步的计算：
 \[
  \bm A=\begin{bmatrix}1&3&4\\2&2&4\\1&2&5\end{bmatrix},\qquad
- \bm b=\begin{bmatrix}2\\4\\4\end{bmatrix}
+ \bm b=\begin{bmatrix}2\\4\\4\end{bmatrix}.
 \]
-演示该步的计算。
+这个$\bm A$第一列的首元不是绝对值最大的元素，演示中会出现行交换。
 
 \subsubsection{LU分解}
 输入$\bm A$，输出$\bm P$、$\bm L$、$\bm U$。消元逐列进行，用$k$记当前处理的列。计算中维护三个矩阵：工作矩阵$\bm W$逐步化为上三角形状，$\bm L$收集乘子，$\bm P$记录行交换。下面每一步之后都给出例中这三个矩阵的当前值。
@@ -95,9 +111,10 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
  \]
 
  \item \textbf{选主元并换行。}在第$k$列的第$k$至$d$行中找出主元所在的行
- \[
+ \begin{equation}
   r=\operatorname*{arg\,max}_{k\leq i\leq d}|w_{i,k}| ,
- \]
+  \label{eq:ls-lu-partial-pivot}
+ \end{equation}
  交换$\bm W$的第$k,r$两行，并对$\bm P$作同样的行交换；$\bm L$前$k-1$列已经保存的乘子也交换这两行，使它们始终跟随所在的方程（理由见本节的算法分析）。
  
  若选出的主元为零，说明输入不满足非奇异的前提，停止并报告本算法不适用；$\bm A$非奇异时这种情况不会出现，理由见定理~\ref{thm:ls-lu-existence}。
@@ -110,10 +127,11 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
  \]
 
  \item \textbf{计算乘子并更新尾块。}对每个$i>k$，把第$i$行减去第$k$行的$l_{i,k}$倍，以消去$w_{i,k}$。新的第$k$个元素是$w_{i,k}-l_{i,k}w_{k,k}$，令它为零，得乘子；同一次行操作也作用于该行其余的元素：
- \[
+ \begin{equation}
   l_{i,k}=\frac{w_{i,k}}{w_{k,k}},\qquad
   w_{i,j}\leftarrow w_{i,j}-l_{i,k}w_{k,j}\quad(j=k+1,\ldots,d),
- \]
+  \label{eq:ls-lu-elimination-update}
+ \end{equation}
  再令$w_{i,k}=0$，并把$l_{i,k}$存入$\bm L$的$(i,k)$位置。
  
  前$k-1$列在第$k$行和第$i$行上都已经是零，减去后仍为零，所以这一步只改变右下角的$(d-k)$阶尾块；$\bm P$不变。计算时使用的都是$\bm W$的当前值，而不是最初的$a_{i,j}$。
@@ -188,12 +206,25 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 
 \subsection{算法分析}
 \paragraph{乘子与置换的拼合}
-先说明LU分解第3步存入的乘子为什么恰好组成$\bm L$，以及第2步为什么要交换已存乘子。第$k$轮全部消元可以写成左乘一个矩阵。令$\bm\ell_k=(0,\ldots,0,l_{k+1,k},\ldots,l_{d,k})^\top$，前$k$个分量为零，则第$k$轮相当于左乘$\bm M_k=\bm I_d-\bm\ell_k\bm e_k^\top$：它把第$k$行的$l_{i,k}$倍从第$i$行减去。因为$\bm e_k^\top\bm\ell_k=0$，有
+先说明LU分解第3步存入的乘子为什么恰好组成$\bm L$，以及第2步为什么要交换已存乘子。
+
+第$k$轮全部消元可以写成左乘一个矩阵。令$\bm\ell_k=(0,\ldots,0,l_{k+1,k},\ldots,l_{d,k})^\top$，前$k$个分量为零，则第$k$轮相当于左乘
+\[
+ \bm M_k=\bm I_d-\bm\ell_k\bm e_k^\top ,
+\]
+它把第$k$行的$l_{i,k}$倍从第$i$行减去。因为$\bm e_k^\top\bm\ell_k=0$，有
 \[
  (\bm I_d-\bm\ell_k\bm e_k^\top)(\bm I_d+\bm\ell_k\bm e_k^\top)
  =\bm I_d-\bm\ell_k(\bm e_k^\top\bm\ell_k)\bm e_k^\top=\bm I_d,
 \]
-即$\bm M_k^{-1}=\bm I_d+\bm\ell_k\bm e_k^\top$。不交换行时，$\bm M_{d-1}\cdots\bm M_1\bm A=\bm U$，于是$\bm A=\bm M_1^{-1}\cdots\bm M_{d-1}^{-1}\bm U$。对$j<k$还有$\bm e_j^\top\bm\ell_k=0$，展开乘积时所有交叉项都消失，得到
+即$\bm M_k^{-1}=\bm I_d+\bm\ell_k\bm e_k^\top$。
+
+不交换行时，$d-1$轮消元把$\bm A$化为$\bm U$，于是
+\[
+ \bm M_{d-1}\cdots\bm M_1\bm A=\bm U,\qquad
+ \bm A=\bm M_1^{-1}\cdots\bm M_{d-1}^{-1}\bm U .
+\]
+对$j<k$还有$\bm e_j^\top\bm\ell_k=0$，展开乘积时所有交叉项都消失，得到
 \[
  \bm M_1^{-1}\cdots\bm M_{d-1}^{-1}=\bm I_d+\sum_{k=1}^{d-1}\bm\ell_k\bm e_k^\top=\bm L,
 \]
@@ -219,16 +250,32 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 \begin{proof}
 （1）第$k$步开始时$\bm W=\bm M\bm A$，其中$\bm M$是此前各次行交换与消元矩阵的乘积，可逆；$\bm W$的前$k-1$列已是对角元非零的上三角形状。若第$k$列从第$k$行起全为零，$\bm W$的前$k$列就都落在$\operatorname{span}\{\bm e_1,\ldots,\bm e_{k-1}\}$中而线性相关，$\bm A=\bm M^{-1}\bm W$随之奇异，矛盾。选出的主元绝对值最大，故$|l_{i,k}|\leq1$。由本小节开头的推导，全部置换移到右侧后得到$\bm P\bm A=\bm L\bm U$。
 
-（2）若$\bm A=\bm L\bm U$，由三角形状，左上角$k$阶块满足$\bm A_k=\bm L_k\bm U_k$，故$\det\bm A_k=\prod_{i\leq k}u_{i,i}\neq0$。反之，设各$\det\bm A_k\neq0$，用归纳法说明不选主元时第$k$个主元非零：前$k-1$步只用了单位下三角的消元矩阵，$\bm W=\bm M\bm A$中$\bm M$单位下三角，于是$\bm W_k=\bm M_k\bm A_k$，$\det\bm W_k=\det\bm A_k\neq0$；而$\bm W_k$是上三角矩阵，前$k-1$个对角元非零，所以$w_{k,k}\neq0$。唯一性：若$\bm L_1\bm U_1=\bm L_2\bm U_2$，则$\bm L_2^{-1}\bm L_1=\bm U_2\bm U_1^{-1}$，左边单位下三角，右边上三角，只能都等于$\bm I_d$。
+（2）若$\bm A=\bm L\bm U$，由三角形状，左上角$k$阶块满足$\bm A_k=\bm L_k\bm U_k$，故
+\[
+ \det\bm A_k=\prod_{i\leq k}u_{i,i}\neq0 .
+\]
+
+反之，设各$\det\bm A_k\neq0$，用归纳法说明不选主元时第$k$个主元非零。前$k-1$步只用了单位下三角的消元矩阵，$\bm W=\bm M\bm A$中$\bm M$单位下三角，于是
+\[
+ \bm W_k=\bm M_k\bm A_k,\qquad \det\bm W_k=\det\bm A_k\neq0 .
+\]
+而$\bm W_k$是上三角矩阵，前$k-1$个对角元非零，所以$w_{k,k}\neq0$。
+
+唯一性：若$\bm L_1\bm U_1=\bm L_2\bm U_2$，则
+\[
+ \bm L_2^{-1}\bm L_1=\bm U_2\bm U_1^{-1},
+\]
+左边单位下三角，右边上三角，只能都等于$\bm I_d$。
 \end{proof}
 
 定理的第一部分说明前代与回代给出的正是原方程的解：行交换只重排方程，不改变解。第二部分中的条件不能仅由$\bm A$非奇异推出，例如$\left[\begin{smallmatrix}0&1\\1&1\end{smallmatrix}\right]$可逆，第一个主元却为零。
 
 \paragraph{主元增长与数值敏感度}
 精确算术中任何非零主元都可以用，选主元是为有限精度服务的。主元很小时乘子很大，尾块更新$w_{i,j}-l_{i,k}w_{k,j}$会产生远大于原始元素的数，原始元素的信息在舍入中被淹没。衡量这种现象的是\term{增长因子}
-\[
+\begin{equation}
  \rho=\frac{\max_{i,j,k}|w^{(k)}_{i,j}|}{\max_{i,j}|a_{i,j}|},
-\]
+ \label{eq:ls-lu-growth-factor}
+\end{equation}
 其中$w^{(k)}_{i,j}$是第$k$轮之后工作矩阵的元素。部分选主元使$|l_{i,k}|\leq1$，每轮元素的绝对值至多翻倍，所以$\rho\leq2^{d-1}$；这个上界可以达到，但在实际计算中极少出现，增长因子通常很小。LU的后向误差与$\rho$成正比，这一误差界及其解释见第~\ref{sec:ls-numerical-stability}节。
 
 \paragraph{计算代价}
@@ -276,9 +323,21 @@ $\bm U$非奇异，它的行列式是对角元之积，所以对角元都不为�
 \[
  l_{2,2}=\sqrt{a_{2,2}-l_{2,1}^2},\qquad l_{3,2}=\frac{a_{3,2}-l_{3,1}l_{2,1}}{l_{2,2}} .
 \]
-第三列只剩对角元，由最后一个等式得$l_{3,3}=\sqrt{a_{3,3}-l_{3,1}^2-l_{3,2}^2}$。开方时按正对角的约定取正根。
+第三列只剩对角元，由最后一个等式得
+\[
+ l_{3,3}=\sqrt{a_{3,3}-l_{3,1}^2-l_{3,2}^2} .
+\]
+开方时按正对角的约定取正根。
 
-一般地，在第$j$列先取$i=j$，把已完成列的贡献移到右侧，得$l_{j,j}^2=a_{j,j}-\sum_{k<j}l_{j,k}^2$；再对同列下方的$i>j$，把$a_{i,j}=\sum_{k<j}l_{i,k}l_{j,k}+l_{i,j}l_{j,j}$中已知的部分移项，除以刚算出的$l_{j,j}$。
+一般地，在第$j$列先取$i=j$，把已完成列的贡献移到右侧，得
+\[
+ l_{j,j}^2=a_{j,j}-\sum_{k<j}l_{j,k}^2 .
+\]
+再对同列下方的$i>j$，把等式
+\[
+ a_{i,j}=\sum_{k<j}l_{i,k}l_{j,k}+l_{i,j}l_{j,j}
+\]
+中已知的部分移项，除以刚算出的$l_{j,j}$。
 
 合起来，对$j=1,\ldots,d$逐列计算
 \begin{equation}
@@ -294,12 +353,12 @@ $j=1$时两个和式都是空和。对每一列，我们先算本列对角元，
 各列完成后，上述等式覆盖了下三角的全部位置，而$\bm A$与$\bm L\bm L^\top$都对称，上三角的等式自动成立。
 
 \subsection{算法实现}
-输入是实对称正定的$\bm A$与$\bm b$，输出是$\bm x$。算法由三个模块组成，下面依次给出：$\bm L\bm L^\top$分解由$\bm A$算出$\bm L$，前代求出$\bm y$，回代求出$\bm x$。每一步都用
+输入是实对称正定的$\bm A$与$\bm b$，输出是$\bm x$。算法由三个模块组成，下面依次给出：$\bm L\bm L^\top$分解由$\bm A$算出$\bm L$，前代求出$\bm y$，回代求出$\bm x$。每一步都用以下数据演示该步的计算：
 \[
  \bm A=\begin{bmatrix}4&2&2\\2&5&3\\2&3&6\end{bmatrix},\qquad
- \bm b=\begin{bmatrix}8\\10\\11\end{bmatrix}
+ \bm b=\begin{bmatrix}8\\10\\11\end{bmatrix}.
 \]
-演示该步的计算。
+这个$\bm A$对称正定，各步的开方量都是完全平方数，便于手算核对。
 
 \subsubsection{\texorpdfstring{$\bm L\bm L^\top$}{LLT}分解}
 输入$\bm A$，输出$\bm L$。对$j=1,\ldots,d$逐列按式~\eqref{eq:ls-cholesky-columns}计算：先算开方量$\delta_j=a_{j,j}-\sum_{k<j}l_{j,k}^2$，检查$\delta_j>0$后令$l_{j,j}=\sqrt{\delta_j}$，再对$i=j+1,\ldots,d$算出$l_{i,j}$；处理完第$d$列后结束。
@@ -381,7 +440,13 @@ $j=1$时两个和式都是空和。对每一列，我们先算本列对角元，
 设$\bm A\in\mathbb R^{d\times d}$对称。存在对角元为正的下三角矩阵$\bm L$使$\bm A=\bm L\bm L^\top$，当且仅当$\bm A\succ0$；此时$\bm L$唯一，并由式~\eqref{eq:ls-cholesky-columns}给出。
 \end{theorem}
 \begin{proof}
-必要性：$\bm L$的对角元为正，故可逆；对非零$\bm v$有$\bm v^\top\bm A\bm v=\lVert\bm L^\top\bm v\rVert_2^2>0$。充分性对阶数归纳。把$\bm A$按首行首列分块为$\left[\begin{smallmatrix}a_{1,1}&\bm a^\top\\\bm a&\bm A_{22}\end{smallmatrix}\right]$，正定性给出$a_{1,1}=\bm e_1^\top\bm A\bm e_1>0$，所以$l_{1,1}=\sqrt{a_{1,1}}$有定义，第一列其余元素为$\bm a/l_{1,1}$。对$\bm v=(v_1,\bm w^\top)^\top$关于首变量配方，
+必要性：$\bm L$的对角元为正，故可逆；对非零$\bm v$有$\bm v^\top\bm A\bm v=\lVert\bm L^\top\bm v\rVert_2^2>0$。
+
+充分性对阶数归纳。把$\bm A$按首行首列分块为
+\[
+ \bm A=\begin{bmatrix}a_{1,1}&\bm a^\top\\\bm a&\bm A_{22}\end{bmatrix},
+\]
+正定性给出$a_{1,1}=\bm e_1^\top\bm A\bm e_1>0$，所以$l_{1,1}=\sqrt{a_{1,1}}$有定义，第一列其余元素为$\bm a/l_{1,1}$。对$\bm v=(v_1,\bm w^\top)^\top$关于首变量配方，
 \[
 \begin{aligned}
  \bm v^\top\bm A\bm v
@@ -389,13 +454,17 @@ $j=1$时两个和式都是空和。对每一列，我们先算本列对角元，
  &\quad+\bm w^\top\Bigl(\bm A_{22}-\frac{\bm a\bm a^\top}{a_{1,1}}\Bigr)\bm w .
 \end{aligned}
 \]
-对任意非零$\bm w$取$v_1=-\bm a^\top\bm w/a_{1,1}$，左边为正，故剩余矩阵$\bm A_{22}-\bm a\bm a^\top/a_{1,1}$仍正定；后面各列的计算正是对它重复同样的步骤，由归纳假设每一步开方的数都为正。唯一性：对角元取正后，式~\eqref{eq:ls-cholesky-columns}逐个唯一地确定每个元素。
+对任意非零$\bm w$取$v_1=-\bm a^\top\bm w/a_{1,1}$，左边为正，故剩余矩阵$\bm A_{22}-\bm a\bm a^\top/a_{1,1}$仍正定；后面各列的计算正是对它重复同样的步骤，由归纳假设每一步开方的数都为正。
+
+唯一性：对角元取正后，式~\eqref{eq:ls-cholesky-columns}逐个唯一地确定每个元素。
 \end{proof}
 
 由$\bm A=\bm L\bm L^\top$，算出的$\bm x$满足$\bm A\bm x=\bm L(\bm L^\top\bm x)=\bm L\bm y=\bm b$。
 
 \paragraph{数值敏感度}
-$a_{j,j}=\sum_{k\leq j}l_{j,k}^2$给出$|l_{j,k}|\leq\sqrt{a_{j,j}}$，因子的元素不会增长，因此分解不选主元也是后向稳定的（第~\ref{sec:ls-numerical-stability}节）；解的误差仍由$\bm A$的条件数决定（第~\ref{sec:ls-matrix-condition-number}节）。还要区分数学上的正定与有限精度下的可计算性：$\bm A$正定但最小特征值相对于$\lVert\bm A\rVert_2$极小时，开方量本身很小，舍入误差可能使它算成零或负数，算法在一个本应正定的矩阵上报告失败。这种失败提示问题接近奇异，处理办法属于第~\ref{chap:solution-error-regularization}章。
+$a_{j,j}=\sum_{k\leq j}l_{j,k}^2$给出$|l_{j,k}|\leq\sqrt{a_{j,j}}$，因子的元素不会增长，因此分解不选主元也是后向稳定的（第~\ref{sec:ls-numerical-stability}节）；解的误差仍由$\bm A$的条件数决定（第~\ref{sec:ls-matrix-condition-number}节）。
+
+还要区分数学上的正定与有限精度下的可计算性：$\bm A$正定但最小特征值相对于$\lVert\bm A\rVert_2$极小时，开方量本身很小，舍入误差可能使它算成零或负数，算法在一个本应正定的矩阵上报告失败。这种失败提示问题接近奇异，处理办法属于第~\ref{chap:solution-error-regularization}章。
 
 \paragraph{计算代价}
 稠密分解约需$\tfrac13d^3$次运算，是LU的一半，存储也只需一个三角因子；每个右端的两次三角求解约需$2d^2$次运算。
@@ -406,68 +475,123 @@ $a_{j,j}=\sum_{k\leq j}l_{j,k}^2$给出$|l_{j,k}|\leq\sqrt{a_{j,j}}$，因子的
 对称但不定的矩阵也很常见，例如带约束的二次问题给出的鞍点系统。这时Cholesky分解的开方量可能为负，而直接用LU又浪费了对称性。分块LDL分解不开方，并在必要时用二阶主元块，使对称结构和非奇异方程的可解性同时得到保留。
 
 \subsection{主要思想}
-设$\bm A\in\mathbb R^{d\times d}$实对称非奇异，但不一定正定，$\bm b\in\mathbb R^d$，要求唯一精确解$\bm x_\star$。Cholesky的逐列公式要对$a_{j,j}-\sum_{k<j}l_{j,k}^2$开方，再用结果作除数；矩阵不定时，这个量可能为负，也可能为零。负数容易处理：不开方，把主元连同正负号放进一个对角因子即可。零则不能靠对称交换避开，例如$\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$可逆，但两个对角元都是零，而对称置换只把对角元换到别的对角位置，第一个标量主元总是零。把这两行两列合成一个可逆的二阶块作主元，消元才能继续。所以要构造的是\term{分块LDL分解}
+设$\bm A\in\mathbb R^{d\times d}$实对称非奇异，但不一定正定，$\bm b\in\mathbb R^d$，要求唯一精确解$\bm x_\star$。Cholesky的逐列公式要对$a_{j,j}-\sum_{k<j}l_{j,k}^2$开方，再用结果作除数；矩阵不定时，这个量可能为负，也可能为零。
+
+负数容易处理：不开方，把主元连同正负号放进一个对角因子即可。零则不能靠对称交换避开，例如$\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$可逆，但两个对角元都是零，而对称置换只把对角元换到别的对角位置，第一个标量主元总是零。
+
+把这两行两列合成一个可逆的二阶块作主元，消元才能继续。所以要构造的是\term{分块LDL分解}
 \begin{equation}
  \bm P\bm A\bm P^\top=\bm L\bm D\bm L^\top,
  \label{eq:ls-ldlt}
 \end{equation}
 其中$\bm P$是置换矩阵，$\bm L$是单位下三角矩阵，$\bm D$是由可逆的一阶和二阶对称块组成的块对角矩阵。对称置换同时交换行与列，矩阵保持对称。
 
-有了分解，把$\bm A\bm x=\bm b$两边左乘$\bm P$，并写$\bm P\bm A\bm x=(\bm P\bm A\bm P^\top)(\bm P\bm x)$，方程成为$\bm L\bm D\bm L^\top(\bm P\bm x)=\bm P\bm b$。记$\bm c=\bm P\bm b$、$\bm w=\bm P\bm x$，求解拆成三段：先按式~\eqref{eq:ls-forward-substitution}前代求解$\bm L\bm y=\bm c$，再求解块对角方程$\bm D\bm z=\bm y$，最后按式~\eqref{eq:ls-back-substitution}回代求解$\bm L^\top\bm w=\bm z$，并由$\bm x=\bm P^\top\bm w$恢复未知量的原次序。与LU相比，新增的只是中间一步。
+有了分解，把$\bm A\bm x=\bm b$两边左乘$\bm P$，并写$\bm P\bm A\bm x=(\bm P\bm A\bm P^\top)(\bm P\bm x)$，方程成为
+\[
+  \bm L\bm D\bm L^\top(\bm P\bm x)=\bm P\bm b .
+\]
+
+记$\bm c=\bm P\bm b$、$\bm w=\bm P\bm x$，求解拆成三段：
+\begin{enumerate}
+\item 先按式~\eqref{eq:ls-forward-substitution}前代求解$\bm L\bm y=\bm c$，
+\item 再求解块对角方程$\bm D\bm z=\bm y$，
+\item 再按式~\eqref{eq:ls-back-substitution}回代求解$\bm L^\top\bm w=\bm z$，
+\item 最后由$\bm x=\bm P^\top\bm w$恢复未知量的原次序。
+\end{enumerate}
+
+与LU分解相比，LDL分解新增的只是中间一步。
 
 \paragraph{块对角方程}
-$\bm D\bm z=\bm y$按$\bm D$的对角块分成互不相关的小方程。一阶块是标量方程，直接相除。二阶块记为$\bm E=\left[\begin{smallmatrix}e_{1,1}&e_{1,2}\\e_{1,2}&e_{2,2}\end{smallmatrix}\right]$，把它对应的两个分量记为$(y_1,y_2)$与$(z_1,z_2)$，方程是
+$\bm D\bm z=\bm y$按$\bm D$的对角块分成互不相关的小方程。
+
+一阶块是标量方程，直接相除。
+
+二阶块记为
+\[
+  \bm E=\left[\begin{smallmatrix}e_{1,1}&e_{1,2}\\e_{1,2}&e_{2,2}\end{smallmatrix}\right] ,
+\]
+把它对应的两个分量记为$(y_1,y_2)$与$(z_1,z_2)$，方程是
 \[
  \begin{aligned}
  e_{1,1}z_1+e_{1,2}z_2&=y_1,\\
  e_{1,2}z_1+e_{2,2}z_2&=y_2 .
  \end{aligned}
 \]
-第一个方程乘$e_{2,2}$减去第二个方程乘$e_{1,2}$，消去$z_2$，得$(e_{1,1}e_{2,2}-e_{1,2}^2)z_1=e_{2,2}y_1-e_{1,2}y_2$；第二个方程乘$e_{1,1}$减去第一个方程乘$e_{1,2}$，消去$z_1$，得$(e_{1,1}e_{2,2}-e_{1,2}^2)z_2=e_{1,1}y_2-e_{1,2}y_1$。系数$e_{1,1}e_{2,2}-e_{1,2}^2$就是$\det\bm E$，所选块可逆时它不为零，于是
+第一个方程乘$e_{2,2}$减去第二个方程乘$e_{1,2}$，消去$z_2$，得
+\[
+  (e_{1,1}e_{2,2}-e_{1,2}^2)z_1=e_{2,2}y_1-e_{1,2}y_2 .
+\]
+第二个方程乘$e_{1,1}$减去第一个方程乘$e_{1,2}$，消去$z_1$，得
+\[
+  (e_{1,1}e_{2,2}-e_{1,2}^2)z_2=e_{1,1}y_2-e_{1,2}y_1 .
+\]
+系数$e_{1,1}e_{2,2}-e_{1,2}^2$就是$\det\bm E$，所选块可逆时它不为零，于是
 \begin{equation}
  z_1=\frac{e_{2,2}y_1-e_{1,2}y_2}{\det\bm E},\qquad
  z_2=\frac{e_{1,1}y_2-e_{1,2}y_1}{\det\bm E}.
  \label{eq:ls-ldlt-two-by-two-solve}
 \end{equation}
-下面说明怎样由$\bm A$算出$\bm P$、$\bm L$与$\bm D$。
 
-\paragraph{一步块消元}
+\paragraph{一步块消元} 下面说明怎样由$\bm A$算出$\bm P$、
+$\bm L$与$\bm D$。
+
 设对称交换后，当前剩余矩阵写成
 \[
  \begin{bmatrix}\bm E&\bm C^\top\\\bm C&\bm F\end{bmatrix},
 \]
 其中$\bm E$是选出的一阶或二阶可逆对称块。一步消元要找乘子块$\bm M$与新的剩余矩阵$\bm S$，使
 \[
+ \begin{aligned}
  \begin{bmatrix}\bm E&\bm C^\top\\\bm C&\bm F\end{bmatrix}
- =\begin{bmatrix}\bm I&\bm0\\\bm M&\bm I\end{bmatrix}
+ &=\begin{bmatrix}\bm I&\bm0\\\bm M&\bm I\end{bmatrix}
  \begin{bmatrix}\bm E&\bm0\\\bm0&\bm S\end{bmatrix}
- \begin{bmatrix}\bm I&\bm M^\top\\\bm0&\bm I\end{bmatrix}
- =\begin{bmatrix}\bm E&\bm E\bm M^\top\\\bm M\bm E&\bm M\bm E\bm M^\top+\bm S\end{bmatrix}.
+ \begin{bmatrix}\bm I&\bm M^\top\\\bm0&\bm I\end{bmatrix}\\
+ &=\begin{bmatrix}\bm E&\bm E\bm M^\top\\\bm M\bm E&\bm M\bm E\bm M^\top+\bm S\end{bmatrix}.
+ \end{aligned}
 \]
-逐块比较两边：左上块自动相等；由于$\bm E$对称，右上块$\bm E\bm M^\top=(\bm M\bm E)^\top$是左下块的转置，不必另算；剩下两个块等式是$\bm M\bm E=\bm C$与$\bm M\bm E\bm M^\top+\bm S=\bm F$。由第一个得$\bm M=\bm C\bm E^{-1}$；代入第二个，并用$\bm E$对称化简$\bm M\bm E\bm M^\top=\bm C\bm E^{-1}\bm C^\top=\bm M\bm C^\top$，得
+逐块比较两边。左上块自动相等。由于$\bm E$对称，右上块$\bm E\bm M^\top=(\bm M\bm E)^\top$是左下块的转置，不必另算。剩下两个块等式是
+\[
+  \bm M\bm E=\bm C, \qquad \bm M\bm E\bm M^\top+\bm S=\bm F .
+\]
+
+由第一个得$\bm M=\bm C\bm E^{-1}$。代入第二个，并用$\bm E$对称化简
+\[
+ \bm M\bm E\bm M^\top=\bm C\bm E^{-1}\bm C^\top=\bm M\bm C^\top ,
+\]
+得
 \begin{equation}
  \bm M\bm E=\bm C,\qquad
  \bm S=\bm F-\bm M\bm C^\top .
  \label{eq:ls-ldlt-block-step}
 \end{equation}
-计算时不显式求逆。$\bm E$对称，$\bm M\bm E=\bm C$的第$i$行$\bm m_i$满足$\bm E\bm m_i^\top=\bm c_i^\top$，其中$\bm c_i$是$\bm C$的第$i$行。一阶块$\bm E=e$时，这就是除以标量：$\bm M=\bm C/e$，$\bm S=\bm F-\bm C\bm C^\top/e$，与Cholesky的逐列递推相同，只是不开方，主元$e$可以为负。二阶块时，每一行都是以$\bm E$为系数的二阶方程，按式~\eqref{eq:ls-ldlt-two-by-two-solve}求解。
+
+计算时不显式求逆。$\bm E$对称，$\bm M\bm E=\bm C$的第$i$行$\bm m_i$满足$\bm E\bm m_i^\top=\bm c_i^\top$，其中$\bm c_i$是$\bm C$的第$i$行。一阶块$\bm E=e$时，这就是除以标量：
+\[
+  \bm M=\bm C/e, \qquad \bm S=\bm F-\bm C\bm C^\top/e ,
+\]
+与Cholesky的逐列递推相同，只是不开方，主元$e$可以为负。
+
+二阶块时，每一行都是以$\bm E$为系数的二阶方程，按式~\eqref{eq:ls-ldlt-two-by-two-solve}求解。
 
 \paragraph{逐块递推}
-对$\bm S$重复选块与消元。每一轮把$\bm M$存入$\bm L$中主元块下方的位置，把$\bm E$放入$\bm D$的下一个对角块；后面的轮次交换两行两列时，前面已存的乘子也交换相应两行，理由与LU中乘子随行交换相同。剩余矩阵为空时，全部置换合成$\bm P$，便得到式~\eqref{eq:ls-ldlt}。每一轮的剩余矩阵为什么仍然非奇异、按规则选出的块为什么总可逆，留到算法分析说明。
+对$\bm S$重复选块与消元。每一轮把$\bm M$存入$\bm L$中主元块下方的位置，把$\bm E$放入$\bm D$的下一个对角块；后面的轮次交换两行两列时，前面已存的乘子也交换相应两行，理由与LU中乘子随行交换相同。剩余矩阵为空时，全部置换合成$\bm P$，便得到式~\eqref{eq:ls-ldlt}。
 
 \subsection{算法实现}
-输入是实对称非奇异的$\bm A$与$\bm b$，输出是$\bm x$。需要预先选定的规则是选块策略。为使给定数据下的计算可以复算，这里采用一个精确算术下可执行的代数规则。设当前剩余矩阵的首个对角元为$w_{k,k}$：若$w_{k,k}\neq0$，取它作一阶块；若$w_{k,k}=0$，在第$k$列下方找绝对值最大的元素$w_{p,k}$（绝对值相同时取行号最小者），把第$p$行与第$p$列对称地交换到第$k+1$个位置，取交换后的二阶块
-\[
+输入是实对称非奇异的$\bm A$与$\bm b$，输出是$\bm x$。需要预先选定的规则是选块策略。为使给定数据下的计算可以复算，这里采用一个精确算术下可执行的代数规则。
+
+设当前剩余矩阵的首个对角元为$w_{k,k}$：若$w_{k,k}\neq0$，取它作一阶块；若$w_{k,k}=0$，在第$k$列下方找绝对值最大的元素$w_{p,k}$（绝对值相同时取行号最小者），把第$p$行与第$p$列对称地交换到第$k+1$个位置，取交换后的二阶块
+\begin{equation}
  \bm E=\begin{bmatrix}0&w_{p,k}\\w_{p,k}&w_{p,p}\end{bmatrix};
-\]
+ \label{eq:ls-ldlt-pivot-block}
+\end{equation}
 若第$k$列下方也全为零，停止并报告本算法不适用。这一规则保证构造能够进行（理由见本节的算法分析），但不保证数值稳定。
 
-算法由四个模块组成，下面依次给出：$\bm L\bm D\bm L^\top$分解由$\bm A$算出$\bm P$、$\bm L$、$\bm D$，前代求出$\bm y$，块对角求解求出$\bm z$，回代求出$\bm w$并还原为$\bm x$。每一步都用
+算法由四个模块组成，下面依次给出：$\bm L\bm D\bm L^\top$分解由$\bm A$算出$\bm P$、$\bm L$、$\bm D$，前代求出$\bm y$，块对角求解求出$\bm z$，回代求出$\bm w$并还原为$\bm x$。每一步都用以下数据演示该步的计算：
 \[
  \bm A=\begin{bmatrix}0&1&2\\1&2&4\\2&4&4\end{bmatrix},\qquad
- \bm b=\begin{bmatrix}1\\3\\2\end{bmatrix}
+ \bm b=\begin{bmatrix}1\\3\\2\end{bmatrix}.
 \]
-演示该步的计算。
+这个$\bm A$对称不定，首个对角元为零，第一轮就要用到二阶块。
 
 \subsubsection{\texorpdfstring{$\bm L\bm D\bm L^\top$}{LDLT}分解}
 输入$\bm A$，输出$\bm P$、$\bm L$、$\bm D$。消元逐块进行，用$k$记当前主元块的起始位置，$s$记它的阶数。计算中维护工作矩阵$\bm W$、收集乘子的$\bm L$、记录交换的$\bm P$，以及逐块填入的$\bm D$。
@@ -483,14 +607,21 @@ $\bm D\bm z=\bm y$按$\bm D$的对角块分成互不相关的小方程。一阶�
   \bm P=\begin{bmatrix}1&0&0\\0&0&1\\0&1&0\end{bmatrix}.
  \]
 
- \item \textbf{块消元。}取$\bm W$第$k$至$k+s-1$行、列交叉处的$s$阶块为$\bm E$，其下方的块为$\bm C$，右下角的尾块为$\bm F$。根据式~\eqref{eq:ls-ldlt-block-step}，逐行求解$\bm M\bm E=\bm C$得乘子块$\bm M$：一阶块时除以标量，二阶块时每行按式~\eqref{eq:ls-ldlt-two-by-two-solve}求解。把$\bm M$存入$\bm L$的第$k+s$至$d$行、第$k$至$k+s-1$列，把$\bm E$放入$\bm D$的下一个对角块，再把尾块更新为$\bm F-\bm M\bm C^\top$，并把$\bm C$与$\bm C^\top$所在的位置置零。尾块仍然对称，只需计算下三角部分；$\bm P$不变。
+ \item \textbf{块消元。}取$\bm W$第$k$至$k+s-1$行、列交叉处的$s$阶块为$\bm E$，其下方的块为$\bm C$，右下角的尾块为$\bm F$。根据式~\eqref{eq:ls-ldlt-block-step}，逐行求解$\bm M\bm E=\bm C$得乘子块$\bm M$：一阶块时除以标量，二阶块时每行按式~\eqref{eq:ls-ldlt-two-by-two-solve}求解。
+ 
+ 把$\bm M$存入$\bm L$的第$k+s$至$d$行、第$k$至$k+s-1$列，把$\bm E$放入$\bm D$的下一个对角块，再把尾块更新为$\bm F-\bm M\bm C^\top$，并把$\bm C$与$\bm C^\top$所在的位置置零。尾块仍然对称，只需计算下三角部分；$\bm P$不变。
 
  例中$\bm E=\left[\begin{smallmatrix}0&2\\2&4\end{smallmatrix}\right]$，$\det\bm E=-4$，$\bm C=(1,4)$，$\bm F=2$。$\bm C$只有一行，按式~\eqref{eq:ls-ldlt-two-by-two-solve}得
  \[
   m_1=\frac{4\cdot1-2\cdot4}{-4}=1,\qquad
   m_2=\frac{0\cdot4-2\cdot1}{-4}=\frac12 ,
  \]
- 即$\bm M=(1,\tfrac12)$；尾块更新为$2-(1\cdot1+\tfrac12\cdot4)=-1$。于是
+ 
+ 尾块更新为
+ \[
+  2-\bigl(1\cdot1+\tfrac12\cdot4\bigr)=-1 .
+ \]
+ 于是
  \[
   \bm W=\begin{bmatrix}0&2&0\\2&4&0\\0&0&-1\end{bmatrix},\quad
   \bm L=\begin{bmatrix}1&0&0\\0&1&0\\1&\tfrac12&1\end{bmatrix},\quad
@@ -505,30 +636,10 @@ $\bm D\bm z=\bm y$按$\bm D$的对角块分成互不相关的小方程。一阶�
  \[
   \bm D=\bm W=\begin{bmatrix}0&2&0\\2&4&0\\0&0&-1\end{bmatrix},
  \]
- $\bm L$与$\bm P$取上面的值。可以逐项验证$\bm L\bm D\bm L^\top$等于第2步交换后的$\bm W$，即$\bm P\bm A\bm P^\top$，例如$\bm L\bm D$的第三行为$(1,4,-1)$，与$\bm L$的第三行$(1,\tfrac12,1)$作内积，得$(3,3)$元$1+2-1=2$。行列式也一致：$\det\bm E\cdot(-1)=4=\det\bm A$。
+ $\bm L$与$\bm P$取上面的值。可以逐项验证$\bm L\bm D\bm L^\top$等于第2步交换后的$\bm W$。
 \end{enumerate}
 
-上例在第一轮就用了二阶块，一阶块消元时下方没有元素。下例的对角元都不为零，零主元在一阶消元之后才出现，用来检查一阶块的消元。
-
-\begin{example}[一阶消元之后出现零主元]
-\label{ex:ls-ldlt-late-two-by-two}
-取
-\[
- \bm A=\begin{bmatrix}1&1&1\\1&1&2\\1&2&1\end{bmatrix}.
-\]
-$k=1$时$w_{1,1}=1\neq0$，取一阶块$\bm E=1$，$\bm C=(1,1)^\top$，$\bm F=\left[\begin{smallmatrix}1&2\\2&1\end{smallmatrix}\right]$。除以标量得$\bm M=(1,1)^\top$，尾块更新为
-\[
- \begin{bmatrix}1&2\\2&1\end{bmatrix}-\begin{bmatrix}1\\1\end{bmatrix}\begin{bmatrix}1&1\end{bmatrix}
- =\begin{bmatrix}0&1\\1&0\end{bmatrix}.
-\]
-$k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换，取二阶块$\bm E=\left[\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right]$，它下方没有元素。令$k=4>3$，分解结束：
-\[
- \bm L=\begin{bmatrix}1&0&0\\1&1&0\\1&0&1\end{bmatrix},\qquad
- \bm D=\begin{bmatrix}1&0&0\\0&0&1\\0&1&0\end{bmatrix},\qquad
- \bm P=\bm I_3 ,
-\]
-逐项可验$\bm L\bm D\bm L^\top=\bm A$。这个矩阵的对角元都是$1$，Cholesky却在第二列的开方量$1-1^2=0$处中断；分块LDL用二阶块继续消元，而$\det\bm A=1\cdot(-1)=-1<0$说明$\bm A$不定。
-\end{example}
+上例在第一轮就用了二阶块，一阶块消元时下方没有元素。
 
 \subsubsection{前代}
 输入$\bm P$、$\bm L$与$\bm b$，输出$\bm y$。
@@ -544,20 +655,23 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
 \end{enumerate}
 
 \subsubsection{块对角求解}
-输入$\bm D$与$\bm y$，输出$\bm z$。按$\bm D$的对角块自上而下逐块求解：一阶块$e$给出$z_i=y_i/e$，二阶块按式~\eqref{eq:ls-ldlt-two-by-two-solve}给出对应的两个分量；处理完最后一块后结束。
+输入$\bm D$与$\bm y$，输出$\bm z$。
+
+按$\bm D$的对角块自上而下逐块求解：一阶块$e$给出$z_i=y_i/e$，二阶块按式~\eqref{eq:ls-ldlt-two-by-two-solve}给出对应的两个分量；处理完最后一块后结束。
 
 例中第一块$\bm E=\left[\begin{smallmatrix}0&2\\2&4\end{smallmatrix}\right]$对应$(y_1,y_2)=(1,2)$，第二块$-1$对应$y_3=1$：
 \[
  z_1=\frac{4\cdot1-2\cdot2}{-4}=0,\qquad
  z_2=\frac{0\cdot2-2\cdot1}{-4}=\frac12,\qquad
- z_3=\frac{1}{-1}=-1 ,
+ z_3=\frac{1}{-1}=-1 .
 \]
-即$\bm z=(0,\tfrac12,-1)^\top$。
 
 \subsubsection{回代}
 输入$\bm L$、$\bm P$与$\bm z$，输出$\bm x$。
 \begin{enumerate}
- \item \textbf{逐个求出$w_i$。}根据式~\eqref{eq:ls-back-substitution}，$\bm L^\top$的$(i,k)$元取$l_{k,i}$，对角元为$1$，对$i=d,\ldots,1$依次计算$w_i=z_i-\sum_{k>i}l_{k,i}w_k$，求出$w_1$后结束。例中
+ \item \textbf{逐个求出$w_i$。}根据式~\eqref{eq:ls-back-substitution}，$\bm L^\top$的$(i,k)$元取$l_{k,i}$，对角元为$1$，对$i=d,\ldots,1$依次计算$w_i=z_i-\sum_{k>i}l_{k,i}w_k$，求出$w_1$后结束。
+ 
+ 例中
  \[
   \begin{aligned}
   w_3&=z_3=-1,\\
@@ -566,15 +680,37 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
   \end{aligned}
  \]
 
- \item \textbf{还原次序并检验。}由$\bm w=\bm P\bm x$得$\bm x=\bm P^\top\bm w$，再用原始的$\bm A$与$\bm b$重算残差。例中$\bm P^\top$交换第二、三个分量，$\bm x=(1,-1,1)^\top$；代回得$\bm A\bm x=(0-1+2,\,1-2+4,\,2-4+4)^\top=(1,3,2)^\top=\bm b$，残差为零。
+ \item \textbf{还原次序并检验。}由$\bm w=\bm P\bm x$得$\bm x=\bm P^\top\bm w$，再用原始的$\bm A$与$\bm b$重算残差。例中$\bm P^\top$交换第二、三个分量，得
+ \[
+  \bm x=(1,-1,1)^\top .
+ \]
+ 代回原方程，
+ \[
+  \bm A\bm x=(0-1+2,\,1-2+4,\,2-4+4)^\top=(1,3,2)^\top=\bm b ,
+ \]
+ 残差为零。
 \end{enumerate}
 
 \subsection{算法分析}
 \paragraph{正确性}
-先说明选块规则总能进行。一步块消元的恒等式可以由式~\eqref{eq:ls-ldlt-block-step}乘开验证，只用到$\bm M\bm E=\bm C$和$\bm E^\top=\bm E$。两侧单位块三角因子的行列式为$1$，所以剩余矩阵的行列式等于$\det\bm E\cdot\det\bm S$；对称置换$\bm P\bm W\bm P^\top$也不改变行列式。按规则选出的块都可逆：一阶块是非零标量，二阶块$\left[\begin{smallmatrix}0&w_{p,k}\\w_{p,k}&w_{p,p}\end{smallmatrix}\right]$的行列式为$-w_{p,k}^2\neq0$。于是由$\bm A$非奇异逐轮推出每一轮的剩余矩阵$\bm S$都非奇异。规则也不会在中途失败：若当前首个对角元为零且第$k$列下方也全为零，则由对称性剩余矩阵的首行首列全为零，它将是奇异的，矛盾。乘子随后续交换而交换行的理由，与第~\ref{sec:ls-lu}节算法分析中乘子与置换的拼合相同。逐轮累积对称置换与乘子即得式~\eqref{eq:ls-ldlt}，前代、块对角求解、回代与还原次序因而给出原方程的解。$\bm D$中的负主元或不定二阶块只说明$\bm A$有使二次型为负的方向，并不妨碍可逆求解。
+先说明选块规则总能进行。
+
+把式~\eqref{eq:ls-ldlt-block-step}代回一步块消元的恒等式乘开，即可验证它成立，这里只用到$\bm M\bm E=\bm C$和$\bm E^\top=\bm E$。两侧单位块三角因子的行列式为$1$，所以
+\[
+ \det\begin{bmatrix}\bm E&\bm C^\top\\\bm C&\bm F\end{bmatrix}=\det\bm E\cdot\det\bm S ;
+\]
+对称置换$\bm P\bm W\bm P^\top$也不改变行列式。
+
+按规则选出的块都可逆：一阶块是非零标量，二阶块$\left[\begin{smallmatrix}0&w_{p,k}\\w_{p,k}&w_{p,p}\end{smallmatrix}\right]$的行列式为$-w_{p,k}^2\neq0$。于是由$\bm A$非奇异逐轮推出每一轮的剩余矩阵$\bm S$都非奇异。
+
+规则也不会在中途失败：若当前首个对角元为零且第$k$列下方也全为零，则由对称性剩余矩阵的首行首列全为零，它将是奇异的，矛盾。
+
+乘子随后续交换而交换行的理由，与第~\ref{sec:ls-lu}节算法分析中乘子与置换的拼合相同。逐轮累积对称置换与乘子即得式~\eqref{eq:ls-ldlt}，前代、块对角求解、回代与还原次序因而给出原方程的解。$\bm D$中的负主元或不定二阶块只说明$\bm A$有使二次型为负的方向，并不妨碍可逆求解。
 
 \paragraph{数值敏感度}
-要区分两类规则：上面的选块规则保证代数构造可以进行，稳定的主元策略则要控制数值误差。存在可逆主元并不等于稳定：主元块相对很小时乘子很大，剩余矩阵的元素随之增长，与LU中的主元增长是同一现象。实用的选块策略要控制这种增长，Bunch--Kaufman策略就是一例，它按当前对角元与所在列最大非对角元的相对大小，决定取一阶块还是二阶块。
+要区分两类规则：上面的选块规则保证代数构造可以进行，稳定的主元策略则要控制数值误差。存在可逆主元并不等于稳定：主元块相对很小时乘子很大，剩余矩阵的元素随之增长，与LU中的主元增长是同一现象。
+
+实用的选块策略要控制这种增长，Bunch--Kaufman策略就是一例，它按当前对角元与所在列最大非对角元的相对大小，决定取一阶块还是二阶块。
 
 \paragraph{计算代价}
 稠密计算约需$\tfrac13d^3$次运算，存储约$\tfrac12d^2$个元素，利用对称性比直接用LU减少一半。
@@ -586,9 +722,10 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
 
 \subsection{主要思想}
 设新的系数矩阵具有已知结构
-\[
+\begin{equation}
  \bm A=\bm A_0+\bm U\bm C\bm V^\top,
-\]
+ \label{eq:ls-woodbury-update-structure}
+\end{equation}
 其中$\bm A_0\in\mathbb R^{d\times d}$非奇异，$\bm U,\bm V\in\mathbb R^{d\times k}$，$\bm C\in\mathbb R^{k\times k}$，$k\ll d$，且$\bm A$非奇异；要求$\bm A\bm x=\bm b$的精确解。更新表示是输入矩阵的结构信息，$\bm A_0$已有的分解只在内部复用。$\bm C$可以吸收修改项中的系数；取$\bm C=\bm I_k$就是常见的$\bm A_0+\bm U\bm V^\top$。
 
 \paragraph{辅助变量}
@@ -599,7 +736,11 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
  \bm C\bm V^\top\bm x-\bm z&=\bm0 .
  \end{aligned}
 \]
-第一个方程的系数矩阵是$\bm A_0$，可以用它已有的因子求解。由第一个方程得$\bm x=\bm A_0^{-1}\bm b-\bm A_0^{-1}\bm U\bm z$。记
+第一个方程的系数矩阵是$\bm A_0$，可以用它已有的因子求解。由第一个方程得
+\[
+ \bm x=\bm A_0^{-1}\bm b-\bm A_0^{-1}\bm U\bm z .
+\]
+记
 \begin{equation}
  \bm A_0\bm u=\bm b,\qquad \bm A_0\bm Z=\bm U,
  \label{eq:ls-woodbury-old-solves}
@@ -609,7 +750,11 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
  \bm x=\bm u-\bm Z\bm z .
  \label{eq:ls-woodbury-correction}
 \end{equation}
-代入第二个方程，得$\bm C\bm V^\top\bm u-\bm C\bm V^\top\bm Z\bm z-\bm z=\bm0$，移项便是$k$阶方程
+代入第二个方程，得
+\[
+ \bm C\bm V^\top\bm u-\bm C\bm V^\top\bm Z\bm z-\bm z=\bm0 ,
+\]
+移项便是$k$阶方程
 \begin{equation}
  \bm K\bm z=\bm h,\qquad
  \bm K=\bm I_k+\bm C\bm V^\top\bm Z,\quad
@@ -620,43 +765,63 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
 
 \paragraph{秩一修改}
 最常见的是秩一修改$\bm A=\bm A_0+\bm p\bm q^\top$，即$k=1$、$\bm U=\bm p$、$\bm V=\bm q$、$\bm C=1$。这时$\bm Z$是一个向量，记$\bm A_0\bm w=\bm p$；$\bm K=1+\bm q^\top\bm w$与$\bm h=\bm q^\top\bm u$都是标量，辅助方程退化为一次除法：
-\[
+\begin{equation}
  z=\frac{\bm q^\top\bm u}{1+\bm q^\top\bm w},\qquad \bm x=\bm u-z\bm w .
-\]
+ \label{eq:ls-woodbury-rank-one-solve}
+\end{equation}
 分母为零时更新后的矩阵奇异，见定理~\ref{thm:ls-sherman-morrison}。
 
 \subsection{算法实现}
 输入是$\bm A_0$的分解、修改项$\bm U$、$\bm C$、$\bm V$与右端$\bm b$，输出是$\bm x$。需要预先确定的是$\bm A_0$的求解方法：它的分解通常已经存在，可以直接复用；尚无分解时，先按$\bm A_0$的结构调用前面各节的方法求得。下面关于节省计算的比较，以分解已经存在为前提。
 
-算法由三个模块组成，下面依次给出：用旧因子求解得到$\bm u$与$\bm Z$，形成小系统得到$\bm K$与$\bm h$，求解小系统并修正得到$\bm x$。每一步都用
+算法由三个模块组成，下面依次给出：用旧因子求解得到$\bm u$与$\bm Z$，形成小系统得到$\bm K$与$\bm h$，求解小系统并修正得到$\bm x$。每一步都用以下数据演示该步的计算：
 \[
+ \begin{gathered}
  \bm A_0=\begin{bmatrix}3&0\\0&2\end{bmatrix},\qquad
- \bm U=\bm V=\begin{bmatrix}1\\1\end{bmatrix},\qquad
+ \bm U=\bm V=\begin{bmatrix}1\\1\end{bmatrix},\\
  \bm C=1,\qquad
- \bm b=\begin{bmatrix}1\\2\end{bmatrix}
+ \bm b=\begin{bmatrix}1\\2\end{bmatrix}.
+ \end{gathered}
 \]
-演示该步的计算。这时更新后的矩阵是$\bm A=\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$，修改的秩为一。
+这时更新后的矩阵是$\bm A=\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$，修改的秩为一。
 
 \subsubsection{用旧因子求解}
 输入$\bm A_0$的因子、$\bm U$与$\bm b$，输出$\bm u$与$\bm Z$。
 \begin{enumerate}
- \item \textbf{求未作更新时的解。}按式~\eqref{eq:ls-woodbury-old-solves}，用$\bm A_0$的因子求解$\bm A_0\bm u=\bm b$。例中$\bm A_0$是对角矩阵，求解只需逐个相除，得$\bm u=(\tfrac13,1)^\top$。
+ \item \textbf{求未作更新时的解。}按式~\eqref{eq:ls-woodbury-old-solves}，用$\bm A_0$的因子求解$\bm A_0\bm u=\bm b$。例中$\bm A_0$是对角矩阵，求解只需逐个相除，得
+ \[
+  \bm u=\begin{bmatrix}\tfrac13\\1\end{bmatrix}.
+ \]
 
- \item \textbf{求修改方向。}对$\bm U$的$k$列复用同一组因子，求解$\bm A_0\bm Z=\bm U$，得到$\bm Z\in\mathbb R^{d\times k}$，它记录修改方向经$\bm A_0^{-1}$作用后的结果。例中$\bm Z=(\tfrac13,\tfrac12)^\top$。
+ \item \textbf{求修改方向。}对$\bm U$的$k$列复用同一组因子，求解$\bm A_0\bm Z=\bm U$，得到$\bm Z\in\mathbb R^{d\times k}$，它记录修改方向经$\bm A_0^{-1}$作用后的结果。例中
+ \[
+  \bm Z=\begin{bmatrix}\tfrac13\\\tfrac12\end{bmatrix}.
+ \]
 \end{enumerate}
 
 \subsubsection{形成小系统}
 输入$\bm C$、$\bm V$、$\bm u$与$\bm Z$，输出$\bm K$与$\bm h$。
 \begin{enumerate}
- \item \textbf{投影到$k$维。}计算$k$阶矩阵$\bm V^\top\bm Z$与$k$维向量$\bm V^\top\bm u$。例中$\bm V^\top\bm Z=\tfrac13+\tfrac12=\tfrac56$，$\bm V^\top\bm u=\tfrac13+1=\tfrac43$。
+ \item \textbf{投影到$k$维。}计算$k$阶矩阵$\bm V^\top\bm Z$与$k$维向量$\bm V^\top\bm u$。例中
+ \[
+  \bm V^\top\bm Z=\tfrac13+\tfrac12=\tfrac56,\qquad
+  \bm V^\top\bm u=\tfrac13+1=\tfrac43 .
+ \]
 
- \item \textbf{组装。}根据式~\eqref{eq:ls-woodbury-small-system}，左乘$\bm C$后得$\bm K=\bm I_k+\bm C\bm V^\top\bm Z$与$\bm h=\bm C\bm V^\top\bm u$，全程不形成新的$d$阶矩阵。例中$\bm C=1$，$\bm K=1+\tfrac56=\tfrac{11}6$，$\bm h=\tfrac43$。
+ \item \textbf{组装。}根据式~\eqref{eq:ls-woodbury-small-system}，左乘$\bm C$后得$\bm K=\bm I_k+\bm C\bm V^\top\bm Z$与$\bm h=\bm C\bm V^\top\bm u$，全程不形成新的$d$阶矩阵。例中$\bm C=1$，于是
+ \[
+  \bm K=1+\tfrac56=\tfrac{11}6,\qquad
+  \bm h=\tfrac43 .
+ \]
 \end{enumerate}
 
 \subsubsection{求解小系统并修正}
 输入$\bm K$、$\bm h$、$\bm u$与$\bm Z$，输出$\bm x$。
 \begin{enumerate}
- \item \textbf{求解小系统。}调用已有的直接法求解$\bm K\bm z=\bm h$；$\bm K$奇异时停止并报告，这时更新后的矩阵也奇异（定理~\ref{thm:ls-woodbury}）。例中$k=1$，小系统只是一次标量除法：$z=\tfrac43\cdot\tfrac6{11}=\tfrac8{11}$。
+ \item \textbf{求解小系统。}调用已有的直接法求解$\bm K\bm z=\bm h$；$\bm K$奇异时停止并报告，这时更新后的矩阵也奇异（定理~\ref{thm:ls-woodbury}）。例中$k=1$，小系统只是一次标量除法：
+ \[
+  z=\frac{h}{K}=\tfrac43\cdot\tfrac6{11}=\tfrac8{11}.
+ \]
 
  \item \textbf{修正。}根据式~\eqref{eq:ls-woodbury-correction}计算$\bm x=\bm u-\bm Z\bm z$。例中
  \[
@@ -664,31 +829,68 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
   =\begin{bmatrix}\tfrac1{11}\\\tfrac7{11}\end{bmatrix}.
  \]
 
- \item \textbf{检验。}在更新后的矩阵下重算原残差$\bm b-\bm A\bm x$，而不是只检查辅助方程。例中$\bm A\bm x=(\tfrac4{11}+\tfrac7{11},\,\tfrac1{11}+\tfrac{21}{11})^\top=(1,2)^\top=\bm b$，残差为零，全程没有分解$\bm A$本身。
+ \item \textbf{检验。}在更新后的矩阵下重算原残差$\bm b-\bm A\bm x$，而不是只检查辅助方程。例中
+ \[
+  \bm A\bm x=\begin{bmatrix}4&1\\1&3\end{bmatrix}\begin{bmatrix}\tfrac1{11}\\\tfrac7{11}\end{bmatrix}
+  =\begin{bmatrix}\tfrac4{11}+\tfrac7{11}\\\tfrac1{11}+\tfrac{21}{11}\end{bmatrix}
+  =\begin{bmatrix}1\\2\end{bmatrix}=\bm b,
+ \]
+ 残差为零，全程没有分解$\bm A$本身。
 \end{enumerate}
 
 上例取$\bm U=\bm V$，看不出两者在步骤中的不同用途。下例取$\bm U\neq\bm V$，更新后的矩阵不再对称，用来检查$\bm U$只进入旧因子的求解、$\bm V$只进入投影。
 
 \begin{example}[非对称的秩一更新]
 \label{ex:ls-woodbury-nonsymmetric}
-取$\bm A_0=\operatorname{diag}(2,3)$，$\bm U=(1,1)^\top$，$\bm V=(1,0)^\top$，$\bm C=1$，$\bm b=(4,5)^\top$，更新后的矩阵为$\bm A=\left[\begin{smallmatrix}3&0\\1&3\end{smallmatrix}\right]$。旧因子给出$\bm u=(2,\tfrac53)^\top$与$\bm Z=(\tfrac12,\tfrac13)^\top$。小系统为$\bm K=1+\bm V^\top\bm Z=\tfrac32$、$\bm h=\bm V^\top\bm u=2$，所以$z=\tfrac43$，修正得
+取以下数据：
+\[
+ \begin{gathered}
+ \bm A_0=\operatorname{diag}(2,3),\qquad \bm U=(1,1)^\top,\qquad \bm V=(1,0)^\top,\\
+ \bm C=1,\qquad \bm b=(4,5)^\top .
+ \end{gathered}
+\]
+更新后的矩阵为$\bm A=\left[\begin{smallmatrix}3&0\\1&3\end{smallmatrix}\right]$。旧因子给出
+\[
+ \bm u=\begin{bmatrix}2\\\tfrac53\end{bmatrix},\qquad
+ \bm Z=\begin{bmatrix}\tfrac12\\\tfrac13\end{bmatrix}.
+\]
+小系统为
+\[
+ \bm K=1+\bm V^\top\bm Z=\tfrac32,\qquad
+ \bm h=\bm V^\top\bm u=2,\qquad
+ z=\frac{h}{K}=\tfrac43 ,
+\]
+修正得
 \[
  \bm x=\begin{bmatrix}2\\\tfrac53\end{bmatrix}-\frac43\begin{bmatrix}\tfrac12\\\tfrac13\end{bmatrix}
  =\begin{bmatrix}\tfrac43\\\tfrac{11}9\end{bmatrix}.
 \]
-用更新后的矩阵重算：$3\cdot\tfrac43=4$，$\tfrac43+3\cdot\tfrac{11}9=5$，原残差为零。
+用更新后的矩阵重算：
+\[
+ \bm A\bm x=\begin{bmatrix}3\cdot\tfrac43\\\tfrac43+3\cdot\tfrac{11}9\end{bmatrix}=\begin{bmatrix}4\\5\end{bmatrix}=\bm b,
+\]
+原残差为零。
 \end{example}
 
 \subsection{算法分析}
 \paragraph{正确性}
-主要思想已经说明原方程的解满足式~\eqref{eq:ls-woodbury-correction}与式~\eqref{eq:ls-woodbury-small-system}。反过来，若$\bm K\bm z=\bm h$且$\bm x=\bm u-\bm Z\bm z$，则$\bm C\bm V^\top\bm x=\bm h-(\bm K-\bm I_k)\bm z=\bm z$，从而$\bm A\bm x=\bm A_0\bm x+\bm U\bm z=\bm b$。所以小系统与原方程等价。把这一等价关系对任意右端写成矩阵形式，就得到下面的可逆性判据与逆矩阵公式。
+主要思想已经说明原方程的解满足式~\eqref{eq:ls-woodbury-correction}与式~\eqref{eq:ls-woodbury-small-system}。反过来，设$\bm K\bm z=\bm h$且$\bm x=\bm u-\bm Z\bm z$。由$\bm K$、$\bm h$的定义，
+\[
+ \bm C\bm V^\top\bm x=\bm C\bm V^\top\bm u-\bm C\bm V^\top\bm Z\bm z=\bm h-(\bm K-\bm I_k)\bm z=\bm z ,
+\]
+从而
+\[
+ \bm A\bm x=\bm A_0\bm x+\bm U\bm z=\bm b .
+\]
+所以小系统与原方程等价。把这一等价关系对任意右端写成矩阵形式，就得到下面的可逆性判据与逆矩阵公式。
 
 \begin{theorem}[Woodbury恒等式]
 \label{thm:ls-woodbury}
 设$\bm A_0\in\mathbb R^{d\times d}$可逆，$\bm U,\bm V\in\mathbb R^{d\times k}$，$\bm C\in\mathbb R^{k\times k}$，记$\bm K=\bm I_k+\bm C\bm V^\top\bm A_0^{-1}\bm U$。则
-\[
+\begin{equation}
  \det(\bm A_0+\bm U\bm C\bm V^\top)=\det\bm A_0\det\bm K,
-\]
+ \label{eq:ls-woodbury-determinant}
+\end{equation}
 因而$\bm A_0+\bm U\bm C\bm V^\top$可逆当且仅当$\bm K$可逆。若$\bm C$也可逆且$\bm K$可逆，则成立\term{Woodbury恒等式}（Woodbury identity）
 \begin{equation}
 \begin{aligned}
@@ -701,7 +903,11 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
 \end{equation}
 \end{theorem}
 \begin{proof}
-记$\bm Z=\bm A_0^{-1}\bm U$，则$\bm A_0+\bm U\bm C\bm V^\top=\bm A_0(\bm I_d+\bm Z\bm C\bm V^\top)$。分块矩阵$\bm T=\left[\begin{smallmatrix}\bm I_d&-\bm Z\\\bm C\bm V^\top&\bm I_k\end{smallmatrix}\right]$有两种分块三角分解，直接相乘即可验证：
+记$\bm Z=\bm A_0^{-1}\bm U$，则$\bm A_0+\bm U\bm C\bm V^\top=\bm A_0(\bm I_d+\bm Z\bm C\bm V^\top)$。考虑分块矩阵
+\[
+ \bm T=\begin{bmatrix}\bm I_d&-\bm Z\\\bm C\bm V^\top&\bm I_k\end{bmatrix},
+\]
+它有两种分块三角分解，直接相乘即可验证：
 \[
  \begin{aligned}
  \bm T&=\begin{bmatrix}\bm I_d&\bm0\\\bm C\bm V^\top&\bm I_k\end{bmatrix}
@@ -710,7 +916,21 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
  \begin{bmatrix}\bm I_d&\bm0\\\bm C\bm V^\top&\bm I_k\end{bmatrix}.
  \end{aligned}
 \]
-分块三角矩阵的行列式等于对角块行列式之积，两种分解分别给出$\det\bm T=\det(\bm I_k+\bm C\bm V^\top\bm Z)$与$\det\bm T=\det(\bm I_d+\bm Z\bm C\bm V^\top)$，所以$\det(\bm I_d+\bm Z\bm C\bm V^\top)=\det\bm K$，第一个结论成立。$\bm C$可逆时$\bm K=\bm C(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)$，括号内的矩阵随$\bm K$可逆。由上面的等价关系，对任意$\bm b$，新方程的解为$\bm x=\bm u-\bm Z\bm K^{-1}\bm C\bm V^\top\bm u$，其中$\bm u=\bm A_0^{-1}\bm b$；代入$\bm K^{-1}\bm C=(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)^{-1}$，并因$\bm b$任意而去掉右端，即得式~\eqref{eq:matrix-analysis-woodbury}。
+分块三角矩阵的行列式等于对角块行列式之积，两种分解分别给出
+\[
+ \det\bm T=\det(\bm I_k+\bm C\bm V^\top\bm Z),\qquad
+ \det\bm T=\det(\bm I_d+\bm Z\bm C\bm V^\top),
+\]
+所以$\det(\bm I_d+\bm Z\bm C\bm V^\top)=\det\bm K$，第一个结论成立。
+
+$\bm C$可逆时$\bm K=\bm C(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)$，括号内的矩阵随$\bm K$可逆。由上面的等价关系，对任意$\bm b$，新方程的解为
+\[
+  \bm x=\bm u-\bm Z\bm K^{-1}\bm C\bm V^\top\bm u ,
+\]
+其中
+$\bm u=\bm A_0^{-1}\bm b$。
+
+代入$\bm K^{-1}\bm C=(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)^{-1}$，并因$\bm b$任意而去掉右端，即得式~\eqref{eq:matrix-analysis-woodbury}。
 \end{proof}
 
 判据部分允许$\bm C$奇异，这正是算法只使用$\bm K$、不使用$\bm C^{-1}$的原因。秩一修改时，定理化为一个只含标量分母的公式。
@@ -718,10 +938,11 @@ $k=2$时$w_{2,2}=0$，下方的$w_{3,2}=1$已在第$k+1$个位置，无需交换
 \begin{theorem}[Sherman--Morrison公式]
 \label{thm:ls-sherman-morrison}
 设$\bm A_0\in\mathbb R^{d\times d}$可逆，$\bm p,\bm q\in\mathbb R^d$。则$\bm A_0+\bm p\bm q^\top$可逆当且仅当$1+\bm q^\top\bm A_0^{-1}\bm p\neq0$，此时
-\[
+\begin{equation}
  (\bm A_0+\bm p\bm q^\top)^{-1}
  =\bm A_0^{-1}-\frac{\bm A_0^{-1}\bm p\bm q^\top\bm A_0^{-1}}{1+\bm q^\top\bm A_0^{-1}\bm p}.
-\]
+ \label{eq:matrix-analysis-sherman-morrison}
+\end{equation}
 \end{theorem}
 \begin{proof}
 在定理~\ref{thm:ls-woodbury}中取$k=1$、$\bm U=\bm p$、$\bm V=\bm q$、$\bm C=1$，则$\bm K=1+\bm q^\top\bm A_0^{-1}\bm p$是标量，$(\bm C^{-1}+\bm V^\top\bm A_0^{-1}\bm U)^{-1}=1/\bm K$，代入式~\eqref{eq:matrix-analysis-woodbury}即得。

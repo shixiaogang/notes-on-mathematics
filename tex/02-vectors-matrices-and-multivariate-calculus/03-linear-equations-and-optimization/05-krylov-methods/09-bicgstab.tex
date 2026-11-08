@@ -1,0 +1,347 @@
+\section{稳定化双共轭梯度法}
+\label{sec:ls-bicgstab}
+
+设$\bm A$是一般的实可逆方阵。第~\ref{sec:ls-bicg}节的BiCG用影子序列维持双正交，以短递推满足第~\ref{sec:ls-krylov-selection-criteria}节的Petrov--Galerkin条件，但留下两个困难：影子残差的更新~\eqref{eq:ls-bicg-update}每轮都要计算$\bm A^\top$乘向量，而双正交条件不最小化任何范数，残差可能剧烈振荡。
+
+\term{稳定化双共轭梯度法}（biconjugate gradient stabilized method，BiCGSTAB）由van der Vorst提出\scite{math-vandervorst1992bicgstab}，它紧接BiCG的结果：仍取BiCG的步长与组合系数，却只用一个固定的影子向量$\widehat{\bm r}$计算它们，不再生成影子序列，也不需要$\bm A^\top$；每轮在BiCG半步之后再接一个一维的残差最小化半步，相当于只走一步的GMRES，用来平滑收敛过程。
+
+对大型稀疏的非对称方程组，当GMRES的存储过大、BiCG的振荡又过于剧烈时，BiCGSTAB是实际计算中常用的选择。
+
+\subsection{主要思想}
+
+\paragraph{BiCG的残差多项式}
+BiCG的每一步只用同一组系数$\alpha_k,\beta_k$更新原序列与影子序列，所以两者由同样的多项式生成。记$\phi_k$为残差多项式、$\pi_k$为方向多项式，由式~\eqref{eq:ls-bicg-update}与\eqref{eq:ls-bicg-direction}，
+\begin{equation}
+ \begin{gathered}
+ \phi_0=\pi_0=1,\\
+ \phi_{k+1}(t)=\phi_k(t)-\alpha_kt\,\pi_k(t),\qquad
+ \pi_{k+1}(t)=\phi_{k+1}(t)+\beta_k\pi_k(t),
+ \end{gathered}
+ \label{eq:ls-bicgstab-bicg-polynomials}
+\end{equation}
+则
+\begin{equation}
+ \begin{gathered}
+ \bm r_k=\phi_k(\bm A)\bm r_0,\qquad \bm p_k=\pi_k(\bm A)\bm r_0,\\
+ \widetilde{\bm r}_k=\phi_k(\bm A^\top)\widetilde{\bm r}_0,\qquad \widetilde{\bm p}_k=\pi_k(\bm A^\top)\widetilde{\bm r}_0 .
+ \end{gathered}
+ \label{eq:ls-bicgstab-bicg-representation}
+\end{equation}
+$\phi_k$是$k$次多项式，最高次项系数为$(-\alpha_0)(-\alpha_1)\cdots(-\alpha_{k-1})$，$\pi_k$的最高次项系数与它相同。
+
+\paragraph{把影子多项式移到内积另一侧}
+影子序列只通过内积进入计算：步长~\eqref{eq:ls-bicg-step}与组合系数~\eqref{eq:ls-bicg-beta}只用到$\rho_k=\widetilde{\bm r}_k^\top\bm r_k$与$\widetilde{\bm p}_k^\top\bm A\bm p_k$。把$\bm A^\top$的多项式移到内积另一侧，
+\[
+ \widetilde{\bm r}_k^\top\bm r_k=\widetilde{\bm r}_0^\top\phi_k(\bm A)\bm r_k ,
+\]
+就只剩$\bm A$的多项式。更进一步，$\bm r_k\perp\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0)$，所以对任何次数低于$k$的多项式$q$都有
+\[
+ \widetilde{\bm r}_0^\top q(\bm A)\bm r_k=0 .
+\]
+于是对任何$k$次多项式$\psi_k$，内积$\widetilde{\bm r}_0^\top\psi_k(\bm A)\bm r_k$只取决于$\psi_k$的最高次项：
+\begin{equation}
+ \widetilde{\bm r}_0^\top\psi_k(\bm A)\bm r_k=\frac{\text{$\psi_k$的最高次项系数}}{\text{$\phi_k$的最高次项系数}}\,\rho_k .
+ \label{eq:ls-bicgstab-leading-coefficient}
+\end{equation}
+$\widetilde{\bm p}_k^\top\bm A\bm p_k$由双共轭性同理。所以不必真的用$\phi_k$，换成任何一个已知最高次项系数的$k$次多项式$\psi_k$，都能用固定向量$\widetilde{\bm r}_0$的内积求出同样的$\alpha_k,\beta_k$，而不再需要$\bm A^\top$。
+
+\paragraph{用平滑多项式代替影子多项式}
+BiCGSTAB把这个多项式取为一串一次因子之积，
+\begin{equation}
+ \psi_k(t)=(1-\omega_0t)(1-\omega_1t)\cdots(1-\omega_{k-1}t),
+ \label{eq:ls-bicgstab-smoothing-polynomial}
+\end{equation}
+并让原序列直接携带它：第$k$轮的残差与方向是
+\begin{equation}
+ \bm r_k=\psi_k(\bm A)\phi_k(\bm A)\bm r_0,\qquad \bm p_k=\psi_k(\bm A)\pi_k(\bm A)\bm r_0 .
+ \label{eq:ls-bicgstab-residual-polynomial}
+\end{equation}
+这些向量只用$\bm A$就能递推：把$\phi_k,\pi_k$的递推乘以$\psi_k$，再乘以新因子$1-\omega_kt$。每个$\omega_k$在添入时选得使残差局部最小，所以$\psi_k$还起平滑作用，减缓BiCG残差的振荡。以下记固定的影子向量为$\widehat{\bm r}$，通常取$\widehat{\bm r}=\widetilde{\bm r}_0=\bm r_0$；每轮分成两个半步，再形成下一轮的方向。
+
+\paragraph{BiCG半步}
+先把$\phi_k$推进到$\phi_{k+1}$，$\psi_k$不变。由$\phi_{k+1}=\phi_k-\alpha_kt\pi_k$乘以$\psi_k$，中间残差为
+\[
+ \psi_k(\bm A)\phi_{k+1}(\bm A)\bm r_0=\bm r_k-\alpha_k\bm A\bm p_k .
+\]
+记$\rho_k=\widehat{\bm r}^\top\bm r_k$、$\bm v_k=\bm A\bm p_k$，按上一段，BiCG的步长可以写成
+\begin{equation}
+ \alpha_k=\frac{\rho_k}{\widehat{\bm r}^\top\bm v_k},
+ \label{eq:ls-bicgstab-alpha}
+\end{equation}
+分子与分母中多项式$\psi_k$带来的因子相同，相互抵消。中间近似$\bm x_k+\alpha_k\bm p_k$的残差为
+\begin{equation}
+ \bm s_k=\bm r_k-\alpha_k\bm v_k .
+ \label{eq:ls-bicgstab-intermediate}
+\end{equation}
+步长使中间残差与影子向量正交，$\widehat{\bm r}^\top\bm s_k=0$。
+
+\paragraph{残差最小化半步}
+再把$\psi_k$推进到$\psi_{k+1}=(1-\omega_kt)\psi_k$：从中间近似出发沿$\bm s_k$走$\omega_k$，残差变为$\bm s_k-\omega_k\bm t_k$，其中$\bm t_k=\bm A\bm s_k$。取
+\begin{equation}
+ \omega_k=\frac{\bm t_k^\top\bm s_k}{\bm t_k^\top\bm t_k},
+ \label{eq:ls-bicgstab-omega}
+\end{equation}
+它使新残差的长度$\lVert\bm s_k-\omega\bm t_k\rVert_2$在$\omega\in\mathbb R$上最小，也就是在一维子空间$\operatorname{span}\{\bm s_k\}$上作一步GMRES。两次修正合起来，解与残差更新为
+\begin{equation}
+ \bm x_{k+1}=\bm x_k+\alpha_k\bm p_k+\omega_k\bm s_k,\qquad \bm r_{k+1}=\bm s_k-\omega_k\bm t_k .
+ \label{eq:ls-bicgstab-update}
+\end{equation}
+
+\paragraph{新方向}
+首轮取$\bm p_0=\bm r_0$。由$\pi_{k+1}=\phi_{k+1}+\beta\pi_k$乘以$\psi_{k+1}=(1-\omega_kt)\psi_k$，新方向是$\bm r_{k+1}$加上$(\bm I-\omega_k\bm A)\bm p_k$的倍数。
+
+组合系数仍是BiCG的$\beta$，按上一段由固定影子向量的内积换算：$\psi$与$\phi$的最高次项系数在一轮中分别多乘$-\omega$与$-\alpha$，所以BiCG的$\rho_{k+1}/\rho_k$等于这里的$\rho_{k+1}/\rho_k$再乘$\alpha_k/\omega_k$。按第$k$轮（$k\ge1$）用上一轮保存的量写出，
+\begin{equation}
+ \beta_k=\frac{\rho_k}{\rho_{k-1}}\cdot\frac{\alpha_{k-1}}{\omega_{k-1}},\qquad
+ \bm p_k=\bm r_k+\beta_k(\bm p_{k-1}-\omega_{k-1}\bm v_{k-1}).
+ \label{eq:ls-bicgstab-direction}
+\end{equation}
+与BiCG的方向更新~\eqref{eq:ls-bicg-direction}相比，多出的因子$\alpha_{k-1}/\omega_{k-1}$与$-\omega_{k-1}\bm v_{k-1}$都来自残差上额外的一次因子。取$\widehat{\bm r}=\widetilde{\bm r}_0$时，定理~\ref{thm:ls-bicgstab-bicg-relation}说明，这里的$\alpha_k$与$\beta_k$正是BiCG的步长与组合系数，BiCGSTAB的残差等于BiCG的残差再乘上平滑多项式$\psi_k(\bm A)$。
+
+\paragraph{代价}
+每轮作两次$\bm A$乘向量，不需要$\bm A^\top$。但$\omega_k$的局部最小只相对于中间残差$\bm s_k$成立，BiCGSTAB既不保证残差单调下降，也保留了BiCG的中断：$\rho_k=0$或$\widehat{\bm r}^\top\bm v_k=0$时步长无法计算；此外$\omega_k=0$时$\psi$不再增加次数，下一轮的$\beta$也无法计算。这些在算法分析中具体说明。
+
+\subsection{算法实现}
+
+输入为实可逆方阵$\bm A$与右端$\bm b$，算法只需计算$\bm A$乘向量，输出为近似解$\bm x$。预先选定的参数除第~\ref{sec:ls-matrix-splitting}节执行流程中的初值$\bm x_0$、容差$\mathrm{atol},\mathrm{rtol}$与最大轮数$K$外，还有固定的影子向量$\widehat{\bm r}$，默认取$\widehat{\bm r}=\bm r_0$；停止检查沿用该流程的阈值$\tau=\mathrm{atol}+\mathrm{rtol}\lVert\bm b\rVert_2$，但每轮检查两次，中间残差也要检查。与BiCG相同，$\rho_k$、$\widehat{\bm r}^\top\bm v_k$与$\omega_k$都可能在残差非零时为零，相除前要检查，并区分收敛与中断。
+
+每轮先作BiCG半步，检查中间残差，再作残差最小化半步，更新解与残差后形成下一轮的方向；两个半步各作一次$\bm A$乘向量。下面的写法参照文献中的模板\scite{math-barrett1994templates}。对称的贯穿例配上$\widehat{\bm r}=\bm r_0$时，BiCG就是CG，显示不出与CG的区别，所以沿用第~\ref{sec:ls-bicg}节的非对称系统。每一步使用下面的数据进行演示：
+\[
+ \bm A=\begin{bmatrix}4&1\\2&3\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\2\end{bmatrix},\qquad
+ \bm x_0=\bm 0,
+\]
+其精确解为$\bm x_\star=(1/10,3/5)^\top$。影子向量取$\widehat{\bm r}=\bm r_0$，以便与BiCG的数值逐项比较。
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm x\in\mathbb R^d$：当前近似$\bm x_k$，原处更新。
+ \item $\bm r\in\mathbb R^d$：当前残差$\bm r_k$，由递推更新，不重新计算$\bm b-\bm A\bm x$。
+ \item $\widehat{\bm r}\in\mathbb R^d$：固定的影子向量，整个计算中不变。
+ \item $\bm p\in\mathbb R^d$：搜索方向$\bm p_k$。
+ \item $\bm v\in\mathbb R^d$：$\bm A\bm p_k$，保留到本轮末形成新方向时使用。
+ \item $\bm s,\bm t\in\mathbb R^d$：中间残差$\bm s_k$与$\bm A\bm s_k$。
+ \item $\rho_k$：配对量$\widehat{\bm r}^\top\bm r_k$，保留到下一轮求组合系数。
+ \item $\alpha_k,\omega_k$：两个半步的步长，也用于本轮末的组合系数$\beta_{k+1}$。
+ \item $k$：轮次。
+\end{itemize}
+除矩阵外共保存$\bm x,\bm r,\widehat{\bm r},\bm p,\bm v,\bm s,\bm t$七个向量。
+
+\paragraph{初始化}
+把残差初始化为初始残差，检查影子向量满足$\widehat{\bm r}^\top\bm r_0\ne0$，把配对量初始化为它，第一个方向初始化为初始残差，轮次初始化为$0$：
+\[
+ \bm r_0=\bm b-\bm A\bm x_0,\qquad \rho_0=\widehat{\bm r}^\top\bm r_0,\qquad \bm p_0=\bm r_0,\qquad k=0 .
+\]
+若$\lVert\bm r_0\rVert_2\le\tau$，复核后直接输出$\bm x_0$。例中
+\[
+ \widehat{\bm r}=\bm r_0=\bm p_0=\begin{bmatrix}1\\2\end{bmatrix},\qquad \rho_0=5,\qquad \lVert\bm r_0\rVert_2=\sqrt5\approx2.24 .
+\]
+
+\paragraph{每轮更新}
+在第$k$轮：
+\begin{enumerate}
+ \item \textbf{BiCG半步。}计算$\bm v_k=\bm A\bm p_k$与分母$\widehat{\bm r}^\top\bm v_k$，按式~\eqref{eq:ls-bicgstab-alpha}与\eqref{eq:ls-bicgstab-intermediate}得到步长与中间残差：
+ \[
+  \begin{gathered}
+  \bm v_k=\bm A\bm p_k,\qquad \alpha_k=\frac{\rho_k}{\widehat{\bm r}^\top\bm v_k},\\
+  \bm s_k=\bm r_k-\alpha_k\bm v_k .
+  \end{gathered}
+ \]
+ 例中第一轮
+ \[
+  \begin{gathered}
+  \bm v_0=\begin{bmatrix}6\\8\end{bmatrix},\qquad \widehat{\bm r}^\top\bm v_0=22,\qquad \alpha_0=\frac5{22},\\
+  \bm s_0=\begin{bmatrix}-\tfrac4{11}\\\tfrac2{11}\end{bmatrix}.
+  \end{gathered}
+ \]
+ 中间近似
+ \[
+  \bm x_0+\alpha_0\bm p_0=\begin{bmatrix}5/22\\5/11\end{bmatrix}
+ \]
+ 与中间残差$\bm s_0$正是BiCG第一步的$\bm x_1$与$\bm r_1$，并且
+ \[
+  \widehat{\bm r}^\top\bm s_0=-\tfrac4{11}+\tfrac4{11}=0 .
+ \]
+
+ \item \textbf{检查中间残差。}若$\lVert\bm s_k\rVert_2\le\tau$，复核后输出中间近似
+ \[
+  \bm x_k+\alpha_k\bm p_k ,
+ \]
+ 不再走第二个半步。因此进入下一步时$\bm s_k\ne\bm 0$，$\bm t_k^\top\bm t_k$不会出现$0/0$。例中第一轮$\lVert\bm s_0\rVert_2=2\sqrt5/11\approx0.407$，未达标，继续。
+
+ \item \textbf{求$\omega_k$。}计算$\bm t_k=\bm A\bm s_k$，按式~\eqref{eq:ls-bicgstab-omega}取使$\lVert\bm s_k-\omega\bm t_k\rVert_2$最小的步长：
+ \[
+  \bm t_k=\bm A\bm s_k,\qquad \omega_k=\frac{\bm t_k^\top\bm s_k}{\bm t_k^\top\bm t_k}.
+ \]
+ 例中第一轮
+ \[
+  \begin{gathered}
+  \bm t_0=\begin{bmatrix}-\tfrac{14}{11}\\-\tfrac2{11}\end{bmatrix},\\
+  \bm t_0^\top\bm s_0=\frac{52}{121},\qquad
+  \bm t_0^\top\bm t_0=\frac{200}{121},\qquad
+  \omega_0=\frac{13}{50}.
+  \end{gathered}
+ \]
+
+ \item \textbf{更新解与残差。}按式~\eqref{eq:ls-bicgstab-update}合并两次修正：
+ \[
+  \bm x\leftarrow\bm x+\alpha_k\bm p_k+\omega_k\bm s_k,\qquad \bm r\leftarrow\bm s_k-\omega_k\bm t_k .
+ \]
+ 若$\lVert\bm r_{k+1}\rVert_2\le\tau$，复核后输出$\bm x_{k+1}$。例中第一轮
+ \[
+  \bm x_1=\begin{bmatrix}\tfrac5{22}\\\tfrac5{11}\end{bmatrix}+\frac{13}{50}\begin{bmatrix}-\tfrac4{11}\\\tfrac2{11}\end{bmatrix}=\begin{bmatrix}\tfrac{73}{550}\\\tfrac{138}{275}\end{bmatrix},
+ \]
+ \[
+  \bm r_1=\bm s_0-\frac{13}{50}\bm t_0=\begin{bmatrix}-\tfrac9{275}\\\tfrac{63}{275}\end{bmatrix}.
+ \]
+ 直接计算$\bm b-\bm A\bm x_1$得到同一向量。它的长度
+ \[
+  \lVert\bm r_1\rVert_2=\frac{9\sqrt2}{55}\approx0.231
+ \]
+ 小于中间残差的长度$0.407$，这部分下降来自第二个半步的一元最小化。
+
+ \item \textbf{形成新方向。}计算$\rho_{k+1}=\widehat{\bm r}^\top\bm r_{k+1}$，按式~\eqref{eq:ls-bicgstab-direction}（下标换成$k+1$）求组合系数与新方向，然后令$k\leftarrow k+1$：
+ \[
+  \beta_{k+1}=\frac{\rho_{k+1}}{\rho_k}\cdot\frac{\alpha_k}{\omega_k},\qquad
+  \bm p_{k+1}=\bm r_{k+1}+\beta_{k+1}(\bm p_k-\omega_k\bm v_k).
+ \]
+ 例中第一轮的配对量与组合系数为
+ \[
+  \begin{gathered}
+  \rho_1=-\frac9{275}+\frac{126}{275}=\frac{117}{275},\\
+  \beta_1=\frac{117/275}{5}\cdot\frac{5/22}{13/50}=\frac9{121},
+  \end{gathered}
+ \]
+ 与BiCG的$\beta_0$相同。由
+ \[
+  \bm p_0-\omega_0\bm v_0=\begin{bmatrix}1\\2\end{bmatrix}-\frac{13}{50}\begin{bmatrix}6\\8\end{bmatrix}=\begin{bmatrix}-\tfrac{14}{25}\\-\tfrac2{25}\end{bmatrix},
+ \]
+ 得
+ \[
+  \bm p_1=\bm r_1+\frac9{121}(\bm p_0-\omega_0\bm v_0)=\begin{bmatrix}-\tfrac9{121}\\\tfrac{27}{121}\end{bmatrix}.
+ \]
+
+ 例中第二轮由第1步，
+ \[
+  \begin{gathered}
+  \bm v_1=\begin{bmatrix}-\tfrac9{121}\\\tfrac{63}{121}\end{bmatrix},\\
+  \widehat{\bm r}^\top\bm v_1=\frac{117}{121},\qquad
+  \alpha_1=\frac{117/275}{117/121}=\frac{11}{25},
+  \end{gathered}
+ \]
+ $\alpha_1$也与BiCG的$\alpha_1$相同，于是
+ \[
+  \bm s_1=\bm r_1-\frac{11}{25}\bm v_1=\bm 0 .
+ \]
+
+ \item \textbf{停止。}退出有三种原因。
+
+ 其一，第2步的中间残差或第4步的新残差达到容差：这只是递推残差，按第~\ref{sec:ls-stationary-stopping}节先用原矩阵重算$\bm b-\bm A\bm x$复核，复核仍满足时才以“达到容差”结束。
+
+ 其二，残差非零而某个分母$\widehat{\bm r}^\top\bm v_k$、$\bm t_k^\top\bm t_k$或$\rho_{k+1}$为零，或相对于所涉向量长度的乘积过小，或$\omega_k=0$使下一轮的组合系数无法计算：这时报告中断，或者采用明确的重启策略（例如以当前残差重新选取影子向量），不能把中断误报为残差达标。
+
+ 其三，做满$K$轮，以“步数耗尽”结束。各种结束原因的含义见第~\ref{sec:ls-stationary-stopping}节。
+
+ 例中第二轮第2步发现$\bm s_1=\bm 0$，复核后退出，不再计算$\bm t_1=\bm 0$与$\omega_1$，从而避免了零除。
+\end{enumerate}
+
+最终输出的是第二轮的中间近似
+\[
+ \bm x_1+\alpha_1\bm p_1=\bm x_1+\frac{11}{25}\begin{bmatrix}-\tfrac9{121}\\\tfrac{27}{121}\end{bmatrix}=\begin{bmatrix}\tfrac1{10}\\\tfrac35\end{bmatrix}=\bm x_\star ,
+\]
+原矩阵上的残差$\bm b-\bm A\bm x_\star=\bm 0$。
+
+各步系数与BiCG逐项一致：$\alpha_0=5/22$、$\beta_1=9/121$、$\alpha_1=11/25$分别等于BiCG的$\alpha_0,\beta_0,\alpha_1$，这正是定理~\ref{thm:ls-bicgstab-bicg-relation}的结论；两种方法都在两轮内得到精确解，但BiCGSTAB没有计算$\bm A^\top$乘向量。残差长度依次为$2.24$、$0.407$（中间残差）、$0.231$、$0$。
+
+在对称的例~\ref{ex:ls-stationary-running-example}上按同样步骤执行，得$\alpha_0=1/4$、$\omega_0=3/10$、$\beta_1=1/16$、$\alpha_1=4/11$，第二轮中间残差为零，输出$(1/11,7/11)^\top$；其中$\alpha_0,\beta_1,\alpha_1$就是CG的$\alpha_0,\beta_0,\alpha_1$。
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+为把BiCGSTAB与BiCG比较，用残差多项式描述BiCG。记BiCG的步长与组合系数为$\alpha_k^{B},\beta_k^{B}$。由式~\eqref{eq:ls-bicg-update}与\eqref{eq:ls-bicg-direction}，存在多项式$P_k,T_k$，使BiCG的残差与方向分别为$P_k(\bm A)\bm r_0$与$T_k(\bm A)\bm r_0$，且
+\[
+ P_0=T_0=1,\qquad P_{k+1}=P_k-\alpha_k^{B}zT_k,\qquad T_{k+1}=P_{k+1}+\beta_k^{B}T_k ;
+\]
+影子残差与影子方向使用同样的系数，分别为$P_k(\bm A^\top)\widetilde{\bm r}_0$与$T_k(\bm A^\top)\widetilde{\bm r}_0$。BiCGSTAB每轮的第二个半步对应一个一次因子，记平滑多项式$Q_k(z)=\prod_{j<k}(1-\omega_jz)$。
+
+\begin{theorem}[BiCGSTAB与BiCG的关系]
+\label{thm:ls-bicgstab-bicg-relation}
+设在精确算术下取$\widehat{\bm r}=\widetilde{\bm r}_0$，BiCG与BiCGSTAB执行到第$k$轮均未中断。则
+\begin{equation}
+ \bm r_k=Q_k(\bm A)P_k(\bm A)\bm r_0,\qquad \bm p_k=Q_k(\bm A)T_k(\bm A)\bm r_0,
+ \label{eq:ls-bicgstab-bicg-relation}
+\end{equation}
+并且BiCGSTAB的步长$\alpha_k=\alpha_k^{B}$；$k\ge1$时，式~\eqref{eq:ls-bicgstab-direction}的$\beta_k=\beta_{k-1}^{B}$。
+\end{theorem}
+
+\begin{proof}
+对$k$归纳证明多项式表示。每一轮先用一个线性泛函把配对量化为首项的贡献，得到两种方法的系数相等，再由系数相等推出下一轮的表示。$k=0$时$Q_0=P_0=T_0=1$，$\bm p_0=\bm r_0$，表示成立。
+
+\emph{正交关系。}定义$L[f]=\widehat{\bm r}^\top f(\bm A)\bm r_0$。前$k$个影子残差张成$\mathcal K_k(\bm A^\top,\widehat{\bm r})$，所以定理~\ref{thm:ls-bicg-biorthogonality}的双正交性与双共轭性分别写成
+\[
+ L[z^jP_k]=0,\qquad L[z^{j+1}T_k]=0\qquad(j<k).
+\]
+记$P_k$与$Q_k$的首项系数分别为$\pi_k$与$\chi_k$。$T_k$与$P_k$只差低次项，首项系数也是$\pi_k$；由两条递推，
+\[
+ \frac{\pi_{k+1}}{\pi_k}=-\alpha_k^{B},\qquad \frac{\chi_{k+1}}{\chi_k}=-\omega_k .
+\]
+
+\emph{配对量与步长。}设表示对$k$成立。各配对量写成$L$的值后，与$P_k$或$zT_k$相乘的低次项都被上面的正交关系消去，只剩首项的贡献。BiCG的配对量$\rho_k^{B}=\widetilde{\bm r}_k^\top P_k(\bm A)\bm r_0$与BiCGSTAB的$\rho_k$满足
+\[
+ \begin{gathered}
+ \rho_k^{B}=L[P_k^2]=\pi_kL[z^kP_k],\\
+ \rho_k=L[Q_kP_k]=\chi_kL[z^kP_k],
+ \end{gathered}
+\]
+故
+\[
+ \rho_k^{B}=\frac{\pi_k}{\chi_k}\rho_k .
+\]
+两种步长的分母同样满足
+\[
+ \begin{gathered}
+ \widetilde{\bm p}_k^\top\bm A\,T_k(\bm A)\bm r_0=L[zT_k^2]=\pi_kL[z^{k+1}T_k],\\
+ \widehat{\bm r}^\top\bm v_k=L[zQ_kT_k]=\chi_kL[z^{k+1}T_k].
+ \end{gathered}
+\]
+两种步长中的$\pi_k$与$\chi_k$分别约去，都等于$L[z^kP_k]/L[z^{k+1}T_k]$，所以$\alpha_k=\alpha_k^{B}$。
+
+\emph{表示的保持。}由$\alpha_k=\alpha_k^{B}$与式~\eqref{eq:ls-bicgstab-intermediate}、\eqref{eq:ls-bicgstab-update}，
+\[
+ \begin{gathered}
+ \bm s_k=Q_k(\bm A)P_{k+1}(\bm A)\bm r_0,\\
+ \bm r_{k+1}=(\bm I-\omega_k\bm A)\bm s_k=Q_{k+1}(\bm A)P_{k+1}(\bm A)\bm r_0 .
+ \end{gathered}
+\]
+于是配对量的关系对$k+1$也成立，代入首项系数之比，
+\[
+ \beta_k^{B}=\frac{\rho_{k+1}^{B}}{\rho_k^{B}}
+ =\frac{\pi_{k+1}}{\pi_k}\cdot\frac{\chi_k}{\chi_{k+1}}\cdot\frac{\rho_{k+1}}{\rho_k}
+ =\frac{\rho_{k+1}}{\rho_k}\cdot\frac{\alpha_k}{\omega_k}=\beta_{k+1}.
+\]
+最后由式~\eqref{eq:ls-bicgstab-direction}与$Q_{k+1}=(1-\omega_kz)Q_k$，
+\[
+ \begin{aligned}
+ \bm p_{k+1}&=Q_{k+1}(\bm A)P_{k+1}(\bm A)\bm r_0\\
+ &\quad+\beta_k^{B}(\bm I-\omega_k\bm A)Q_k(\bm A)T_k(\bm A)\bm r_0\\
+ &=Q_{k+1}(\bm A)T_{k+1}(\bm A)\bm r_0 ,
+ \end{aligned}
+\]
+表示对$k+1$成立。
+\end{proof}
+
+因此在精确算术且不中断时，第一个半步保持了BiCG的Petrov--Galerkin条件，第二个半步只是在BiCG的残差多项式上再乘一个一次因子。
+
+\paragraph{第二个半步的作用}
+$\lVert\bm s_k-\omega\bm t_k\rVert_2^2$是$\omega$的一元二次式，在式~\eqref{eq:ls-bicgstab-omega}处取得最小值
+\begin{equation}
+ \lVert\bm s_k-\omega_k\bm t_k\rVert_2^2=\lVert\bm s_k\rVert_2^2-\frac{(\bm t_k^\top\bm s_k)^2}{\lVert\bm t_k\rVert_2^2},
+ \label{eq:ls-bicgstab-local-decrease}
+\end{equation}
+所以$\lVert\bm r_{k+1}\rVert_2\le\lVert\bm s_k\rVert_2$。这只是相对于中间残差的局部改进：第一个半步可能使$\lVert\bm s_k\rVert_2$大于$\lVert\bm r_k\rVert_2$，因而不保证$\lVert\bm r_{k+1}\rVert_2\le\lVert\bm r_k\rVert_2$，也不保证在所有可逆系统上收敛。收敛快慢取决于实际形成的残差多项式$Q_kP_k$。
+
+\paragraph{中断与数值敏感度}
+稳定化半步不消除BiCG的中断：$\rho_k$或$\widehat{\bm r}^\top\bm v_k$为零的情形依然存在，另外还多了$\omega_k=0$的可能，这时下一轮的$\beta$无法计算。影子配对量很小或$\omega_k$很小时，后续系数对舍入敏感，所以仍按公共准则复核原残差。
+
+\paragraph{计算代价}
+完整一轮通常需要两次$\bm A$乘向量，不需要$\bm A^\top$，使用固定数量的工作向量；在中间阶段终止时，只需要第一个半步的一次乘法。与BiCG相比，每轮的矩阵作用次数相同，但两次都是$\bm A$，并多了一次局部平滑。

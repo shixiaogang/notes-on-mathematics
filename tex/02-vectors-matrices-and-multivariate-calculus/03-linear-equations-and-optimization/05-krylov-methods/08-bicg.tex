@@ -1,0 +1,410 @@
+\section{双共轭梯度法}
+\label{sec:ls-bicg}
+
+第~\ref{sec:ls-arnoldi-application}节说明，对一般方阵，Arnoldi正交化给出的小问题无论按Galerkin条件还是按极小残差条件求解，都要用整组基还原近似解；GMRES（第~\ref{sec:ls-gmres}节）因此须保存全部基向量，存储与正交化工作随步数线性增长。
+
+第~\ref{sec:ls-lanczos-application}节的短递推则依赖对称性：正是$\bm A^\top=\bm A$使大部分系数$h_{i,j}$为零，MINRES与CG才只需固定数量的向量。
+
+本节的双共轭梯度法针对一般的非对称可逆方阵，改用第~\ref{sec:ls-krylov-selection-criteria}节第四类准则中的影子空间：残差不再与$\mathcal K_k$本身正交，而与$\bm A^\top$生成的Krylov子空间正交，即Petrov--Galerkin条件~\eqref{eq:ls-krylov-projection}。这样恢复了短递推，算法形式与CG的式~\eqref{eq:ls-cg-update}—\eqref{eq:ls-cg-beta}相仿，代价是放弃残差的最小化；下一节的BiCGSTAB在此基础上减缓残差的起伏。
+
+\subsection{主要思想}
+
+设$\bm A$是一般的实可逆方阵，不要求对称。
+
+\paragraph{影子空间}
+对一般的非对称矩阵，在单一的Krylov子空间$\mathcal K_k(\bm A,\bm r_0)$中，短递推与最优性一般不能兼得：GMRES保住了残差最小，却要保存整组基；Lanczos过程的短递推则依赖$\bm A^\top=\bm A$。
+
+BiCG的做法是放弃最优性、保住短递推。为此，除了原方程$\bm A\bm x=\bm b$，它还引入一个以$\bm A^\top$为系数的影子方程，从满足$\widetilde{\bm r}_0^\top\bm r_0\ne0$的影子残差$\widetilde{\bm r}_0$出发，生成影子空间$\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0)$。近似仍取在$\bm x_0+\mathcal K_k(\bm A,\bm r_0)$中，但要求残差与影子空间正交：
+\[
+ \bm r_k\perp\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0),
+\]
+即第~\ref{sec:ls-krylov-selection-criteria}节的Petrov--Galerkin条件~\eqref{eq:ls-krylov-projection}。\term{双共轭梯度法}（biconjugate gradient method，BiCG）就按这一条件选取近似。下面看这个条件怎样化成一个三对角方程，以及怎样像CG那样逐步求解它。
+
+\paragraph{双正交的两组基}
+设$\bm V_k$的列$\bm v_1,\ldots,\bm v_k$是$\mathcal K_k(\bm A,\bm r_0)$的一组基，$\bm W_k$的列$\bm w_1,\ldots,\bm w_k$是$\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0)$的一组基，且两者的前$j$列分别张成$\mathcal K_j(\bm A,\bm r_0)$与$\mathcal K_j(\bm A^\top,\widetilde{\bm r}_0)$。第~\ref{sec:ls-lanczos}节推导三项递推时，用对称性把$\bm v_i^\top\bm A\bm v_j$改写为$(\bm A\bm v_i)^\top\bm v_j$；没有对称性时，转置把$\bm A$换成$\bm A^\top$，
+\[
+ \bm w_i^\top\bm A\bm v_j=(\bm A^\top\bm w_i)^\top\bm v_j ,
+\]
+而$\bm A^\top\bm w_i$正好留在影子空间中。于是要求两组基\term{双正交}（biorthogonality），并归一化为
+\begin{equation}
+ \bm w_i^\top\bm v_j=\begin{cases}1,&i=j,\\0,&i\ne j,\end{cases}\qquad\text{即}\quad \bm W_k^\top\bm V_k=\bm I .
+ \label{eq:ls-bicg-biorthonormal}
+\end{equation}
+这时$\bm v_j$与$\mathcal K_{j-1}(\bm A^\top,\widetilde{\bm r}_0)$正交，$\bm w_i$与$\mathcal K_{i-1}(\bm A,\bm r_0)$正交。又因为
+\[
+ \bm A^\top\bm w_i\in\mathcal K_{i+1}(\bm A^\top,\widetilde{\bm r}_0),\qquad \bm A\bm v_j\in\mathcal K_{j+1}(\bm A,\bm r_0),
+\]
+所以
+\[
+ \bm w_i^\top\bm A\bm v_j=0\qquad(\lvert i-j\rvert>1),
+\]
+因此投影矩阵$\bm T_k=\bm W_k^\top\bm A\bm V_k$是三对角的，但一般不对称。
+
+记它的对角元为$a_j$、次对角元为$\gamma_j$、上对角元为$\eta_j$，以$k=3$为例，
+\[
+ \bm T_3=\begin{bmatrix}a_1&\eta_1&0\\\gamma_1&a_2&\eta_2\\0&\gamma_2&a_3\end{bmatrix}.
+\]
+与Lanczos过程一样，这两组基可以用三项递推交替生成：
+\begin{equation}
+ \begin{gathered}
+ \bm A\bm v_j=\eta_{j-1}\bm v_{j-1}+a_j\bm v_j+\gamma_j\bm v_{j+1},\\
+ \bm A^\top\bm w_j=\gamma_{j-1}\bm w_{j-1}+a_j\bm w_j+\eta_j\bm w_{j+1},
+ \end{gathered}
+ \label{eq:ls-bicg-two-sided-lanczos}
+\end{equation}
+每个新基向量只需扣除两个旧方向，称为双边Lanczos过程。若某一步扣除后的两个余项内积为零而余项本身不为零，就无法归一化，递推中断。
+
+\paragraph{逐步长大的三对角方程}
+取$\bm v_1=\bm r_0/\beta$，$\beta=\lVert\bm r_0\rVert_2$，并取$\bm w_1$与$\widetilde{\bm r}_0$同向、满足$\bm w_1^\top\bm v_1=1$。把近似写成
+\[
+  \bm x_k=\bm x_0+\bm V_k\bm y_k ,
+\]
+Petrov--Galerkin条件是
+\[
+  \bm W_k^\top(\bm r_0-\bm A\bm V_k\bm y_k)=\bm 0 .
+\]
+由$\bm W_k^\top\bm V_k=\bm I$得
+\[
+  \bm W_k^\top\bm r_0=\beta\bm e_1 ,
+\]
+于是条件化为$k$阶三对角方程
+\begin{equation}
+ \bm T_k\bm y_k=\beta\bm e_1 .
+ \label{eq:ls-bicg-tridiagonal-system}
+\end{equation}
+
+这与CG的处境完全相同：每一步$\bm T_k$只在右侧添一列、在下方添一行，新添的元素只有$\eta_{k-1},\gamma_{k-1},a_k$。区别只在于$\bm T_k$不对称，也不一定正定。
+
+\paragraph{分解的增量更新}
+不对称的三对角矩阵不能作$\bm L\bm D\bm L^\top$分解，改作不选主元的LU分解：
+\[
+ \bm T_k=\bm L_k\bm U_k ,
+\]
+其中$\bm L_k$是单位下双对角矩阵，次对角元记为$\ell_j$；$\bm U_k$是上双对角矩阵，对角元记为$d_j$。
+
+以$k=3$为例，
+\[
+ \bm L_3\bm U_3=
+ \begin{bmatrix}1&&\\\ell_1&1&\\&\ell_2&1\end{bmatrix}
+ \begin{bmatrix}d_1&\eta_1&\\&d_2&\eta_2\\&&d_3\end{bmatrix}
+ =\begin{bmatrix}d_1&\eta_1&\\\ell_1d_1&\ell_1\eta_1+d_2&\eta_2\\&\ell_2d_2&\ell_2\eta_2+d_3\end{bmatrix}.
+\]
+$\bm U_k$的上对角元就是$\bm T_k$的$\eta_j$。
+
+与$\bm T_3$逐元素比较，从$d_1=a_1$出发，逐个算出
+\begin{equation}
+ \ell_j=\frac{\gamma_j}{d_j},\qquad d_{j+1}=a_{j+1}-\ell_j\eta_j\qquad(j=1,2,\ldots).
+ \label{eq:ls-bicg-lu}
+\end{equation}
+对称时$\eta_j=\gamma_j$，这就是CG的式~\eqref{eq:ls-cg-ldl}。与CG一样，$\bm T_{k+1}$只多出$\eta_k,\gamma_k,a_{k+1}$，$\bm L_k,\bm U_k$原封不动，只需在末尾追加$\ell_k$与$d_{k+1}$。不同的是，这里没有正定性保证$d_j\ne0$；若某个$d_j=0$，不选主元的LU就无法继续，这是BiCG的另一种中断。
+
+\paragraph{翻译回向量}
+仍按CG的办法把分解翻译成向量的短递推。先由前代$\bm L_k\bm g=\beta\bm e_1$得
+\[
+ g_1=\beta,\qquad g_{j+1}=-\ell_jg_j ,
+\]
+再令$\widehat{\bm P}_k=\bm V_k\bm U_k^{-1}=[\hat{\bm p}_1,\ldots,\hat{\bm p}_k]$，则
+\[
+ \bm x_k=\bm x_0+\widehat{\bm P}_k\bm g .
+\]
+
+比较$\widehat{\bm P}_k\bm U_k=\bm V_k$的第$j+1$列，得
+\[
+ \eta_j\hat{\bm p}_j+d_{j+1}\hat{\bm p}_{j+1}=\bm v_{j+1} .
+\]
+
+由于$\bm g$与$\widehat{\bm P}_k$都只在末尾追加，解可以逐步累加：
+\[
+ \bm x_k=\bm x_{k-1}+g_k\hat{\bm p}_k ,
+\]
+其中的方向由上式逐列解出：
+\[
+ \hat{\bm p}_1=\frac{\bm v_1}{d_1},\qquad \hat{\bm p}_{j+1}=\frac{\bm v_{j+1}-\eta_j\hat{\bm p}_j}{d_{j+1}} .
+\]
+残差也与CG一样落在下一个基向量的方向上。
+
+由$\bm A\bm V_k=\bm V_k\bm T_k+\gamma_k\bm v_{k+1}\bm e_k^\top$与$\bm T_k\bm y_k=\beta\bm e_1$，
+\[
+ \bm r_k=-\gamma_k(\bm e_k^\top\bm y_k)\bm v_{k+1} .
+\]
+
+$\bm U_k\bm y_k=\bm g$的最后一个方程给出$d_k(\bm e_k^\top\bm y_k)=g_k$，所以
+\begin{equation}
+ \bm r_k=-\ell_kg_k\,\bm v_{k+1}=g_{k+1}\bm v_{k+1} .
+ \label{eq:ls-bicg-residual-direction}
+\end{equation}
+影子方程一侧对$\bm T_k^\top=\bm U_k^\top\bm L_k^\top$作同样的推导，影子残差$\widetilde{\bm r}_k$落在$\bm w_{k+1}$的方向上。于是BiCG可以像CG那样，用残差代替基向量，不必显式生成两组基。
+
+\paragraph{BiCG的形式}
+把方向按残差的比例缩放，记
+\[
+ \bm p_k=g_{k+1}d_{k+1}\hat{\bm p}_{k+1} .
+\]
+
+上面的方向递推乘以$g_{k+1}d_{k+1}$，并用$g_{k+1}/g_k=-\ell_k$，就成为
+\[
+ \bm p_k=\bm r_k+(\ell_k\eta_k/d_k)\bm p_{k-1} .
+\]
+
+解的递推成为
+\[
+ \bm x_{k+1}=\bm x_k+\bm p_k/d_{k+1} .
+\]
+
+影子一侧得到同样的系数。于是解、原残差与影子残差用同一个步长更新：
+\begin{equation}
+ \begin{gathered}
+ \bm x_{k+1}=\bm x_k+\alpha_k\bm p_k,\\
+ \bm r_{k+1}=\bm r_k-\alpha_k\bm A\bm p_k,\qquad
+ \widetilde{\bm r}_{k+1}=\widetilde{\bm r}_k-\alpha_k\bm A^\top\widetilde{\bm p}_k ,
+ \end{gathered}
+ \label{eq:ls-bicg-update}
+\end{equation}
+两组方向都从各自的初始残差出发，用同一个组合系数更新：
+\begin{equation}
+ \begin{gathered}
+ \bm p_0=\bm r_0,\qquad \widetilde{\bm p}_0=\widetilde{\bm r}_0,\\
+ \bm p_{k+1}=\bm r_{k+1}+\beta_k\bm p_k,\qquad
+ \widetilde{\bm p}_{k+1}=\widetilde{\bm r}_{k+1}+\beta_k\widetilde{\bm p}_k ,
+ \end{gathered}
+ \label{eq:ls-bicg-direction}
+\end{equation}
+两个系数正是LU分解的元素换算而来：
+\[
+ \alpha_k=\frac1{d_{k+1}},\qquad \beta_k=\frac{\ell_{k+1}\eta_{k+1}}{d_{k+1}}=\frac{\gamma_{k+1}\eta_{k+1}}{d_{k+1}^2} .
+\]
+对称时$\eta=\gamma$，这就回到CG的$\beta_k=\ell_{k+1}^2$。
+
+实际计算时不必先求$d_j,\ell_j$。记配对量$\rho_k=\widetilde{\bm r}_k^\top\bm r_k$，两个系数可以直接由向量算出：
+\begin{equation}
+ \alpha_k=\frac{\rho_k}{\widetilde{\bm p}_k^\top\bm A\bm p_k},
+ \label{eq:ls-bicg-step}
+\end{equation}
+\begin{equation}
+ \beta_k=\frac{\rho_{k+1}}{\rho_k}.
+ \label{eq:ls-bicg-beta}
+\end{equation}
+它们与CG的式~\eqref{eq:ls-cg-step}、\eqref{eq:ls-cg-beta}同形，只是内积的一侧换成了影子序列：$\alpha_k$使新原残差与当前影子方向正交，
+\[
+ \widetilde{\bm p}_k^\top\bm r_{k+1}=0 ;
+\]
+$\beta_k$使新原方向与当前影子方向关于$\bm A$双共轭，
+\[
+ \widetilde{\bm p}_k^\top\bm A\bm p_{k+1}=0 .
+\]
+
+定理~\ref{thm:ls-bicg-biorthogonality}说明，按式~\eqref{eq:ls-bicg-update}—\eqref{eq:ls-bicg-beta}逐步计算，原、影子残差两两双正交，原、影子方向两两双共轭，所得近似正好满足Petrov--Galerkin条件。$\bm A$对称且$\widetilde{\bm r}_0=\bm r_0$时，影子序列与原序列逐项相同，这组递推就退化为CG。
+
+\paragraph{代价}
+BiCG用影子空间换来了短递推，代价有三。
+
+其一，Petrov--Galerkin条件不最小化任何范数，残差的历史可能剧烈振荡。
+
+其二，每步除了$\bm A$乘向量，还要计算一次$\bm A^\top$乘向量。
+
+其三，递推可能中断：$\rho_k=0$而$\bm r_k\ne\bm0$对应双边Lanczos过程无法归一化，$\widetilde{\bm p}_k^\top\bm A\bm p_k=0$对应LU分解中$d_{k+1}=0$。这些在算法分析中具体说明；下一节的BiCGSTAB去掉$\bm A^\top$并减缓振荡。
+
+\subsection{算法实现}
+
+输入为实可逆方阵$\bm A$与右端$\bm b$，算法需要计算$\bm A$与$\bm A^\top$乘向量，输出为近似解$\bm x$。预先选定的参数除第~\ref{sec:ls-matrix-splitting}节执行流程中的初值$\bm x_0$、容差$\mathrm{atol},\mathrm{rtol}$与最大轮数$K$外，还有影子初值$\widetilde{\bm r}_0$，默认取$\widetilde{\bm r}_0=\bm r_0$；停止检查沿用该流程的阈值$\tau=\mathrm{atol}+\mathrm{rtol}\lVert\bm b\rVert_2$，各种结束原因的含义见第~\ref{sec:ls-stationary-stopping}节。
+
+每轮作一次$\bm A$乘向量和一次$\bm A^\top$乘向量，用同一个步长更新解与两个残差，再用同一个组合系数形成两个新方向。与CG不同，$\rho_k$与$\widetilde{\bm p}_k^\top\bm A\bm p_k$不受正定性保护，残差非零时也可能为零，所以每次相除前都要检查分母，并区分收敛与中断。
+
+对称矩阵配上$\widetilde{\bm r}_0=\bm r_0$时BiCG与CG的计算完全一致，贯穿例显示不出影子序列的作用；因此改用把贯穿例的$a_{2,1}$由$1$改为$2$的非对称矩阵，在下面的例子上执行。
+
+\begin{example}[非对称二阶系统上的BiCG]
+\label{ex:ls-bicg-two-steps}
+取
+\[
+ \bm A=\begin{bmatrix}4&1\\2&3\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\2\end{bmatrix},\qquad
+ \bm x_0=\bm 0,
+\]
+影子初值$\widetilde{\bm r}_0=\bm r_0$。精确解为
+\[
+ \bm x_\star=\begin{bmatrix}1/10\\3/5\end{bmatrix},
+\]
+代回两行方程，$4/10+3/5=1$，$2/10+9/5=2$。下面每一步之后给出BiCG在这个例子上的数值。
+\end{example}
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm x\in\mathbb R^d$：当前近似解$\bm x_k$。
+ \item $\bm r,\widetilde{\bm r}\in\mathbb R^d$：当前残差$\bm r_k$与影子残差$\widetilde{\bm r}_k$。
+ \item $\bm p,\widetilde{\bm p}\in\mathbb R^d$：当前方向$\bm p_k$与影子方向$\widetilde{\bm p}_k$。
+ \item $\bm q,\widetilde{\bm q}\in\mathbb R^d$：工作向量，分别存$\bm A\bm p_k$与$\bm A^\top\widetilde{\bm p}_k$，供残差更新复用。
+ \item $\rho_k$：配对量$\widetilde{\bm r}_k^\top\bm r_k$，留到下一轮作$\beta_k$的分母。
+ \item $\alpha_k,\beta_k$：本轮的步长与组合系数。
+ \item $k$：轮次。
+\end{itemize}
+除矩阵外共保存七个向量，存储不随轮数增长。
+
+\paragraph{初始化}
+把解初始化为$\bm x_0$，残差初始化为初始残差，影子残差初始化为影子初值，两组方向分别初始化为两个残差，配对量初始化为两者的内积，轮次初始化为$0$：
+\[
+ \begin{gathered}
+ \bm r_0=\bm b-\bm A\bm x_0,\qquad \bm p_0=\bm r_0,\qquad \widetilde{\bm p}_0=\widetilde{\bm r}_0,\\
+ \rho_0=\widetilde{\bm r}_0^\top\bm r_0,\qquad k=0 .
+ \end{gathered}
+\]
+若$\lVert\bm r_0\rVert_2\le\tau$，复核后直接输出$\bm x_0$；若$\rho_0=0$，须另取影子初值。例中
+\[
+ \bm r_0=\widetilde{\bm r}_0=\bm p_0=\widetilde{\bm p}_0=\begin{bmatrix}1\\2\end{bmatrix},\qquad \rho_0=5,
+\]
+$\lVert\bm r_0\rVert_2=\sqrt5\approx2.24$，开始迭代。
+
+\paragraph{每轮更新}
+在第$k$轮：
+\begin{enumerate}
+ \item \textbf{乘矩阵。}计算
+ \[
+  \bm q=\bm A\bm p_k,\qquad \widetilde{\bm q}=\bm A^\top\widetilde{\bm p}_k .
+ \]
+ 例中第一轮
+ \[
+  \bm q=\begin{bmatrix}6\\8\end{bmatrix},\qquad
+  \widetilde{\bm q}=\begin{bmatrix}8\\7\end{bmatrix}.
+ \]
+
+ \item \textbf{求步长。}计算分母$\widetilde{\bm p}_k^\top\bm q$。它为零而残差非零时递推中断，报告中断并停止；否则按式~\eqref{eq:ls-bicg-step}，
+ \[
+  \alpha_k=\frac{\rho_k}{\widetilde{\bm p}_k^\top\bm q} .
+ \]
+ 例中第一轮
+ \[
+  \widetilde{\bm p}_0^\top\bm q=22,\qquad \alpha_0=\frac5{22}.
+ \]
+
+ \item \textbf{更新解与两个残差。}按式~\eqref{eq:ls-bicg-update}，其中$\bm A\bm p_k$与$\bm A^\top\widetilde{\bm p}_k$直接取已算出的$\bm q$与$\widetilde{\bm q}$：
+ \[
+  \bm x_{k+1}=\bm x_k+\alpha_k\bm p_k,\qquad
+  \bm r_{k+1}=\bm r_k-\alpha_k\bm q,\qquad
+  \widetilde{\bm r}_{k+1}=\widetilde{\bm r}_k-\alpha_k\widetilde{\bm q} .
+ \]
+ 例中第一轮
+ \[
+  \bm x_1=\begin{bmatrix}\tfrac5{22}\\\tfrac5{11}\end{bmatrix},\qquad
+  \bm r_1=\begin{bmatrix}-\tfrac4{11}\\\tfrac2{11}\end{bmatrix},\qquad
+  \widetilde{\bm r}_1=\begin{bmatrix}-\tfrac9{11}\\\tfrac9{22}\end{bmatrix}.
+ \]
+ 可以核对双正交关系
+ \[
+  \widetilde{\bm r}_0^\top\bm r_1=-\tfrac4{11}+\tfrac4{11}=0,\qquad
+  \widetilde{\bm r}_1^\top\bm r_0=-\tfrac9{11}+\tfrac9{11}=0 .
+ \]
+
+ \item \textbf{形成新方向。}计算新的配对量，按式~\eqref{eq:ls-bicg-beta}算出组合系数，再按式~\eqref{eq:ls-bicg-direction}形成两个新方向：
+ \[
+  \rho_{k+1}=\widetilde{\bm r}_{k+1}^\top\bm r_{k+1},\qquad \beta_k=\frac{\rho_{k+1}}{\rho_k},
+ \]
+ \[
+  \bm p_{k+1}=\bm r_{k+1}+\beta_k\bm p_k,\qquad
+  \widetilde{\bm p}_{k+1}=\widetilde{\bm r}_{k+1}+\beta_k\widetilde{\bm p}_k .
+ \]
+ 分母$\rho_k$已在初始化或上一轮确认非零。例中第一轮
+ \[
+  \rho_1=\frac{36}{121}+\frac9{121}=\frac{45}{121},\qquad \beta_0=\frac{45/121}{5}=\frac9{121},
+ \]
+ \[
+  \bm p_1=\begin{bmatrix}-\tfrac{35}{121}\\\tfrac{40}{121}\end{bmatrix},\qquad
+  \widetilde{\bm p}_1=\begin{bmatrix}-\tfrac{90}{121}\\\tfrac{135}{242}\end{bmatrix}.
+ \]
+ 可以核对双共轭关系
+ \[
+  \widetilde{\bm p}_0^\top\bm A\bm p_1=\widetilde{\bm q}^\top\bm p_1=\frac{-280+280}{121}=0 .
+ \]
+ 然后令$k\leftarrow k+1$。
+
+ 例中第二轮
+ \[
+  \bm q=\begin{bmatrix}-\tfrac{100}{121}\\\tfrac{50}{121}\end{bmatrix},\qquad
+  \widetilde{\bm q}=\begin{bmatrix}-\tfrac{225}{121}\\\tfrac{225}{242}\end{bmatrix},
+ \]
+ 其中$\widetilde{\bm p}_0^\top\bm q=(-100+100)/121=0$再次印证双共轭。分母与步长为
+ \[
+  \widetilde{\bm p}_1^\top\bm q=\frac{1125}{1331},\qquad
+  \alpha_1=\frac{45/121}{1125/1331}=\frac{11}{25},
+ \]
+ 于是
+ \[
+  \begin{gathered}
+  \bm x_2=\bm x_1+\frac{11}{25}\bm p_1=\begin{bmatrix}\tfrac1{10}\\\tfrac35\end{bmatrix},\\
+  \bm r_2=\bm r_1-\frac{11}{25}\bm q=\bm 0,\qquad
+  \widetilde{\bm r}_2=\widetilde{\bm r}_1-\frac{11}{25}\widetilde{\bm q}=\bm 0,
+  \end{gathered}
+ \]
+ $\rho_2=0$，$\beta_1=0$。
+
+ \item \textbf{停止。}若$\lVert\bm r_{k}\rVert_2\le\tau$，先用原矩阵重算$\bm b-\bm A\bm x_{k}$复核（第~\ref{sec:ls-stationary-stopping}节），复核仍满足时以“达到容差”结束；若$\bm r_{k}\ne\bm 0$而$\rho_{k}=0$，下一轮的组合系数无法再除以它，以“中断”结束，不能把它当作收敛；若$k=K$，以“步数耗尽”结束；残差长期不降时按停滞处理。各种情况都输出$\bm x_{k}$并报告原因，否则进入下一轮。
+
+ 例中第一轮后$\lVert\bm r_1\rVert_2=\sqrt{20}/11\approx0.41$且$\rho_1\ne0$，继续；第二轮后$\bm r_2=\bm 0$，复核真实残差也为零，以“达到容差”结束。
+\end{enumerate}
+第1—4步就是式~\eqref{eq:ls-bicg-update}—\eqref{eq:ls-bicg-beta}，其中两次矩阵作用都只算一次，存入$\bm q$与$\widetilde{\bm q}$复用。
+
+最终得到例中的近似解
+\[
+ \bm x_2=\begin{bmatrix}\tfrac1{10}\\\tfrac35\end{bmatrix}=\bm x_\star ,
+\]
+与例~\ref{ex:ls-bicg-two-steps}中代回验证的精确解相同。
+
+第一步的近似也可以由小问题~\eqref{eq:ls-krylov-projection}直接核对：取$\bm V_1=\bm r_0$、$\bm W_1=\widetilde{\bm r}_0$，方程为
+\[
+ (\widetilde{\bm r}_0^\top\bm A\bm r_0)\,y=\widetilde{\bm r}_0^\top\bm r_0 ,
+\]
+即$22y=5$，$y=\alpha_0$，$\bm x_1=\bm x_0+y\bm r_0$与递推结果一致。$\bm A$不对称，CG的前提不成立，但BiCG借助影子序列维持了双正交与双共轭，在二维问题上同样两步结束。
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+BiCG选取近似的依据是下面的双正交关系。证明沿用CG的归纳，只是把每个内积的左因子换成影子序列。
+
+\begin{theorem}[BiCG的双正交性]
+\label{thm:ls-bicg-biorthogonality}
+设在精确算术下BiCG执行到第$k$步，此前的$\rho_0,\ldots,\rho_k$与$\widetilde{\bm p}_i^\top\bm A\bm p_i$（$i<k$）均非零。则对$i,j\le k$、$i\ne j$，
+\begin{equation}
+ \widetilde{\bm r}_i^\top\bm r_j=0,\qquad \widetilde{\bm p}_i^\top\bm A\bm p_j=0,
+ \label{eq:ls-bicg-biorthogonality-relations}
+\end{equation}
+并且$\bm r_k\perp\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0)$。这个正交条件确定了BiCG在$\bm x_0+\mathcal K_k$中选取的近似。
+\end{theorem}
+
+\begin{proof}
+对$k$归纳证明两组关系，再由双正交推出与检验空间的正交。$k=0$时没有需要验证的关系。设结论对$k$成立；由式~\eqref{eq:ls-bicg-direction}，$\bm p_0,\ldots,\bm p_i$与$\bm r_0,\ldots,\bm r_i$张成同一空间，影子序列亦然。
+
+\emph{双正交。}由归纳假设，$\bm r_k$与$\widetilde{\bm r}_0,\ldots,\widetilde{\bm r}_{k-1}$正交，因而与$\widetilde{\bm p}_0,\ldots,\widetilde{\bm p}_{k-1}$正交，于是
+\[
+ \widetilde{\bm p}_k^\top\bm r_k=\widetilde{\bm r}_k^\top\bm r_k+\beta_{k-1}\widetilde{\bm p}_{k-1}^\top\bm r_k=\rho_k ,
+\]
+$k=0$时由$\widetilde{\bm p}_0=\widetilde{\bm r}_0$直接成立。由步长~\eqref{eq:ls-bicg-step}与残差更新~\eqref{eq:ls-bicg-update}，
+\[
+ \widetilde{\bm p}_k^\top\bm r_{k+1}=\rho_k-\alpha_k\widetilde{\bm p}_k^\top\bm A\bm p_k=0 .
+\]
+对$i<k$，由归纳假设中的双共轭性，
+\[
+ \widetilde{\bm p}_i^\top\bm r_{k+1}=\widetilde{\bm p}_i^\top\bm r_k-\alpha_k\widetilde{\bm p}_i^\top\bm A\bm p_k=0 .
+\]
+所以$\bm r_{k+1}$与$\widetilde{\bm r}_0,\ldots,\widetilde{\bm r}_k$都正交。把两个序列的角色互换，同理$\widetilde{\bm r}_{k+1}$与$\bm r_0,\ldots,\bm r_k$正交。
+
+\emph{双共轭。}由影子残差的更新，$\bm A^\top\widetilde{\bm p}_i=(\widetilde{\bm r}_i-\widetilde{\bm r}_{i+1})/\alpha_i$，再用刚证的双正交，
+\[
+ \widetilde{\bm p}_i^\top\bm A\bm r_{k+1}=\frac{(\widetilde{\bm r}_i-\widetilde{\bm r}_{i+1})^\top\bm r_{k+1}}{\alpha_i}
+ =\begin{cases}0,&i<k,\\-\rho_{k+1}/\alpha_k,&i=k .\end{cases}
+\]
+对$i<k$，由归纳假设$\widetilde{\bm p}_i^\top\bm A\bm p_k=0$，故
+\[
+ \widetilde{\bm p}_i^\top\bm A\bm p_{k+1}=\widetilde{\bm p}_i^\top\bm A\bm r_{k+1}+\beta_k\widetilde{\bm p}_i^\top\bm A\bm p_k=0 .
+\]
+对$i=k$，由式~\eqref{eq:ls-bicg-step}、\eqref{eq:ls-bicg-beta}，
+\[
+ \beta_k\widetilde{\bm p}_k^\top\bm A\bm p_k=\frac{\rho_{k+1}}{\rho_k}\cdot\frac{\rho_k}{\alpha_k}=\frac{\rho_{k+1}}{\alpha_k},
+\]
+恰与$\widetilde{\bm p}_k^\top\bm A\bm r_{k+1}$抵消，所以$\widetilde{\bm p}_k^\top\bm A\bm p_{k+1}=0$。由$\bm A\bm p_i=(\bm r_i-\bm r_{i+1})/\alpha_i$，同理得$\widetilde{\bm p}_{k+1}^\top\bm A\bm p_i=0$（$i\le k$）。
+
+\emph{检验空间。}$\rho_i\ne0$与双正交性给出$\widetilde{\bm r}_0,\ldots,\widetilde{\bm r}_{k-1}$线性无关：若$\sum_ic_i\widetilde{\bm r}_i=\bm 0$，与$\bm r_j$作内积得$c_j\rho_j=0$。它们都属于维数至多为$k$的$\mathcal K_k(\bm A^\top,\widetilde{\bm r}_0)$，因而张成该空间，$\bm r_k$与之正交。
+\end{proof}
+
+\paragraph{收敛性与数值敏感度}
+双正交条件不是某个范数的最小化，BiCG因而没有CG或GMRES那样的单调最小性，残差可能上下波动，一般也不存在只靠$\kappa_2(\bm A)$就能承诺的统一下降速度。即使原方程有唯一解，配对量也可能在残差非零时为零，使递推中断；配对量很小时，除以它会放大已有的舍入误差，残差可能剧烈振荡。这里保留这一限制，不展开中断的分类与修补策略。
+
+\paragraph{计算代价}
+每轮需要一次$\bm A$乘向量和一次$\bm A^\top$乘向量，工作向量数量固定，存储不随步数增长。与GMRES相比，它以失去最小残差性和需要转置作用为代价换取短递推；若$\bm A^\top$的作用难以获得，这一方法就不适用。

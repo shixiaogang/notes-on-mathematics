@@ -44,9 +44,21 @@
 \end{itemize}
 $|S|=k$时停止，输出$S$。记第$t$轮选中的元素为$v_t$、结束时的集合为$S_t$，于是$S_0=\varnothing$，$S_t=S_{t-1}\cup\{v_t\}$。平局规则必须事先规定，否则同一输入可能得到不同输出，结果无法复核。
 
-停止条件还有一种常用的变形：某一轮全部未选元素的增益都是$0$时提前停止，输出当前集合$S$。目标单调且次模时，这样做不损失函数值。对任意$T\subseteq V\setminus S$，把$T$的元素逐个加入$S$，由式~\eqref{eq:graph-setfn-telescoping}和次模性，每一步的增益不超过该元素相对于$S$的增益$0$，所以$F(S\cup T)\leq F(S)$；单调性又给出$F(S\cup T)\geq F(S)$，于是继续选满$k$个只会保持当前值。
+停止条件还有一种常用的变形：某一轮全部未选元素的增益都是$0$时提前停止，输出当前集合$S$。目标单调且次模时，这样做不损失函数值。
 
-只有单调性时，提前停止可能错过价值。单个元素的增益都是$0$，并不排除两个元素一起加入才产生价值。第~\ref{sec:graph-setfn-greedy-guarantee}小节末尾的单调非次模函数$F(S)=\max\{3\,\mathbb I\{\{1,2\}\subseteq S\},\mathbb I\{3\in S\}\}$取$k=3$时，第$1$轮选$3$，第$2$轮元素$1,2$相对于$\{3\}$的增益都是$0$：提前停止得到$1$；继续选满则依次加入$1$、$2$，最后一步增益为$3$，得到$F(\{1,2,3\})=3$。下面的算法与分析按选满$k$个书写。
+理由如下。对任意$T\subseteq V\setminus S$，把$T$的元素逐个加入$S$，由式~\eqref{eq:graph-setfn-telescoping}和次模性，每一步的增益不超过该元素相对于$S$的增益$0$，所以
+\[
+  F(S\cup T)\leq F(S);
+\]
+单调性又给出$F(S\cup T)\geq F(S)$，于是继续选满$k$个只会保持当前值。
+
+只有单调性时，提前停止可能错过价值。单个元素的增益都是$0$，并不排除两个元素一起加入才产生价值。第~\ref{sec:graph-setfn-greedy-guarantee}小节末尾用到单调非次模函数
+\[
+  F(S)=\max\bigl\{3\,\mathbb I\{\{1,2\}\subseteq S\},\ \mathbb I\{3\in S\}\bigr\}.
+\]
+取$k=3$时，第$1$轮选$3$，第$2$轮元素$1,2$相对于$\{3\}$的增益都是$0$：提前停止得到$1$；继续选满则依次加入$1$、$2$，最后一步增益为$3$，得到$F(\{1,2,3\})=3$。
+
+下面的算法与分析按选满$k$个书写。
 
 \begin{algorithm}[基数约束下的边际增益贪心]
 \label{alg:graph-setfn-greedy}
@@ -100,36 +112,74 @@ $|S|=k$时停止，输出$S$。记第$t$轮选中的元素为$v_t$、结束时�
 \begin{theorem}[贪心的近似保证]
 \label{thm:graph-setfn-greedy-guarantee}
 设$F$是有限底集$V$上的集合函数，满足$F(\varnothing)=0$、单调非减且次模；整数$1\leq k\leq|V|$。记$\mathrm{OPT}$为问题~\eqref{eq:graph-setfn-cardinality-problem}的最优值，$S_\ell$为算法~\ref{alg:graph-setfn-greedy}执行$\ell$轮后的集合（$0\leq\ell\leq k$）。则
-\[
+\begin{equation}
   F(S_\ell)\geq\Bigl(1-\bigl(1-\tfrac1k\bigr)^{\ell}\Bigr)\mathrm{OPT}.
+  \label{eq:graph-setfn-greedy-bound}
+\end{equation}
+特别地，
+\[
+  F(S_k)\geq\bigl(1-(1-1/k)^k\bigr)\mathrm{OPT}\geq(1-e^{-1})\mathrm{OPT}.
 \]
-特别地，$F(S_k)\geq\bigl(1-(1-1/k)^k\bigr)\mathrm{OPT}\geq(1-e^{-1})\mathrm{OPT}$。
 \end{theorem}
 
 \begin{proof}
 固定一个最优集合$O$，$|O|\leq k$，$F(O)=\mathrm{OPT}$。考察第$t$轮开始时的集合$S_{t-1}$（$1\leq t\leq k$），先用次模性把它与最优值的差距上界为若干个边际增益之和。把$O\setminus S_{t-1}$中的元素排成$o_1,\ldots,o_r$，由单调性和式~\eqref{eq:graph-setfn-telescoping}，
 \[
-  \mathrm{OPT}=F(O)\leq F(O\cup S_{t-1})
-  =F(S_{t-1})+\sum_{j=1}^{r}\Delta\bigl(o_j\mid S_{t-1}\cup\{o_1,\ldots,o_{j-1}\}\bigr).
+  \begin{aligned}
+  \mathrm{OPT}=F(O)&\leq F(O\cup S_{t-1})\\
+  &=F(S_{t-1})+\sum_{j=1}^{r}\Delta\bigl(o_j\mid S_{t-1}\cup\{o_1,\ldots,o_{j-1}\}\bigr).
+  \end{aligned}
 \]
-每个$o_j$都不在$S_{t-1}\cup\{o_1,\ldots,o_{j-1}\}$中，由式~\eqref{eq:graph-setfn-diminishing-returns}，第$j$项不超过$\Delta(o_j\mid S_{t-1})$。而贪心在第$t$轮选的是增益最大的元素，所以$\Delta(o_j\mid S_{t-1})\leq\Delta(v_t\mid S_{t-1})=F(S_t)-F(S_{t-1})$。又$r\leq|O|\leq k$，且每一项增益非负，于是
+每个$o_j$都不在$S_{t-1}\cup\{o_1,\ldots,o_{j-1}\}$中，由式~\eqref{eq:graph-setfn-diminishing-returns}，第$j$项满足
+\[
+  \Delta\bigl(o_j\mid S_{t-1}\cup\{o_1,\ldots,o_{j-1}\}\bigr)\leq\Delta(o_j\mid S_{t-1}).
+\]
+而贪心在第$t$轮选的是增益最大的元素，所以
+\[
+  \Delta(o_j\mid S_{t-1})\leq\Delta(v_t\mid S_{t-1})=F(S_t)-F(S_{t-1}).
+\]
+又$r\leq|O|\leq k$，且每一项增益非负，于是
 \[
   \mathrm{OPT}-F(S_{t-1})\leq k\bigl(F(S_t)-F(S_{t-1})\bigr).
 \]
 也就是说，最优集合的至多$k$个元素合起来能补上的差距，至少有$1/k$能被当前最好的单个元素补上。
 
-记差距$\delta_t=\mathrm{OPT}-F(S_t)$。上式可写成$\delta_{t-1}\leq k(\delta_{t-1}-\delta_t)$，即
+记差距$\delta_t=\mathrm{OPT}-F(S_t)$。上式可写成
+\[
+  \delta_{t-1}\leq k(\delta_{t-1}-\delta_t),
+\]
+即
 \[
   \delta_t\leq\Bigl(1-\frac1k\Bigr)\delta_{t-1},\qquad t=1,\ldots,k.
 \]
-由$F(\varnothing)=0$得$\delta_0=\mathrm{OPT}$，连续使用$\ell$次得$\delta_\ell\leq(1-1/k)^\ell\,\mathrm{OPT}$，移项即为所求。
+由$F(\varnothing)=0$得$\delta_0=\mathrm{OPT}$，连续使用$\ell$次得
+\[
+  \delta_\ell\leq(1-1/k)^\ell\,\mathrm{OPT},
+\]
+移项即为所求。
 
-最后比较$(1-1/k)^k$与$e^{-1}$。函数$\psi(x)=e^{-x}-(1-x)$满足$\psi(0)=0$，导数$\psi'(x)=1-e^{-x}$在$x>0$时为正，所以$\psi$在$[0,+\infty)$上单调递增：闭区间上连续、内部导数为正的函数严格递增，这是微分中值定理的推论（可参考\BookChapterRef{chap:univariate-differentiation}{卷一“一元函数的微分”章}）。从而$0\leq1-x\leq e^{-x}$对$0\leq x\leq1$成立。取$x=1/k$再求$k$次幂，得到$(1-1/k)^k\leq e^{-1}$。
+最后比较$(1-1/k)^k$与$e^{-1}$。函数$\psi(x)=e^{-x}-(1-x)$满足$\psi(0)=0$，导数$\psi'(x)=1-e^{-x}$在$x>0$时为正，所以$\psi$在$[0,+\infty)$上单调递增：闭区间上连续、内部导数为正的函数严格递增，这是微分中值定理的推论（可参考\BookChapterRef{chap:univariate-differentiation}{卷一“一元函数的微分”章}）。从而
+\[
+  0\leq1-x\leq e^{-x},\qquad 0\leq x\leq1.
+\]
+取$x=1/k$再求$k$次幂，得到
+\[
+  (1-1/k)^k\leq e^{-1}.
+\]
 \end{proof}
 
 证明中三个条件各有作用。归一化保证差距从$\mathrm{OPT}$开始；若$F(\varnothing)\neq0$，给$F$加上一个常数会改变$F(S_k)$与$\mathrm{OPT}$的比值，比例式就失去意义。单调性用在$F(O)\leq F(O\cup S_{t-1})$和增益非负两处，次模性用在把$O$中元素的增益统一换成相对于$S_{t-1}$的增益。
 
-$k=1$时界为$1$，贪心选出的就是最好的单元素；$k=2$时界为$3/4$。在传感器实例中逐轮核对：$\ell=1$时界为$\frac12\times16=8$，而$F(S_1)=10$；$\ell=2$时界为$\frac34\times16=12$，而$F(S_2)=14$，两轮都与定理一致。$1-e^{-1}\approx0.632$是对一切$k$都成立的比例，但它只是近似保证，贪心并不保证精确最优。
+$k=1$时界为$1$，贪心选出的就是最好的单元素；$k=2$时界为$3/4$。在传感器实例中逐轮核对定理给出的下界：
+\[
+  \begin{aligned}
+  \ell=1:&\quad \tfrac12\times16=8\leq F(S_1)=10,\\
+  \ell=2:&\quad \tfrac34\times16=12\leq F(S_2)=14,
+  \end{aligned}
+\]
+两轮都与定理一致。
+
+$1-e^{-1}\approx0.632$是对一切$k$都成立的比例，但它只是近似保证，贪心并不保证精确最优。
 
 \paragraph{复杂度}
 第$t$轮要对$n-t+1$个未选元素各求值一次，总共
@@ -139,7 +189,11 @@ $k=1$时界为$1$，贪心选出的就是最好的单元素；$k=2$时界为$3/4
 次求值，再加上开始时的一次$F(\varnothing)$。传感器实例$n=4$、$k=2$，共$1+4+3=8$次。若一次求值的代价为$\tau$（例如覆盖量需要合并若干覆盖范围），总代价是$O(nk\tau)$，选最大值等其余操作只占$O(nk)$。与枚举相比，$nk$次求值随$n,k$多项式增长，而可行子集的个数随$k$迅速增长。
 
 \paragraph{适用范围}
-撤去次模性，保证就不再成立。图~\ref{fig:graph-setfn-property-counterexamples}(a)的函数$F(S)=\max\{3\,\mathbb I\{\{1,2\}\subseteq S\},\mathbb I\{3\in S\}\}$单调、归一化，但不是次模的。取$k=2$：第$1$轮三个增益依次为$0,0,1$，选$3$；第$2$轮相对于$\{3\}$，加入$1$或$2$的增益都是$0$，按编号选$1$，得到$F(\{1,3\})=1$。最优集合是$\{1,2\}$，$\mathrm{OPT}=3$。
+撤去次模性，保证就不再成立。图~\ref{fig:graph-setfn-property-counterexamples}(a)的函数
+\[
+  F(S)=\max\bigl\{3\,\mathbb I\{\{1,2\}\subseteq S\},\ \mathbb I\{3\in S\}\bigr\}
+\]
+单调、归一化，但不是次模的。取$k=2$：第$1$轮三个增益依次为$0,0,1$，选$3$；第$2$轮相对于$\{3\}$，加入$1$或$2$的增益都是$0$，按编号选$1$，得到$F(\{1,3\})=1$。最优集合是$\{1,2\}$，$\mathrm{OPT}=3$。
 
 元素$1,2$只有同时选中才有价值，每一轮单独看它们的增益都是零，贪心永远看不到这个互补组合。对照上面的差距论证，这里$O=\{1,2\}$合起来能补上差距$3$，各自的增益却都是$0$，“各元素增益之和不少于差距”这一步失效。把$3$换成任意大的$M$，比例$1/M$可以任意小，所以没有次模性就没有固定比例的保证。
 
@@ -159,7 +213,9 @@ $k=1$时界为$1$，贪心选出的就是最好的单元素；$k=2$时界为$3/4
 \subsubsection{算法实现}
 
 \paragraph{缓存增益的优先队列}
-每轮都要找出缓存增益最大的元素，并在某个元素的增益重算后把它放回合适的位置，这由以缓存增益为键的最大优先队列完成。每个未选元素$v$在队列中恰有一个条目$(v,g_v,r_v)$：$g_v$是缓存的增益，$r_v$是算出它的轮次，即$g_v=\Delta(v\mid S_{r_v-1})$。键的次序按$g_v$从大到小，$g_v$相同时编号小者在前，与普通贪心的平局规则一致。用到的操作只有两个：取出最前的条目，以及插入一个条目。用二叉堆实现时，两者都需要$O(\log n)$次比较。轮次$r_v$用来判断缓存是否过期：$r_v$等于当前轮次时，$g_v$就是相对于当前集合的增益。
+每轮都要找出缓存增益最大的元素，并在某个元素的增益重算后把它放回合适的位置，这由以缓存增益为键的最大优先队列完成。每个未选元素$v$在队列中恰有一个条目$(v,g_v,r_v)$：$g_v$是缓存的增益，$r_v$是算出它的轮次，即$g_v=\Delta(v\mid S_{r_v-1})$。轮次$r_v$用来判断缓存是否过期：$r_v$等于当前轮次时，$g_v$就是相对于当前集合的增益。
+
+键的次序按$g_v$从大到小，$g_v$相同时编号小者在前，与普通贪心的平局规则一致。用到的操作只有两个：取出最前的条目，以及插入一个条目。用二叉堆实现时，两者都需要$O(\log n)$次比较。
 
 \paragraph{惰性贪心的实现}
 与算法~\ref{alg:graph-setfn-greedy}相同，底集、$k$和求值规则在运行前给定；此外要求$F$是次模的，否则旧增益不是上界，下面的选择可能与普通贪心不同。算法维护四项状态：
@@ -221,11 +277,21 @@ $|S|=k$时停止，输出$S$。
 \paragraph{正确性}
 惰性贪心每轮选出的元素与普通贪心按同一平局规则选出的相同，从而定理~\ref{thm:graph-setfn-greedy-guarantee}的保证原样适用。证明对轮次归纳：设前$t-1$轮两者选出相同元素，当前集合都是$S_{t-1}$。
 
-在第$t$轮，设取出的条目$(u,g_u,t)$缓存是新的，则$g_u=\Delta(u\mid S_{t-1})$。对队列中任一其他元素$v$，它的缓存$g_v=\Delta(v\mid S_{r_v-1})$是在更小的集合$S_{r_v-1}\subseteq S_{t-1}$上算出的，由式~\eqref{eq:graph-setfn-diminishing-returns}，$g_v\geq\Delta(v\mid S_{t-1})$。$u$排在$v$前面，所以$\Delta(u\mid S_{t-1})\geq g_v\geq\Delta(v\mid S_{t-1})$。若某个$v$的当前增益与$u$相等，则$g_v$也与$g_u$相等，$u$排在前面说明它的编号更小。所以$u$正是普通贪心第$t$轮的选择。
+在第$t$轮，设取出的条目$(u,g_u,t)$缓存是新的，则$g_u=\Delta(u\mid S_{t-1})$。对队列中任一其他元素$v$，它的缓存$g_v=\Delta(v\mid S_{r_v-1})$是在更小的集合$S_{r_v-1}\subseteq S_{t-1}$上算出的，由式~\eqref{eq:graph-setfn-diminishing-returns}，
+\[
+  g_v\geq\Delta(v\mid S_{t-1}).
+\]
+$u$排在$v$前面，所以
+\[
+  \Delta(u\mid S_{t-1})=g_u\geq g_v\geq\Delta(v\mid S_{t-1}).
+\]
+若某个$v$的当前增益与$u$相等，则$g_v$也与$g_u$相等，$u$排在前面说明它的编号更小。所以$u$正是普通贪心第$t$轮的选择。
 
 每一轮都会结束：每次重算都把一个过期条目变成新的，一轮内至多重算$n-t+1$次，之后队列最前的条目必定是新的而被选中。
 
 这里的正确性只用到次模性，没有用到单调性和归一化；它们是近似保证需要的条件。对一般函数，旧增益不是上界，排在后面的元素的当前增益可能已经超过选中的元素，因此必须每轮全部重算。
 
 \paragraph{复杂度}
-初始化需要$1+n$次求值。第$t\geq2$轮的重算次数不超过未选元素个数$n-t+1$，所以最坏情形的求值次数与普通贪心相同；省下多少取决于增益下降的快慢，没有一般的保证。每次重算伴随一次取出与一次插入，每轮再有一次取出用于选中，每次队列操作需要$O(\log n)$次比较，最坏总开销为$O(nk\log n)$次比较，另加初始插入的$O(n\log n)$次比较。队列存放$n$个条目，额外空间为$O(n)$。一次求值的代价$\tau$通常远大于$O(\log n)$，这时省下的求值次数决定了实际运行时间。
+初始化需要$1+n$次求值。第$t\geq2$轮的重算次数不超过未选元素个数$n-t+1$，所以最坏情形的求值次数与普通贪心相同；省下多少取决于增益下降的快慢，没有一般的保证。
+
+每次重算伴随一次取出与一次插入，每轮再有一次取出用于选中，每次队列操作需要$O(\log n)$次比较，最坏总开销为$O(nk\log n)$次比较，另加初始插入的$O(n\log n)$次比较。队列存放$n$个条目，额外空间为$O(n)$。一次求值的代价$\tau$通常远大于$O(\log n)$，这时省下的求值次数决定了实际运行时间。

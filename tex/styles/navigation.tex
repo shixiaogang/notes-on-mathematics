@@ -99,6 +99,21 @@
       \csname booknav@secs@#1\endcsname}}}%
   \endgroup}
 
+% 顶部浮动体的总高度。marginfix 在 LaTeX 把顶部浮动体并入页面之前挂接边栏，
+% 边栏因此从正文起点而不是版心顶端开始；方框要回到版心顶端，就得先上移这一高度。
+% 测量方式与 \@cflt 拼接顶部浮动体相同，只是复制而不取走浮动体盒子。
+\newdimen\booknav@topht
+\def\booknav@measuretop{%
+  \global\booknav@topht\z@
+  \ifx\@toplist\@empty\else
+    \begingroup
+      \def\@elt##1{\setbox\@tempboxa\vbox{\unvbox\@tempboxa\copy##1\vskip\floatsep}}%
+      \setbox\@tempboxa\vbox{}%
+      \@toplist
+      \global\booknav@topht\dimexpr\ht\@tempboxa+\dp\@tempboxa-\floatsep+\textfloatsep\relax
+    \endgroup
+  \fi}
+
 \ExplSyntaxOn
 \clist_new:N \g__booknav_cursubs_clist
 \clist_new:N \g__booknav_cursecs_clist
@@ -110,6 +125,8 @@
 \box_new:N \g__booknav_box
 \dim_new:N \l__booknav_h_dim
 \dim_const:Nn \c__booknav_gap_dim { 6pt }
+% 方框与其后边注（文献、说明等）之间另加的间距，使两者在视觉上分开。
+\dim_const:Nn \c__booknav_notegap_dim { 10pt }
 
 % 读入上一轮的页码：页码 → {章号}{节列表}{小节列表}
 \cs_new_protected:Npn \__booknav_prepare:
@@ -191,10 +208,12 @@
   }
 \cs_generate_variant:Nn \__booknav_push_wide:nnn { nee }
 
-% 组页时（marginfix 排边注之前）：若本页有小节，排出方框并把边注起点移到方框之下。
+% 组页时（marginfix 排边注之前）：先量出顶部浮动体的高度；若本页有小节，排出方框，
+% 并把边注起点移到方框之下（起点从正文开始量，所以扣除上移的浮动体高度）。
 \cs_new_protected:Npn \__booknav_before_margin:
   {
     \bool_if:NF \g__booknav_ready_bool { \__booknav_prepare: }
+    \booknav@measuretop
     \box_gclear:N \g__booknav_box
     \tl_set:Ne \l_tmpb_tl { \int_eval:n { \g_shipout_readonly_int + 1 } }
     \tl_if_exist:cT { g__booknav_chap_ \l_tmpb_tl _tl }
@@ -211,11 +230,13 @@
         \str_if_eq:eeT { \mfx@marginstart } { 0pt }
           {
             \tl_gset:Ne \mfx@marginstart
-              { \dim_eval:n { \g__booknav_shift_dim + \l__booknav_h_dim } }
+              { \dim_eval:n { \dim_max:nn { 0pt }
+                  { \g__booknav_shift_dim + \l__booknav_h_dim + \c__booknav_notegap_dim
+                    - \booknav@topht } } }
           }
       }
   }
-% 方框默认紧贴边栏顶端；若本页正文中有跨栏图压到这一段，就移到该图之后。
+% 方框默认紧贴版心顶端（越过顶部浮动体所占的高度）；若本页有跨栏图压到这一段，就移到该图之后。
 % 边栏顶端在页面上的位置由上一轮的 booknav-mt<页码> 记录给出。
 \dim_new:N \g__booknav_shift_dim
 \dim_new:N \l__booknav_mt_dim
@@ -259,6 +280,7 @@
       {
         \vbox_to_zero:n
           {
+            \skip_vertical:n { -\booknav@topht }
             \zsavepos { booknav-mt \l_tmpb_tl }
             \box_if_empty:NF \g__booknav_box
               { \skip_vertical:N \g__booknav_shift_dim \box_use_drop:N \g__booknav_box }

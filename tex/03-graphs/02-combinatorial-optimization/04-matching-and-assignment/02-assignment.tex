@@ -14,7 +14,12 @@
 
 \begin{definition}[指派问题]
 \label{def:graph-opt-assignment}
-设二部图两侧各有$r$个顶点，左侧为行$1,\ldots,r$，右侧为列$1,\ldots,r$，允许的行列对组成边集$E$，每条边$(i,j)\in E$有有限实成本$c_{i,j}$。\term{指派问题}（assignment problem）要求选出一个只用允许边的完美匹配，即给每行$i$指定一个不同的列$\sigma(i)$，使总成本$C(\sigma)=\sum_{i=1}^r c_{i,\sigma(i)}$最小。
+设二部图两侧各有$r$个顶点，左侧为行$1,\ldots,r$，右侧为列$1,\ldots,r$，允许的行列对组成边集$E$，每条边$(i,j)\in E$有有限实成本$c_{i,j}$。\term{指派问题}（assignment problem）要求选出一个只用允许边的完美匹配，即给每行$i$指定一个不同的列$\sigma(i)$，使总成本
+\begin{equation}
+  C(\sigma)=\sum_{i=1}^r c_{i,\sigma(i)}
+  \label{eq:graph-opt-assignment-cost}
+\end{equation}
+最小。
 \end{definition}
 
 指派问题也称为最小权完美匹配，输出一个最优指派，或“不存在完美匹配”的结论。若要使收益$w_{i,j}$之和最大，取$c_{i,j}=-w_{i,j}$即可。全部行列对都允许时，$\sigma$可以是任意置换，成本写成$r$阶矩阵$\bm C=(c_{i,j})$。
@@ -29,11 +34,20 @@
   u_i+v_j\leq c_{i,j},
   \label{eq:graph-opt-feasible-labels}
 \end{equation}
-就称$(\bm u,\bm v)$为\term{可行标号}（feasible labeling）：把成本分摊给行与列，两份之和不超过实际成本。对任意完整指派$\sigma$，把它用到的$r$条边的不等式相加；每行恰出现一次，每列也恰出现一次，于是
-\[
-  C(\sigma)=\sum_{i=1}^r c_{i,\sigma(i)}\geq\sum_{i=1}^r\bigl(u_i+v_{\sigma(i)}\bigr)=\sum_{i=1}^r u_i+\sum_{j=1}^r v_j.
-\]
-右边与$\sigma$无关，是全部完整指派成本的共同下界。这个论证只用到“每行每列恰计一次”，不需要一般的线性规划对偶理论。从线性规划看，可行标号正是指派问题对偶问题的可行解，下面的紧边条件就是互补松弛；这一解释可参考\BookChapterRef{chap:linear-programming}{第~\ref{chap:linear-programming}章}。
+就称$(\bm u,\bm v)$为\term{可行标号}（feasible labeling）：把成本分摊给行与列，两份之和不超过实际成本。
+
+对任意完整指派$\sigma$，把它用到的$r$条边的不等式相加；每行恰出现一次，每列也恰出现一次，于是
+\begin{equation}
+  \begin{aligned}
+    C(\sigma)=\sum_{i=1}^r c_{i,\sigma(i)}
+    &\geq\sum_{i=1}^r\bigl(u_i+v_{\sigma(i)}\bigr)\\
+    &=\sum_{i=1}^r u_i+\sum_{j=1}^r v_j.
+  \end{aligned}
+  \label{eq:graph-opt-assignment-lower-bound}
+\end{equation}
+右边与$\sigma$无关，是全部完整指派成本的共同下界。这个论证只用到“每行每列恰计一次”，不需要一般的线性规划对偶理论。
+
+从线性规划看，可行标号正是指派问题对偶问题的可行解，下面的紧边条件就是互补松弛；这一解释可参考\BookChapterRef{chap:linear-programming}{第~\ref{chap:linear-programming}章}。
 
 称$c_{i,j}-u_i-v_j\geq0$为边$(i,j)$的剩余量。剩余量为零、使式~\eqref{eq:graph-opt-feasible-labels}取等号的允许边称为\term{紧边}（tight edge），全部顶点与全部紧边组成的子图称为\term{相等子图}（equality subgraph）。
 \begin{theorem}[紧边指派的最优性]
@@ -42,7 +56,7 @@
 \end{theorem}
 
 \begin{proof}
-$\sigma$用到的每条边都取等号，上面的求和不等式也取等号，所以$\sigma$的成本等于下界。任何完整指派的成本都不低于这个下界，所以$\sigma$最优。
+$\sigma$用到的每条边都取等号，式~\eqref{eq:graph-opt-assignment-lower-bound}中的求和不等式也取等号，所以$\sigma$的成本等于下界。任何完整指派的成本都不低于这个下界，所以$\sigma$最优。
 \end{proof}
 
 可行标号本身只提供下界；相等子图里可能没有完美匹配，不能据此宣布最优。求解因此变成两件同时进行的事：保持标号可行，同时在紧边中凑出完美匹配。KM算法严格按此工作；Auction算法允许所选的边留下一点剩余量，误差在第~\ref{sec:graph-opt-auction}小节给出。
@@ -58,7 +72,14 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 \[
   \bm C=\begin{bmatrix}1&2\\1&4\end{bmatrix},
 \]
-行依次为甲、乙，第$j$列是任务$j$。完整方案只有两个：甲—$1$、乙—$2$成本为$5$；甲—$2$、乙—$1$成本为$3$。两人最便宜的选择都是任务$1$，“每行选最小”拼不成指派；要比较的是让步的代价：甲改做任务$2$多花$1$，乙则多花$3$。
+行依次为甲、乙，第$j$列是任务$j$。完整方案只有两个，成本分别为
+\[
+  \begin{aligned}
+    \text{甲—}1,\ \text{乙—}2&:\quad 1+4=5,\\
+    \text{甲—}2,\ \text{乙—}1&:\quad 2+1=3.
+  \end{aligned}
+\]
+两人最便宜的选择都是任务$1$，“每行选最小”拼不成指派；要比较的是让步的代价：甲改做任务$2$多花$1$，乙则多花$3$。
 
 把上一小节的标号放回成本表。从每行最小值出发取$\bm u=(1,1)$、$\bm v=(0,0)$，标号可行，各格剩余量$c_{i,j}-u_i-v_j$为
 \[
@@ -68,9 +89,17 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 
 让甲先占任务$1$，再从自由的乙出发找增广路径。乙沿紧边到任务$1$，任务$1$已归甲，于是转去问甲；甲除任务$1$外没有紧边，搜索受阻，如图~\ref{fig:graph-opt-km}(a)。
 
-要接到空闲的任务$2$，甲还差$1$、乙还差$3$，所以只把标号推进较小的差额$1$：甲、乙的标号各加$1$，使通往树外的剩余量减$1$；任务$1$的标号减$1$，使树内两条紧边保持为零。新标号为$\bm u=(2,2)$、$\bm v=(-1,0)$，甲到任务$2$变紧，得到增广路径乙—任务$1$—甲—任务$2$，如图~\ref{fig:graph-opt-km}(b)。
+要接到空闲的任务$2$，甲还差$1$、乙还差$3$，所以只把标号推进较小的差额$1$：甲、乙的标号各加$1$，使通往树外的剩余量减$1$；任务$1$的标号减$1$，使树内两条紧边保持为零。新标号为
+\[
+  \bm u=(2,2),\qquad\bm v=(-1,0).
+\]
+这时甲到任务$2$变紧，得到增广路径乙—任务$1$—甲—任务$2$，如图~\ref{fig:graph-opt-km}(b)。
 
-翻转后甲做任务$2$、乙做任务$1$，成本为$3$，等于标号之和$2+2-1+0$，由定理~\ref{thm:graph-opt-tight-assignment}最优。成本表没有被改写，改变的只是下界的表示。
+翻转后甲做任务$2$、乙做任务$1$，成本等于标号之和：
+\[
+  c_{\text{甲},2}+c_{\text{乙},1}=2+1=3=2+2+(-1)+0.
+\]
+由定理~\ref{thm:graph-opt-tight-assignment}，这个指派最优。成本表没有被改写，改变的只是下界的表示。
 
 \begin{figure}[!htb]
   \centering
@@ -167,10 +196,21 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 \end{lemma}
 
 \begin{proof}
-按端点归属逐类检查允许边$(i,j)$的剩余量$c_{i,j}-u_i-v_j$。$i\in S$、$j\in T$时，$u_i$加$\delta$、$v_j$减$\delta$，剩余量不变，树中的紧边都属于这一类。$i\in S$、$j\notin T$时，剩余量减$\delta$；由$\delta$是这类边剩余量的最小值，减后仍非负，取到最小值的边变为零。$i\notin S$、$j\in T$时剩余量增加$\delta$，其余边不变，所以标号可行。树中每个列都与树中某一行匹配，每个非根行都经匹配边进树，匹配边要么两端都在树中，要么两端都在树外，剩余量都不变，仍为零。树外列的松弛量正是第二类边剩余量的最小值，统一减$\delta$后与新标号一致。最后，树中每个列都带进一个已匹配的行，根行自由，所以$|S|=|T|+1$，标号之和增加$|S|\delta-|T|\delta=\delta$。
+按端点归属逐类检查允许边$(i,j)$的剩余量$c_{i,j}-u_i-v_j$。$i\in S$、$j\in T$时，$u_i$加$\delta$、$v_j$减$\delta$，剩余量不变，树中的紧边都属于这一类。
+
+$i\in S$、$j\notin T$时，剩余量减$\delta$；由$\delta$是这类边剩余量的最小值，减后仍非负，取到最小值的边变为零。$i\notin S$、$j\in T$时剩余量增加$\delta$，其余边不变，所以标号可行。
+
+再看紧边与松弛量。树中每个列都与树中某一行匹配，每个非根行都经匹配边进树，匹配边要么两端都在树中，要么两端都在树外，剩余量都不变，仍为零。树外列的松弛量正是第二类边剩余量的最小值，统一减$\delta$后与新标号一致。
+
+最后，树中每个列都带进一个已匹配的行，根行自由，所以$|S|=|T|+1$，标号之和的增量为
+\[
+  |S|\delta-|T|\delta=\delta.
+\]
 \end{proof}
 
-由此，标号可行、匹配只用紧边两条性质在整个运行中保持。算法停止且全部行都匹配时，匹配是相等子图中的完美匹配，由定理~\ref{thm:graph-opt-tight-assignment}，它是最优指派。报告不可行也是正确的：若树外列的松弛量全为$+\infty$，$S$中各行的允许列全部落在$T$中，$|S|$行只能使用$|T|=|S|-1$个列，不可能各配一个不同的列。
+由此，标号可行、匹配只用紧边两条性质在整个运行中保持。算法停止且全部行都匹配时，匹配是相等子图中的完美匹配，由定理~\ref{thm:graph-opt-tight-assignment}，它是最优指派。
+
+报告不可行也是正确的：若树外列的松弛量全为$+\infty$，$S$中各行的允许列全部落在$T$中，$|S|$行只能使用$|T|=|S|-1$个列，不可能各配一个不同的列。
 
 有限终止由计数得到。每次调标后至少有一列入树；若它自由就立即增广，否则它的伙伴行入树。树中的列至多$r$个，所以一个自由行至多经过$r$次调标就增广。每次增广使匹配增加一对，至多$r$次。
 
@@ -198,9 +238,26 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 
 仍用同一成本矩阵，甲、乙是竞标者，任务是物品。不加价格时两人都偏好任务$1$；若只是“后来者抢走”，同一物品可以无休止地转手。需要让争抢付出代价：物品越受争抢，继续选它越不划算。为此给每个物品$j$配一个价格$p_j$，竞标者$i$按调整成本$c_{i,j}+p_j$比较物品。
 
-先看甲的第一次出价。零价格下任务$1$、$2$的调整成本是$1$和$2$，相差$1$。若把任务$1$的价格恰好提高$1$，两项就打平；并列时涨价为零，价格不再上涨，争抢可能无休止地继续。所以再多加一个小正数$\varepsilon$。取$\varepsilon=1/4$，任务$1$涨价$5/4$，甲所持任务的调整成本变为$9/4$，比另一项选择的$2$只贵$1/4$。甲接受的物品至多比最好选择差$\varepsilon$，而每次出价至少涨价$\varepsilon$。
+先看甲的第一次出价。零价格下任务$1$、$2$的调整成本是$1$和$2$，相差$1$。若把任务$1$的价格恰好提高$1$，两项就打平；并列时涨价为零，价格不再上涨，争抢可能无休止地继续。所以再多加一个小正数$\varepsilon$。
 
-接着乙看到$9/4$和$4$，仍选任务$1$，把价格再提高$4-9/4+1/4=2$，接管任务$1$，如图~\ref{fig:graph-opt-auction}(b)。甲重新比较$17/4$与$2$，转向任务$2$，如图~\ref{fig:graph-opt-auction}(c)。一般地，竞标者$i$在调整成本$q_j=c_{i,j}+p_j$中找最小值$q_{(1)}$及其物品$j^\star$，再取排除$j^\star$后的最小值$q_{(2)}$，把$p_{j^\star}$提高$q_{(2)}-q_{(1)}+\varepsilon$。涨价后$j^\star$的调整成本恰为$q_{(2)}+\varepsilon$，即“次好选择加$\varepsilon$”。价格只用于协调选择，方案仍按原成本评价，为$3$。
+取$\varepsilon=1/4$，任务$1$涨价$(2-1)+1/4=5/4$，甲所持任务的调整成本变为
+\[
+  c_{\text{甲},1}+p_1=1+\tfrac54=\tfrac94,
+\]
+比另一项选择的$2$只贵$1/4$。甲接受的物品至多比最好选择差$\varepsilon$，而每次出价至少涨价$\varepsilon$。
+
+接着乙看到$9/4$和$4$，仍选任务$1$，把价格再提高
+\[
+  4-\tfrac94+\tfrac14=2,
+\]
+接管任务$1$，如图~\ref{fig:graph-opt-auction}(b)。甲重新比较$17/4$与$2$，转向任务$2$，如图~\ref{fig:graph-opt-auction}(c)。
+
+一般地，竞标者$i$在调整成本$q_j=c_{i,j}+p_j$中找最小值$q_{(1)}$及其物品$j^\star$，再取排除$j^\star$后的最小值$q_{(2)}$，按
+\begin{equation}
+  p_{j^\star}\gets p_{j^\star}+q_{(2)}-q_{(1)}+\varepsilon
+  \label{eq:graph-opt-auction-bid}
+\end{equation}
+提高$j^\star$的价格。涨价后$j^\star$的调整成本恰为$q_{(2)}+\varepsilon$，即“次好选择加$\varepsilon$”。价格只用于协调选择，方案仍按原成本评价，为$3$。
 
 \begin{figure}[!htb]
   \centering
@@ -226,7 +283,7 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 从队列取出竞标者$i$后，一次出价分三步：
 \begin{itemize}
   \item 比较：扫描第$i$行，计算$q_j=c_{i,j}+p_j$，求最小值$q_{(1)}$及物品$j^\star$，再求$q_{(2)}=\min_{j\neq j^\star}q_j$。不同物品并列时$q_{(2)}=q_{(1)}$，涨价恰为$\varepsilon$。
-  \item 涨价：$p_{j^\star}\gets p_{j^\star}+q_{(2)}-q_{(1)}+\varepsilon$。
+  \item 涨价：按式~\eqref{eq:graph-opt-auction-bid}令$p_{j^\star}\gets p_{j^\star}+q_{(2)}-q_{(1)}+\varepsilon$。
   \item 易主：若$j^\star$已有持有者$k$，置$\sigma(k)$为空并把$k$放回队列；再置$\mathrm{owner}(j^\star)=i$、$\sigma(i)=j^\star$。物品一旦有了持有者，此后始终有持有者。
 \end{itemize}
 队列为空时，每个竞标者都持有不同的物品，停止并输出指派$\sigma$、原始成本$C(\sigma)$和最终价格。
@@ -250,7 +307,13 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
   \item 乙：选任务$1$，涨价$2$，价格变为$13/4$；甲失去任务$1$，重新入队。
   \item 甲：选任务$2$，涨价$17/4-2+1/4=5/2$，队列变空。
 \end{itemize}
-最终甲配任务$2$、乙配任务$1$，原始成本为$2+1=3$。逐人核对：甲手中物品的调整成本是$2+5/2=9/2$，当前最好选择是$\min\{17/4,9/2\}=17/4$，恰好差$1/4$；乙手中的任务$1$调整成本为$17/4$，另一项为$4+5/2=13/2$，乙持有的就是最好选择。最终价格不是原问题的额外支出。
+最终甲配任务$2$、乙配任务$1$，原始成本为$2+1=3$。最终价格不是原问题的额外支出。
+
+再逐人核对$\varepsilon$条件。甲手中物品的调整成本与当前最好选择分别为
+\[
+  2+\tfrac52=\tfrac92,\qquad \min\bigl\{\tfrac{17}4,\tfrac92\bigr\}=\tfrac{17}4,
+\]
+恰好差$1/4$。乙手中的任务$1$调整成本为$17/4$，另一项为$4+5/2=13/2$，乙持有的就是最好选择。
 
 \begin{table}[!htb]
   \centering\small
@@ -274,9 +337,10 @@ $\sigma$用到的每条边都取等号，上面的求和不等式也取等号，
 \begin{definition}[$\varepsilon$互补松弛]
 \label{def:graph-opt-eps-cs}
 设$\varepsilon\geq0$，$\bm p$为价格，$\sigma$为部分或完整指派。若每个已指派的竞标者$i$都满足
-\[
+\begin{equation}
   c_{i,\sigma(i)}+p_{\sigma(i)}\leq\min_{j}\bigl(c_{i,j}+p_j\bigr)+\varepsilon,
-\]
+  \label{eq:graph-opt-eps-cs}
+\end{equation}
 就称$(\sigma,\bm p)$满足\term{$\varepsilon$互补松弛}（$\varepsilon$-complementary slackness）。
 \end{definition}
 
@@ -293,14 +357,21 @@ $\varepsilon=0$时，它就是“匹配边是紧边”的价格写法，下面�
 \begin{theorem}[Auction算法的误差界]
 \label{thm:graph-opt-auction}
 设成本矩阵完整有限，Auction算法以完整指派$\sigma$和价格$\bm p$停止，$C^\star$为最优指派成本。则
-\[
+\begin{equation}
   0\leq C(\sigma)-C^\star\leq r\varepsilon.
-\]
+  \label{eq:graph-opt-auction-error}
+\end{equation}
 若全部成本为整数且$0<\varepsilon<1/r$，则$\sigma$是最优指派。
 \end{theorem}
 
 \begin{proof}
-令$u_i=\min_j(c_{i,j}+p_j)$、$v_j=-p_j$。对任意$i,j$有$u_i\leq c_{i,j}+p_j$，即$u_i+v_j\leq c_{i,j}$，所以$(\bm u,\bm v)$是可行标号，由第~\ref{sec:graph-opt-assign-labels}小节，$\sum_iu_i+\sum_jv_j\leq C^\star$。由$\varepsilon$互补松弛，$c_{i,\sigma(i)}\leq u_i-p_{\sigma(i)}+\varepsilon=u_i+v_{\sigma(i)}+\varepsilon$，即每条匹配边的剩余量至多为$\varepsilon$。对$i$求和，$\sigma$是置换，每个$v_j$恰出现一次，
+令$u_i=\min_j(c_{i,j}+p_j)$、$v_j=-p_j$。对任意$i,j$有$u_i\leq c_{i,j}+p_j$，即$u_i+v_j\leq c_{i,j}$，所以$(\bm u,\bm v)$是可行标号，由第~\ref{sec:graph-opt-assign-labels}小节，$\sum_iu_i+\sum_jv_j\leq C^\star$。
+
+由$\varepsilon$互补松弛，
+\[
+  c_{i,\sigma(i)}\leq u_i-p_{\sigma(i)}+\varepsilon=u_i+v_{\sigma(i)}+\varepsilon,
+\]
+即每条匹配边的剩余量至多为$\varepsilon$。对$i$求和，$\sigma$是置换，每个$v_j$恰出现一次，
 \[
   C(\sigma)\leq\sum_iu_i+\sum_jv_j+r\varepsilon\leq C^\star+r\varepsilon.
 \]
@@ -309,14 +380,23 @@ $C(\sigma)\geq C^\star$是最优值的定义。成本为整数时，$C(\sigma)-C
 
 一般的实数成本在固定的正$\varepsilon$下只有这个误差界。两人例中$r\varepsilon=1/2<1$，成本为整数，所以得到的成本$3$精确最优。
 
-有限终止要用到“完整有限成本”和“零初始价格”。记$\Delta=\max_{i,j}c_{i,j}-\min_{i,j}c_{i,j}$。物品一旦被出价就始终有持有者，已持有物品的数目等于已指派的人数；只要还没停止，就至少有一个物品从未被出价，价格仍为$0$。竞标者$i$对$j^\star$出价时，若另有从未被出价的物品$j_0\neq j^\star$，则$q_{(2)}\leq c_{i,j_0}$，涨价后
+有限终止要用到“完整有限成本”和“零初始价格”。记成本范围为
+\[
+  \Delta=\max_{i,j}c_{i,j}-\min_{i,j}c_{i,j}.
+\]
+物品一旦被出价就始终有持有者，已持有物品的数目等于已指派的人数；只要还没停止，就至少有一个物品从未被出价，价格仍为$0$。
+
+竞标者$i$对$j^\star$出价时，若另有从未被出价的物品$j_0\neq j^\star$，则$q_{(2)}\leq c_{i,j_0}$，涨价后
 \[
   p_{j^\star}=q_{(2)}+\varepsilon-c_{i,j^\star}\leq c_{i,j_0}-c_{i,j^\star}+\varepsilon\leq\Delta+\varepsilon.
 \]
-若没有这样的$j_0$，$j^\star$就是最后一个未被出价的物品，这次出价后人人都有物品，算法停止。每次出价至少涨价$\varepsilon$，同一物品被出价$k$次后价格至少为$k\varepsilon$，所以除停止前的最后一次外，每个物品至多被出价$\Delta/\varepsilon+1$次，总出价次数
-\[
+若没有这样的$j_0$，$j^\star$就是最后一个未被出价的物品，这次出价后人人都有物品，算法停止。
+
+每次出价至少涨价$\varepsilon$，同一物品被出价$k$次后价格至少为$k\varepsilon$，所以除停止前的最后一次外，每个物品至多被出价$\Delta/\varepsilon+1$次，总出价次数
+\begin{equation}
   B\leq r\bigl(\Delta/\varepsilon+1\bigr)+1.
-\]
+  \label{eq:graph-opt-auction-bids}
+\end{equation}
 这个论证依赖每个物品都可选：禁配实例若不可行，价格可以无限上涨而永不停止。
 
 按总出价次数$B$分析稠密实现：每次出价扫描一行为$O(r)$，读入矩阵为$O(r^2)$，总时间$O(r^2+rB)$；价格、持有者、指派与队列为$O(r)$，成本表另占$O(r^2)$。

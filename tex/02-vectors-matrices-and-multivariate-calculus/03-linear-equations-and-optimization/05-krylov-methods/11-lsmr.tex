@@ -1,0 +1,486 @@
+% LSMR recursion checked against Fong and Saunders, SIAM J. Sci. Comput. 33 (2011), Algorithm LSMR.
+\section{LSMR算法}
+\label{sec:ls-lsmr}
+
+问题类与第~\ref{sec:ls-lsqr}节的LSQR相同：$\bm A\in\mathbb R^{m\times d}$可以是长方、秩亏的矩阵，方程$\bm A\bm x=\bm b$可以不相容。LSMR由Fong与Saunders提出\scite{math-fong2011lsmr}，它从零初值出发，在同一个Krylov子空间$\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$中取点，但选解准则改为使正规残差$\lVert\bm A^\top(\bm b-\bm A\bm x)\rVert_2$最小，这正是判断是否到达最小二乘解所看的量。
+
+它紧接第~\ref{sec:ls-golub-kahan-application}节Golub--Kahan双对角化的应用：那里已把正规残差化为关于双对角矩阵$\bm B_k$的一个小问题，本节说明怎样不形成$\bm B_k^\top\bm B_k$而逐步解出它。
+
+\subsection{主要思想}
+
+\paragraph{逐步长大的小问题}
+双对角化按递推~\eqref{eq:ls-golub-kahan-step}生成两组基与下双对角矩阵$\bm B_k$，并满足关系~\eqref{eq:ls-golub-kahan-relations}（定理~\ref{thm:ls-golub-kahan-relations}）。令$\bm x=\bm V_k\bm y$，第~\ref{sec:ls-golub-kahan-application}节已得到
+\[
+ \bm A^\top(\bm b-\bm A\bm V_k\bm y)
+ =\bm V_k\bigl(\alpha_1\beta_1\bm e_1-\bm B_k^\top\bm B_k\bm y\bigr)-\alpha_{k+1}\beta_{k+1}y_k\bm v_{k+1}.
+\]
+边界项的系数$-\alpha_{k+1}\beta_{k+1}y_k$可以写成$-\alpha_{k+1}\beta_{k+1}\bm e_k^\top\bm y$，于是把$\bm v_{k+1}$并入基，正规残差成为
+\begin{equation}
+ \begin{gathered}
+ \bm A^\top(\bm b-\bm A\bm V_k\bm y)
+ =\bm V_{k+1}\bigl(\alpha_1\beta_1\bm e_1-\bm C_k\bm y\bigr),\\
+ \bm C_k=\begin{bmatrix}\bm B_k^\top\bm B_k\\ \alpha_{k+1}\beta_{k+1}\bm e_k^\top\end{bmatrix}.
+ \end{gathered}
+ \label{eq:ls-lsmr-subproblem}
+\end{equation}
+$\bm V_{k+1}$的列标准正交，不改变长度，所以第$k$步要解的小问题是
+\[
+ \min_{\bm y\in\mathbb R^k}\lVert\alpha_1\beta_1\bm e_1-\bm C_k\bm y\rVert_2 ,
+\]
+区别于LSQR最小化$\lVert\beta_1\bm e_1-\bm B_k\bm y\rVert_2$。若$\alpha_{k+1}=0$，$\bm C_k$的末行为零，删去它并只用已有的$\bm V_k$表达，不假定存在额外的右基向量。
+
+$\bm B_k^\top\bm B_k$是对称三对角矩阵，对角元为$\alpha_i^2+\beta_{i+1}^2$，次对角元为$\alpha_{i+1}\beta_{i+1}$。以$k=3$为例，
+\[
+ \bm C_3=
+ \begin{bmatrix}
+ \alpha_1^2+\beta_2^2&\alpha_2\beta_2&0\\
+ \alpha_2\beta_2&\alpha_2^2+\beta_3^2&\alpha_3\beta_3\\
+ 0&\alpha_3\beta_3&\alpha_3^2+\beta_4^2\\
+ 0&0&\alpha_4\beta_4
+ \end{bmatrix}.
+\]
+它与MINRES的$\overline{\bm T}_k$同形，每步也只在右侧添一列、在下方添一行。但直接形成这些元素，就是形成Gram矩阵$\bm A^\top\bm A$在子空间上的投影，元素中出现系数的平方，与第~\ref{chap:direct-least-squares-solvers}章正规方程法一样会损失精度。LSMR因此不形成$\bm C_k$，而是从$\bm B_k$本身出发，用两层旋转逐列消元。
+
+\paragraph{两层分解}
+先对$\bm B_k$本身作正交三角化：与第~\ref{sec:ls-lsqr}节一样，逐列旋转把$\bm B_k$化为上双对角因子$\bm R_k$（对角元$\rho_i$，上对角元$\theta_{i+1}$）下接一行零。旋转不改变内积，于是
+\[
+ \bm B_k^\top\bm B_k=\bm R_k^\top\bm R_k .
+\]
+
+末行也能用$\bm R_k$表示。$\bm R_k$的末行是$\rho_k\bm e_k^\top$，即$\bm e_k^\top\bm R_k=\rho_k\bm e_k^\top$；而由下面的式~\eqref{eq:ls-lsmr-first-rotation}，
+\[
+ \theta_{k+1}\rho_k=s_k\rho_k\alpha_{k+1}=\beta_{k+1}\alpha_{k+1} ,
+\]
+所以
+\[
+ \alpha_{k+1}\beta_{k+1}\bm e_k^\top=\theta_{k+1}\bm e_k^\top\bm R_k .
+\]
+于是系数矩阵分解为
+\begin{equation}
+ \bm C_k=\bm L_k\bm R_k,\qquad
+ \bm L_k=\begin{bmatrix}\bm R_k^\top\\ \theta_{k+1}\bm e_k^\top\end{bmatrix}.
+ \label{eq:ls-lsmr-factorization}
+\end{equation}
+以$k=3$为例，
+\[
+ \bm R_3=\begin{bmatrix}\rho_1&\theta_2&0\\0&\rho_2&\theta_3\\0&0&\rho_3\end{bmatrix},\qquad
+ \bm L_3=\begin{bmatrix}\rho_1&0&0\\\theta_2&\rho_2&0\\0&\theta_3&\rho_3\\0&0&\theta_4\end{bmatrix}.
+\]
+$\bm L_k$是$(k+1)\times k$的下双对角矩阵，形状与$\bm B_k$完全相同。换元$\bm t=\bm R_k\bm y$后，小问题成为
+\[
+ \min_{\bm t\in\mathbb R^k}\lVert\alpha_1\beta_1\bm e_1-\bm L_k\bm t\rVert_2 ,
+\]
+与LSQR的小问题同形。所以需要两层消元：第一层逐列把$\bm B_k$消成$\bm R_k$，得到$\bm L_k$的新列；第二层再逐列把$\bm L_k$消成上三角，并变换右端。两层都沿用前一步的结果，只处理新添的一列。
+
+\paragraph{第一层：消元$\bm B_k$}
+两层都采用第~\ref{sec:ls-minres}节的旋转约定，第$i$个旋转只作用于第$i$、$i+1$两行，形式为
+\[
+ \begin{bmatrix}c_i&s_i\\-s_i&c_i\end{bmatrix}.
+\]
+第一层的做法与LSQR相同：$\bm B_k$的新列$(0,\ldots,0,\alpha_k,\beta_{k+1})^\top$只需经过最后一个旧旋转$\bm G_{k-1}$，再由新旋转$\bm G_k$消去$\beta_{k+1}$。以$k=3$为例，
+\[
+ \begin{bmatrix}0\\0\\\alpha_3\\\beta_4\end{bmatrix}
+ \xrightarrow{\ \bm G_2\ }
+ \begin{bmatrix}0\\\theta_3\\\bar\alpha_3\\\beta_4\end{bmatrix}
+ \xrightarrow{\ \bm G_3\ }
+ \begin{bmatrix}0\\\theta_3\\\rho_3\\0\end{bmatrix},
+\]
+其中$\bar\alpha_k$是第$k$个对角位置在旧旋转作用后、新旋转作用前的元素。与LSQR一样，$\bm G_k$一构造出来就提前作用于下一列的$(0,\alpha_{k+1})$，所以第$k$步的计算是
+\begin{equation}
+ \begin{gathered}
+ \rho_k=\sqrt{\bar\alpha_k^2+\beta_{k+1}^2},\qquad
+ c_k=\frac{\bar\alpha_k}{\rho_k},\qquad s_k=\frac{\beta_{k+1}}{\rho_k},\\
+ \theta_{k+1}=s_k\alpha_{k+1},\qquad
+ \bar\alpha_{k+1}=c_k\alpha_{k+1},
+ \end{gathered}
+ \label{eq:ls-lsmr-first-rotation}
+\end{equation}
+第一行构造$\bm G_k$，把$(\bar\alpha_k,\beta_{k+1})$变成$(\rho_k,0)$；第二行是$\bm G_k$作用于下一列的$(0,\alpha_{k+1})$。起步时$\bar\alpha_1=\alpha_1$。所得$\rho_k,\theta_{k+1}$与LSQR中的同名量相同；这里用$\bar\alpha$命名待消元的对角元，是为了把带横线的$\rho$留给第二层。第一层不作用于右端，LSMR只需要$\bm R_k$本身。
+
+\paragraph{第二层：消元$\bm L_k$}
+第一层每步给出$\rho_k$与$\theta_{k+1}$，它们恰好构成$\bm L_k$的新列$(0,\ldots,0,\rho_k,\theta_{k+1})^\top$，同样只在第$k$、$k+1$行非零。第二层的旋转记为$\bar{\bm G}_i$（参数$\bar c_i,\bar s_i$），把$\bm L_k$化为上双对角因子$\bar{\bm R}_k$（对角元$\bar\rho_i$，上对角元$\bar\theta_{i+1}$）。
+
+新列也只需经过最后一个旧旋转$\bar{\bm G}_{k-1}$，再由新旋转$\bar{\bm G}_k$消去$\theta_{k+1}$。以$k=3$为例，
+\[
+ \begin{bmatrix}0\\0\\\rho_3\\\theta_4\end{bmatrix}
+ \xrightarrow{\ \bar{\bm G}_2\ }
+ \begin{bmatrix}0\\\bar\theta_3\\\bar c_2\rho_3\\\theta_4\end{bmatrix}
+ \xrightarrow{\ \bar{\bm G}_3\ }
+ \begin{bmatrix}0\\\bar\theta_3\\\bar\rho_3\\0\end{bmatrix},
+\]
+整个矩阵在新旋转之前与之后分别是
+\[
+ \begin{bmatrix}
+ \bar\rho_1&\bar\theta_2&0\\
+ 0&\bar\rho_2&\bar\theta_3\\
+ 0&0&\bar c_2\rho_3\\
+ 0&0&\theta_4
+ \end{bmatrix}
+ \xrightarrow{\ \bar{\bm G}_3\ }
+ \begin{bmatrix}
+ \bar\rho_1&\bar\theta_2&0\\
+ 0&\bar\rho_2&\bar\theta_3\\
+ 0&0&\bar\rho_3\\
+ 0&0&0
+ \end{bmatrix}.
+\]
+与第一层不同，第二层的新列要等第一层算出$\theta_{k+1}$才完整，所以旧旋转不能提前作用，而是在本步先补上。
+
+右端$\alpha_1\beta_1\bm e_1$只经过第二层旋转，记第$k$个分量在$\bar{\bm G}_k$之前的值为$\bar\zeta_k$，之后为$\zeta_k$。一般地，
+\begin{equation}
+ \begin{gathered}
+ \bar\theta_k=\bar s_{k-1}\rho_k,\qquad
+ \bar\rho_k=\sqrt{(\bar c_{k-1}\rho_k)^2+\theta_{k+1}^2},\\
+ \bar c_k=\frac{\bar c_{k-1}\rho_k}{\bar\rho_k},\qquad
+ \bar s_k=\frac{\theta_{k+1}}{\bar\rho_k},\\
+ \zeta_k=\bar c_k\bar\zeta_k,\qquad
+ \bar\zeta_{k+1}=-\bar s_k\bar\zeta_k ,
+ \end{gathered}
+ \label{eq:ls-lsmr-second-rotation}
+\end{equation}
+第一行是旧旋转$\bar{\bm G}_{k-1}$把$(0,\rho_k)$变成$(\bar\theta_k,\bar c_{k-1}\rho_k)$，第二、三行构造$\bar{\bm G}_k$，把$(\bar c_{k-1}\rho_k,\theta_{k+1})$变成$(\bar\rho_k,0)$，第四行是$\bar{\bm G}_k$作用于右端。起步时$\bar c_0=1$，$\bar s_0=0$，$\bar\zeta_1=\alpha_1\beta_1$。
+
+\paragraph{右端与残差}
+以$k=3$为例，右端在$\bar{\bm G}_3$前后分别是
+\[
+ \begin{bmatrix}\zeta_1\\\zeta_2\\\bar\zeta_3\\0\end{bmatrix}
+ \xrightarrow{\ \bar{\bm G}_3\ }
+ \begin{bmatrix}\zeta_1\\\zeta_2\\\zeta_3\\\bar\zeta_4\end{bmatrix}.
+\]
+第二层旋转合起来是正交矩阵，不改变长度。记$\bm z_k=(\zeta_1,\ldots,\zeta_k)^\top$，小问题化为
+\[
+ \lVert\alpha_1\beta_1\bm e_1-\bm L_k\bm t\rVert_2
+ =\left\lVert\begin{bmatrix}\bm z_k-\bar{\bm R}_k\bm t\\ \bar\zeta_{k+1}\end{bmatrix}\right\rVert_2 .
+\]
+取$\bm t=\bar{\bm R}_k^{-1}\bm z_k$使上块为零，对应的近似记为$\bm x_k$；末分量$\bar\zeta_{k+1}$无法消去，就是最小值，即正规残差的长度：
+\begin{equation}
+ \lVert\bm A^\top(\bm b-\bm A\bm x_k)\rVert_2=\lvert\bar\zeta_{k+1}\rvert .
+ \label{eq:ls-lsmr-estimate}
+\end{equation}
+它不必形成残差即可用于停止检查；又因$\lvert\bar s_k\rvert\le1$，它随步数单调不增。这一递推不直接给出原残差；以相容方程为目标时，在候选终止处由$\bm b-\bm A\bm x_k$计算。
+
+\paragraph{方向与解}
+最小点是$\bm y=\bm R_k^{-1}\bm t$，即
+\begin{equation}
+ \bm x_k=\bm V_k\bm R_k^{-1}\bar{\bm R}_k^{-1}\bm z_k .
+ \label{eq:ls-lsmr-solution}
+\end{equation}
+不保存$\bm V_k$，而把两次三角求解变成两层方向。比较$(\bm V_k\bm R_k^{-1})\bm R_k=\bm V_k$与$(\bm V_k\bm R_k^{-1}\bar{\bm R}_k^{-1})\bar{\bm R}_k=\bm V_k\bm R_k^{-1}$的第$k$列，利用两个因子都是上双对角的，得到
+\begin{equation}
+ \begin{gathered}
+ \bm w_k=\frac{\bm v_k-\theta_k\bm w_{k-1}}{\rho_k},\qquad
+ \bar{\bm w}_k=\frac{\bm w_k-\bar\theta_k\bar{\bm w}_{k-1}}{\bar\rho_k},\\
+ \bm x_k=\bm x_{k-1}+\zeta_k\bar{\bm w}_k ,
+ \end{gathered}
+ \label{eq:ls-lsmr-update}
+\end{equation}
+其中约定$\bm w_0=\bar{\bm w}_0=\bm0$、$\theta_1=0$。$\bm w_i$是$\bm V_k\bm R_k^{-1}$的第$i$列，与LSQR所用的方向只差缩放；$\bar{\bm w}_i$是$\bm V_k\bm R_k^{-1}\bar{\bm R}_k^{-1}$的第$i$列。$\bm z_k$已确定的分量此后不再改变，所以累加的结果就是小问题的解。每步只需保留两个旧方向。
+
+与MINRES、LSQR一样，每步只作用两个旧旋转（每层一个）、构造两个新旋转，工作量与存储都与步数无关。定理~\ref{thm:ls-lsmr-minres-equivalence}说明，按式~\eqref{eq:ls-lsmr-first-rotation}—\eqref{eq:ls-lsmr-update}逐步计算，正好解出小问题~\eqref{eq:ls-lsmr-subproblem}。
+
+\subsection{算法实现}
+
+输入是一般的实矩阵$\bm A$与右端$\bm b$，允许秩亏，算法只需计算$\bm A$乘向量与$\bm A^\top$乘向量，输出为近似解$\bm x$。预先选定的参数是阈值和步数上限$K$：以最小二乘为目标时，用正规残差的绝对阈值$\tau_n\ge0$；以相容方程为目标时，用第~\ref{sec:ls-stationary-stopping}节的$\mathrm{atol},\mathrm{rtol}$。初值固定为$\bm x_0=\bm0$，停止与复核的规则与第~\ref{sec:ls-lsqr}节相同。
+
+每轮先扩展一次双对角化，得到$\bm B_k$的新列；再用第一层旋转把它消去，得到$\bm L_k$的新列；然后用第二层旋转把这一列消去并变换右端；最后更新两层方向与解。
+
+下面写出计算中用到的变量、它们怎样初始化、每轮怎样更新。每一步使用第~\ref{sec:ls-bidiagonal-iteration}节的不相容系统进行演示：
+\[
+ \bm A=\begin{bmatrix}1&0\\0&2\\0&0\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\1\\1\end{bmatrix}.
+\]
+最小二乘解是$\hat{\bm x}=(1,1/2)^\top$，最优残差为$(0,0,1)^\top$。双对角化的中间向量已在那里逐步给出，这里只列出求解器用到的量，以便与LSQR对照。
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm u\in\mathbb R^m$、$\bm v\in\mathbb R^d$：双对角化的当前基向量，只保存这两个。
+ \item $\alpha_{k+1},\beta_{k+1}$：本轮双对角化得到的系数，即$\bm B_k$新列的两个非零元与下一列的对角元。
+ \item $\bar\alpha_k$：第一层中尚待消元的对角元；$\rho_k,c_k,s_k$与$\theta_{k+1}$：本轮第一层旋转的结果，$\rho_k,\theta_{k+1}$组成$\bm L_k$的新列；$\theta_k$是上一轮保存的值，留给方向更新。
+ \item $\bar c_{k-1},\bar s_{k-1}$：上一轮的第二层旋转；$\bar\theta_k,\bar\rho_k,\bar c_k,\bar s_k$：本轮第二层旋转的结果。
+ \item $\zeta_k$：变换后右端的第$k$个分量，此后不再改变；$\bar\zeta_{k+1}$：右端剩下的末分量，$\lvert\bar\zeta_{k+1}\rvert$是正规残差的估计。
+ \item $\bm w,\bar{\bm w}\in\mathbb R^d$：两层方向；$\bm x\in\mathbb R^d$：当前近似解。
+ \item $k$：轮次。
+\end{itemize}
+
+\paragraph{初始化}
+若$K=0$，直接输出$\bm x_0$。否则按式~\eqref{eq:ls-golub-kahan-start}计算$\beta_1,\bm u_1,\alpha_1,\bm v_1$；$\beta_1=0$或$\alpha_1=0$时零向量已满足正规方程，输出$\bm x_0$。
+
+否则把近似解与两层方向初始化为零向量，把两层旋转与右端初始化为它们的起步值，轮次初始化为$1$：
+\[
+ \begin{gathered}
+ \bm x_0=\bm0,\qquad \bm w_0=\bar{\bm w}_0=\bm0,\qquad \theta_1=0,\\
+ \bar\alpha_1=\alpha_1,\qquad \bar\zeta_1=\alpha_1\beta_1,\\
+ \bar c_0=1,\qquad \bar s_0=0,\qquad k=1 .
+ \end{gathered}
+\]
+$\bar\zeta_1=\lVert\bm A^\top\bm b\rVert_2$是初始正规残差的长度，已满足阈值时输出$\bm x_0$。其余几个量只是占位，使第一轮的公式不必单独处理：$\theta_1=0$与$\bm w_0=\bm0$使$\bm w_1=\bm v_1/\rho_1$，$\bar s_0=0$使$\bar\theta_1=0$，$\bar c_0=1$使第二层在第一轮直接处理$\rho_1$。
+
+例中由第~\ref{sec:ls-bidiagonal-iteration}节，$\beta_1=\sqrt3$，
+\[
+ \alpha_1=\sqrt{\frac53},\qquad \bm v_1=\frac1{\sqrt5}\begin{bmatrix}1\\2\end{bmatrix},
+\]
+于是
+\[
+ \bar\alpha_1=\sqrt{\frac53}\approx1.2910,\qquad \bar\zeta_1=\alpha_1\beta_1=\sqrt5\approx2.2361 ,
+\]
+初始正规残差未达到目标。
+
+\paragraph{每轮更新}
+在第$k$轮：
+\begin{enumerate}
+ \item \textbf{扩展双对角化。}按递推~\eqref{eq:ls-golub-kahan-step}，先作一次$\bm A$乘法得$\beta_{k+1}$与$\bm u_{k+1}$，再作一次$\bm A^\top$乘法得$\alpha_{k+1}$与$\bm v_{k+1}$：
+ \[
+  \bm A\bm v_k-\alpha_k\bm u_k=\beta_{k+1}\bm u_{k+1},\qquad
+  \bm A^\top\bm u_{k+1}-\beta_{k+1}\bm v_k=\alpha_{k+1}\bm v_{k+1} .
+ \]
+ $\beta_{k+1}=0$时不生成$\bm u_{k+1}$，并约定$\alpha_{k+1}=0$；$\alpha_{k+1}=0$时不生成$\bm v_{k+1}$。出现零系数时本轮后面的步骤照常完成，只跳过不存在的新基向量。
+
+ 例中第一轮
+ \[
+  \begin{gathered}
+  \beta_2=\frac{\sqrt{78}}{3\sqrt5}\approx1.3166,\qquad
+  \alpha_2=\frac{18\sqrt5}{5\sqrt{78}}\approx0.9115,\\
+  \bm v_2=\frac1{\sqrt5}\begin{bmatrix}-2\\1\end{bmatrix},
+  \end{gathered}
+ \]
+ $\bm B_1$的新列是$(\alpha_1,\beta_2)^\top\approx(1.2910,1.3166)^\top$。
+
+ \item \textbf{第一层旋转。}按式~\eqref{eq:ls-lsmr-first-rotation}，由$(\bar\alpha_k,\beta_{k+1})$构造$\bm G_k$，把它变成$(\rho_k,0)$，并提前作用于下一列的$(0,\alpha_{k+1})$：
+ \[
+  \begin{bmatrix}\bar\alpha_k&0\\\beta_{k+1}&\alpha_{k+1}\end{bmatrix}
+  \xrightarrow{\ \bm G_k\ }
+  \begin{bmatrix}\rho_k&\theta_{k+1}\\0&\bar\alpha_{k+1}\end{bmatrix}.
+ \]
+ 例中第一轮$c_1=5/\sqrt{51}$，$s_1=\sqrt{26/51}$，
+ \[
+  \begin{bmatrix}1.2910&0\\1.3166&0.9115\end{bmatrix}
+  \xrightarrow{\ \bm G_1\ }
+  \begin{bmatrix}1.8439&0.6508\\0&0.6382\end{bmatrix},
+ \]
+ 即
+ \[
+  \rho_1=\sqrt{\frac{17}5},\qquad \theta_2=\frac6{\sqrt{85}},\qquad \bar\alpha_2=\sqrt{\frac{90}{221}} .
+ \]
+ $\bm L_1$的新列是$(\rho_1,\theta_2)^\top$。
+
+ \item \textbf{第二层旋转。}按式~\eqref{eq:ls-lsmr-second-rotation}，先用上一轮的$\bar{\bm G}_{k-1}$把$\bm L_k$新列的$(0,\rho_k)$变成$(\bar\theta_k,\bar c_{k-1}\rho_k)$，再构造$\bar{\bm G}_k$消去$\theta_{k+1}$，并作用于右端：
+ \[
+  \begin{bmatrix}\bar c_{k-1}\rho_k&\bar\zeta_k\\\theta_{k+1}&0\end{bmatrix}
+  \xrightarrow{\ \bar{\bm G}_k\ }
+  \begin{bmatrix}\bar\rho_k&\zeta_k\\0&\bar\zeta_{k+1}\end{bmatrix}.
+ \]
+ 例中第一轮$\bar\theta_1=\bar s_0\rho_1=0$，$\bar c_1=17/(5\sqrt{13})$，$\bar s_1=6/(5\sqrt{13})$，
+ \[
+  \begin{bmatrix}1.8439&2.2361\\0.6508&0\end{bmatrix}
+  \xrightarrow{\ \bar{\bm G}_1\ }
+  \begin{bmatrix}1.9554&2.1086\\0&-0.7442\end{bmatrix},
+ \]
+ 即
+ \[
+  \bar\rho_1=\sqrt{\frac{65}{17}},\qquad \zeta_1=\frac{17}{\sqrt{65}},\qquad \bar\zeta_2=-\frac6{\sqrt{65}} .
+ \]
+
+ \item \textbf{更新方向与解。}按式~\eqref{eq:ls-lsmr-update}，先算$\bm w_k$，再算$\bar{\bm w}_k$，最后更新
+ \[
+  \bm x_k=\bm x_{k-1}+\zeta_k\bar{\bm w}_k .
+ \]
+ $\bm w_k$的公式用上一轮保存的$\theta_k$，本轮算出的$\theta_{k+1}$留给下一轮。然后令$k\leftarrow k+1$。
+
+ 例中第一轮
+ \[
+  \bm w_1=\frac{\bm v_1}{\rho_1}=\frac1{\sqrt{17}}\begin{bmatrix}1\\2\end{bmatrix},\qquad
+  \bar{\bm w}_1=\frac{\bm w_1}{\bar\rho_1}=\frac1{\sqrt{65}}\begin{bmatrix}1\\2\end{bmatrix},
+ \]
+ 于是
+ \[
+  \bm x_1=\zeta_1\bar{\bm w}_1=\frac{17}{65}\begin{bmatrix}1\\2\end{bmatrix}.
+ \]
+
+ 例中第二轮的双对角化给出
+ \[
+  \beta_3=\sqrt{\frac{10}{13}}\approx0.8771,\qquad \alpha_3=0 ,
+ \]
+ 未知量空间只有二维，已被$\bm v_1,\bm v_2$取尽。
+
+ 第一层旋转$c_2=3/\sqrt{26}$，$s_2=\sqrt{17/26}$，
+ \[
+  \begin{bmatrix}0.6382&0\\0.8771&0\end{bmatrix}
+  \xrightarrow{\ \bm G_2\ }
+  \begin{bmatrix}1.0847&0\\0&0\end{bmatrix},
+ \]
+ 即$\rho_2=\sqrt{20/17}$，$\theta_3=\bar\alpha_3=0$。
+
+ 第二层先用$\bar{\bm G}_1$把$(0,\rho_2)$变成$(\bar\theta_2,\bar c_1\rho_2)\approx(0.3610,1.0228)$；新列下方的$\theta_3=0$，本轮旋转是恒等变换，$\bar c_2=1$，$\bar s_2=0$：
+ \[
+  \begin{bmatrix}1.0228&-0.7442\\0&0\end{bmatrix}
+  \xrightarrow{\ \bar{\bm G}_2\ }
+  \begin{bmatrix}1.0228&-0.7442\\0&0\end{bmatrix},
+ \]
+ 即
+ \[
+  \bar\rho_2=\frac{2\sqrt{17}}{\sqrt{65}},\qquad \zeta_2=-\frac6{\sqrt{65}},\qquad \bar\zeta_3=0 .
+ \]
+
+ 两层方向为
+ \[
+  \begin{gathered}
+  \bm w_2=\frac{\bm v_2-\theta_2\bm w_1}{\rho_2}=\frac{1}{\sqrt{17}}\begin{bmatrix}-4\\1/2\end{bmatrix},\\
+  \bar{\bm w}_2=\frac{\bm w_2-\bar\theta_2\bar{\bm w}_1}{\bar\rho_2}=\frac1{\sqrt{65}}\begin{bmatrix}-8\\1/4\end{bmatrix},
+  \end{gathered}
+ \]
+ 于是
+ \[
+  \bm x_2=\bm x_1+\zeta_2\bar{\bm w}_2
+  =\frac{17}{65}\begin{bmatrix}1\\2\end{bmatrix}+\frac{6}{65}\begin{bmatrix}8\\-1/4\end{bmatrix}
+  =\begin{bmatrix}1\\1/2\end{bmatrix}.
+ \]
+
+ \item \textbf{停止。}按式~\eqref{eq:ls-lsmr-estimate}读出正规残差的估计$\lvert\bar\zeta_{k+1}\rvert$。以最小二乘为目标时，它不超过$\tau_n$、本轮出现零系数或已达到$K$，就按第~\ref{sec:ls-stationary-stopping}节用$\bm r=\bm b-\bm A\bm x_k$与$\bm A^\top\bm r$复核，然后输出$\bm x_k$；以相容方程为目标时，在候选终止处由$\bm b-\bm A\bm x_k$计算原残差。
+
+ 零系数时估计也提示结束：$\alpha_{k+1}=0$（含$\beta_{k+1}=0$时的约定）使$\theta_{k+1}=0$、$\bar s_k=0$，于是$\bar\zeta_{k+1}=0$。$\rho_k$或$\bar\rho_k$为零、明显失去正交性或残差长期不降时，在相除前检查并报告相应的原因，不把估计当成无需复核的精确值；否则回到第1步。
+
+ 例中第一轮的估计为$\lvert\bar\zeta_2\rvert=6/\sqrt{65}\approx0.7442$。直接计算原残差
+ \[
+  \bm r_1=\bm b-\bm A\bm x_1=\begin{bmatrix}48/65\\-3/65\\1\end{bmatrix},
+ \]
+ 再计算正规残差
+ \[
+  \bm A^\top\bm r_1=\frac1{65}\begin{bmatrix}48\\-6\end{bmatrix},\qquad
+  \lVert\bm A^\top\bm r_1\rVert_2=\frac6{\sqrt{65}}=\lvert\bar\zeta_2\rvert ,
+ \]
+ 未达到目标，继续。
+
+ 第二轮出现零系数$\alpha_3=0$，估计$\bar\zeta_3=0$。复核得
+ \[
+  \bm r_2=\begin{bmatrix}0\\0\\1\end{bmatrix},\qquad \bm A^\top\bm r_2=\bm0 ,
+ \]
+ 在第二轮退出并输出$\bm x_2$。
+\end{enumerate}
+
+最终两层消元的结果是
+\[
+ \bm R_2\approx\begin{bmatrix}1.8439&0.6508\\0&1.0847\end{bmatrix},\qquad
+ \bar{\bm R}_2\approx\begin{bmatrix}1.9554&0.3610\\0&1.0228\end{bmatrix},
+\]
+变换后的右端为
+\[
+ \bm z_2\approx\begin{bmatrix}2.1086\\-0.7442\end{bmatrix},
+\]
+近似解为
+\[
+ \bm x_2=\bm V_2\bm R_2^{-1}\bar{\bm R}_2^{-1}\bm z_2=\hat{\bm x}=\begin{bmatrix}1\\1/2\end{bmatrix},
+\]
+原残差停在不可拟合的长度$1$上。三次正规残差的长度为
+\[
+ \lVert\bm A^\top\bm r_0\rVert_2=\sqrt5\approx2.2361,\qquad
+ \lVert\bm A^\top\bm r_1\rVert_2\approx0.7442,\qquad
+ \lVert\bm A^\top\bm r_2\rVert_2=0 ,
+\]
+单调不增。与LSQR对照：第一步的正规残差$0.7442$小于LSQR第一步的约$0.7892$；反过来，原残差$\lVert\bm r_1\rVert_2\approx1.2440$大于LSQR的$\sqrt{26/17}\approx1.2367$。
+
+两种方法在同一个一维空间中取点，只因优化的对象不同而选出不同的点。
+
+也可以直接解小问题核对。$k=1$时$\bm B_1^\top\bm B_1=\alpha_1^2+\beta_2^2=17/5$，$\alpha_2\beta_2=6/5$，所以
+\[
+ \bm C_1=\begin{bmatrix}17/5\\6/5\end{bmatrix},\qquad
+ \argmin_y\left\lVert\begin{bmatrix}\sqrt5\\0\end{bmatrix}-\bm C_1y\right\rVert_2=\frac{17\sqrt5}{65},
+\]
+$y\bm v_1$与上面的$\bm x_1$相同。$k=2$时$\bm C_2$的末行为零，删去后小问题就是
+\[
+ \bm B_2^\top\bm B_2\bm y=\alpha_1\beta_1\bm e_1 ,
+\]
+$\bm V_2$是正交方阵，它等价于完整的正规方程，解出的$\bm V_2\bm y$正是$\hat{\bm x}$。这一小规模对照可以用来检查旋转符号、下标与旧量的读取顺序。
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+两层旋转对应两层三角分解，由此可以把LSMR的最优性与它和MINRES的关系一并写出。
+
+\begin{theorem}[LSMR的最小正规残差性及与MINRES的等价]
+\label{thm:ls-lsmr-minres-equivalence}
+在精确算术中，设双对角化在第$k$轮之前没有终止。则LSMR递推得到的$\bm x_k$是$\operatorname{range}(\bm V_k)=\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$中使正规残差$\lVert\bm A^\top(\bm b-\bm A\bm x)\rVert_2$最小的唯一点，最小值为$\lvert\bar\zeta_{k+1}\rvert$；它也等于对正规方程$\bm A^\top\bm A\bm x=\bm A^\top\bm b$从$\bm x_0=\bm0$施行第~\ref{sec:ls-minres}节MINRES的第$k$步近似，即该Krylov空间中使$\lVert\bm A^\top\bm b-\bm A^\top\bm A\bm x\rVert_2$最小的点。
+\end{theorem}
+
+\begin{proof}
+证明分三步：先把正规残差化为小问题~\eqref{eq:ls-lsmr-subproblem}，再说明两层旋转与方向递推解出了它，最后说明唯一性及与MINRES的等价。
+
+\emph{化为小问题。}由第~\ref{sec:ls-golub-kahan-application}节，$\bm b-\bm A\bm V_k\bm y=\bm U_{k+1}(\beta_1\bm e_1-\bm B_k\bm y)$。用$\bm A^\top$左乘，由关系~\eqref{eq:ls-golub-kahan-relations}的第二式，
+\[
+ \begin{aligned}
+ \bm A^\top\bm U_{k+1}(\beta_1\bm e_1-\bm B_k\bm y)
+ &=\bm V_k\bm B_k^\top(\beta_1\bm e_1-\bm B_k\bm y)\\
+ &\quad+\alpha_{k+1}\bm v_{k+1}\bm e_{k+1}^\top(\beta_1\bm e_1-\bm B_k\bm y).
+ \end{aligned}
+\]
+$\bm B_k$的第一行是$\alpha_1\bm e_1^\top$，末行是$\beta_{k+1}\bm e_k^\top$，所以
+\[
+ \bm B_k^\top\bm e_1=\alpha_1\bm e_1,\qquad
+ \bm e_{k+1}^\top\bm B_k=\beta_{k+1}\bm e_k^\top ,
+\]
+又$k\ge1$时$\bm e_{k+1}^\top\bm e_1=0$。代入即得\eqref{eq:ls-lsmr-subproblem}；$\bm V_{k+1}$的列标准正交，正规残差的长度等于$\lVert\alpha_1\beta_1\bm e_1-\bm C_k\bm y\rVert_2$。
+
+\emph{两层旋转。}第一层旋转逐列把$\bm B_k$化为上三角，给出
+\[
+ \bm B_k=\bm Q_k^\top\begin{bmatrix}\bm R_k\\\bm0^\top\end{bmatrix},
+\]
+所以$\bm B_k^\top\bm B_k=\bm R_k^\top\bm R_k$。又$\theta_{k+1}\rho_k=s_k\alpha_{k+1}\rho_k=\alpha_{k+1}\beta_{k+1}$，而$\bm R_k$的末行是$\rho_k\bm e_k^\top$，所以
+\[
+ \alpha_{k+1}\beta_{k+1}\bm e_k^\top=\theta_{k+1}\bm e_k^\top\bm R_k ,
+\]
+即得分解~\eqref{eq:ls-lsmr-factorization}。$\bm R_k$的对角元都为正，换元$\bm t=\bm R_k\bm y$可逆。
+
+第二层旋转逐列三角化$\bm L_k$：第$k$列只在第$k$、$k+1$行有非零元$\rho_k,\theta_{k+1}$，此前的旋转中只有第$k-1$个作用于第$k$行，
+\[
+ \begin{bmatrix}\bar c_{k-1}&\bar s_{k-1}\\-\bar s_{k-1}&\bar c_{k-1}\end{bmatrix}
+ \begin{bmatrix}0\\\rho_k\end{bmatrix}
+ =\begin{bmatrix}\bar\theta_k\\\bar c_{k-1}\rho_k\end{bmatrix};
+\]
+本轮旋转再作用于第$k$、$k+1$行，
+\[
+ \begin{bmatrix}\bar c_k&\bar s_k\\-\bar s_k&\bar c_k\end{bmatrix}
+ \begin{bmatrix}\bar c_{k-1}\rho_k&\bar\zeta_k\\\theta_{k+1}&0\end{bmatrix}
+ =\begin{bmatrix}\bar\rho_k&\zeta_k\\0&\bar\zeta_{k+1}\end{bmatrix},
+\]
+这就是式~\eqref{eq:ls-lsmr-second-rotation}。与LSQR的证明相同，小问题的最小值为$\lvert\bar\zeta_{k+1}\rvert$，最小点满足$\bm t_k=\bar{\bm R}_k^{-1}\bm z_k$，于是
+\[
+ \bm x_k=\bm V_k\bm R_k^{-1}\bar{\bm R}_k^{-1}\bm z_k .
+\]
+记$\bm W_k=\bm V_k\bm R_k^{-1}$、$\bar{\bm W}_k=\bm W_k\bar{\bm R}_k^{-1}$，列分别为$\bm w_i$与$\bar{\bm w}_i$。比较$\bm W_k\bm R_k=\bm V_k$与$\bar{\bm W}_k\bar{\bm R}_k=\bm W_k$两边的第$k$列，
+\[
+ \theta_k\bm w_{k-1}+\rho_k\bm w_k=\bm v_k,\qquad
+ \bar\theta_k\bar{\bm w}_{k-1}+\bar\rho_k\bar{\bm w}_k=\bm w_k ,
+\]
+移项即得\eqref{eq:ls-lsmr-update}中的两条方向递推；$\bm z_k$已确定的分量此后不再改变，所以解按$\bm x_k=\bm x_{k-1}+\zeta_k\bar{\bm w}_k$累加。
+
+\emph{唯一性与MINRES。}$\operatorname{range}(\bm V_k)\subseteq\operatorname{range}(\bm A^\top)$，而$\operatorname{null}(\bm A^\top\bm A)=\operatorname{null}(\bm A)$与$\operatorname{range}(\bm A^\top)$正交，$\bm x\mapsto\bm A^\top\bm A\bm x$在这个子空间上是单射，所以最小点唯一。
+
+由定理~\ref{thm:ls-golub-kahan-relations}，该子空间就是$\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$。对称矩阵$\bm A^\top\bm A$、右端$\bm A^\top\bm b$与零初值下，MINRES在同一个Krylov空间中最小化同一个函数$\lVert\bm A^\top\bm b-\bm A^\top\bm A\bm x\rVert_2$，所以两者的第$k$步相同。
+\end{proof}
+
+正常步骤中$\rho_k,\bar\rho_k$都为正。$\rho_k$的理由与LSQR相同；对$\bar\rho_k$，有$\bar\rho_k\ge\lvert\bar c_{k-1}\rvert\rho_k$，而$\bar c_0=1$，此后每个$\bar c_i=\bar c_{i-1}\rho_i/\bar\rho_i$都是非零量之比，所以$\bar c_{k-1}\neq0$。
+
+\paragraph{残差的单调性}
+候选空间逐轮嵌套，所以精确算术中正规残差单调不增。原残差同样单调不增，理由如下。
+
+记同一步LSQR与LSMR的近似为$\bm x_k^{\mathrm Q}$与$\bm x_k^{\mathrm M}$，可以证明后者是截至当前步各LSQR近似的凸组合，$\bm x_{k+1}^{\mathrm M}$又是$\bm x_k^{\mathrm M}$与$\bm x_{k+1}^{\mathrm Q}$的凸组合，而$\lVert\bm b-\bm A\bm x\rVert_2^2$是凸函数，且$\bm x_{k+1}^{\mathrm Q}$在包含$\bm x_k^{\mathrm M}$的空间中使它最小。
+
+正规残差单调不增，使LSMR在不相容问题上按$\tau_n$停止时更平稳；原残差则是LSQR每步最小，算法实现中例子的第一步正好显示了这一对照。
+
+\paragraph{选出的解与收敛速度}
+零初值使各步留在$\operatorname{range}(\bm A^\top)$中，与LSQR的论证相同，达到正规方程时选出$\bm A^\dagger\bm b$。由定理~\ref{thm:ls-lsmr-minres-equivalence}，在行空间上LSMR等价于正规方程上的MINRES，速度同样受非零奇异值平方的分布控制。小奇异值与正交性损失仍然影响精度；两个残差单调，并不推出解的误差也单调，有限精度下仍需用真实残差复核。
+
+\paragraph{与缩放方向的关系}
+文献中的算法常用缩放后的方向$\bm h_k=\rho_k\bm w_k$与$\bar{\bm h}_k=\rho_k\bar\rho_k\bar{\bm w}_k$。代入\eqref{eq:ls-lsmr-update}，得到等价的形式
+\begin{equation}
+ \begin{gathered}
+ \bar{\bm h}_k=\bm h_k-\frac{\bar\theta_k\rho_k}{\rho_{k-1}\bar\rho_{k-1}}\bar{\bm h}_{k-1},
+ \qquad
+ \bm x_k=\bm x_{k-1}+\frac{\zeta_k}{\rho_k\bar\rho_k}\bar{\bm h}_k,\\
+ \bm h_{k+1}=\bm v_{k+1}-\frac{\theta_{k+1}}{\rho_k}\bm h_k ,
+ \end{gathered}
+ \label{eq:ls-lsmr-scaled-update}
+\end{equation}
+其中$\bm h_1=\bm v_1$，并约定$\rho_0=\bar\rho_0=1$、$\bar{\bm h}_0=\bm0$。$\bm h_k$与Paige--Saunders原文LSQR所用的方向相同。两种写法的乘法次数相同，选用哪一种只影响需要保存的标量。
+
+\paragraph{计算代价}
+每轮的核心工作仍是一次$\bm A$乘向量和一次$\bm A^\top$乘向量。与LSQR相比，LSMR多一组标量旋转和一套方向$\bar{\bm w}_k$的更新，需要保存$\bm u$和$\bm v,\bm w,\bar{\bm w},\bm x$，工作存储仍为$O(m+d)$。

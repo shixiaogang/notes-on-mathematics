@@ -9,102 +9,149 @@
 
 回答收敛问题的工具来自第~\ref{chap:linear-recurrence-stability}章。那里证明了：仿射迭代$\bm x\mapsto\bm T\bm x+\bm c$从任意初值出发都收敛到同一个极限，当且仅当$\bm T$的谱半径小于一；渐近的收敛速度由谱半径决定，而非正规的$\bm T$在衰减之前还可能暂时放大误差。本章把每种方法都写成这种形式，收敛判断便归结为估计相应迭代矩阵的谱半径。三角求解采用第~\ref{sec:ls-lu}节的前代与回代。
 
-第~\ref{sec:ls-matrix-splitting}节建立各方法共用的框架：修正方程怎样得到，统一的算法流程，以及由谱半径给出的收敛判据。随后五节分别取不同的$\bm M$：Richardson迭代用标量矩阵，Jacobi迭代用$\bm A$的对角部分，Gauss--Seidel迭代用下三角部分，SOR在下三角修正中加入松弛参数，SSOR把前向与反向两次扫掠配成对称的一轮。每节都分主要思想、算法实现与算法分析三部分，并用同一个二维例子逐轮计算，便于对照各方法读取数据的方式。
+第~\ref{sec:ls-matrix-splitting}节建立各方法共用的框架：由矩阵分裂得到不动点方程与修正形式，统一的执行流程，以及由谱半径给出的收敛判据。随后五节分别取不同的$\bm M$：Richardson迭代用标量矩阵，Jacobi迭代用$\bm A$的对角部分，Gauss--Seidel迭代用下三角部分，SOR在下三角修正中加入松弛参数，SSOR把前向与反向两次扫掠配成对称的一轮。此后每节先简述所取的$\bm M$与迭代形式，再分算法实现与算法分析两部分；算法实现逐步写出执行公式，并用同一个二维例子逐轮计算，便于对照各方法读取数据的方式。
 
 SSOR的修正矩阵对称正定，这使它还能作为第~\ref{chap:krylov-methods}章共轭梯度法的预条件。最后一节讨论停止准则：达到残差要求与只是停止计算是两回事。
 
 记号沿用本部分的约定：精确解记作$\bm x_\star$，第$k$轮近似记作$\bm x_k$，残差$\bm r_k=\bm b-\bm A\bm x_k$，修正量$\bm\delta_k$，误差$\bm e_k=\bm x_k-\bm x_\star$；向量的第$i$个分量写作$(\bm x_k)_i$。
 
-\section{矩阵分裂与定常迭代}
+\section{定常迭代}
 \label{sec:ls-matrix-splitting}
 
-\subsection{主要思想}
+\subsection{算法思想}
 
-先看一次修正需要什么。设当前近似为$\bm x_k$，残差$\bm r_k=\bm b-\bm A\bm x_k$度量各个方程还差多少。若能求出精确修正$\bm\delta=\bm x_\star-\bm x_k$，一步就到达真解；但由$\bm A\bm x_\star=\bm b$，它满足
+定常迭代的思路可以概括为两步：先把难解的方程拆成“容易求解的部分”与“其余部分”，从而改写成不动点方程；再从任意初值出发，用同一个固定的映射反复更新。
+
+\paragraph{矩阵分裂}
+直接求解$\bm A\bm x=\bm b$相当于处理$\bm A^{-1}$，对一般的$d$阶矩阵要做约$d^3$量级的运算。
+
+我们可以换一个思路：把$\bm A$拆成两部分，
+\begin{equation}
+ \bm A=\bm M-\bm N ,
+ \label{eq:ls-stationary-splitting}
+\end{equation}
+其中$\bm M$可逆并且极易求解，例如对角矩阵或三角矩阵，$\bm N=\bm M-\bm A$是剩下的部分。这种拆法称为\term{矩阵分裂}（matrix splitting）。
+
+代入原方程，得
 \[
-\bm A\bm\delta=\bm b-\bm A\bm x_k=\bm r_k ,
+ (\bm M-\bm N)\bm x=\bm b,\qquad\text{即}\qquad \bm M\bm x=\bm N\bm x+\bm b .
 \]
-求它与解原方程一样难。
+两边左乘$\bm M^{-1}$，方程化为
+\begin{equation}
+ \bm x=\bm T\bm x+\bm c
+ \label{eq:ls-stationary-fixed-point}
+\end{equation}
+其中$
+ \bm T=\bm M^{-1}\bm N=\bm I-\bm M^{-1}\bm A$，$\bm c=\bm M^{-1}\bm b$。
+这是一个\term{不动点方程}（fixed-point equation）：$\bm x_\star$正是仿射映射$\bm x\mapsto\bm T\bm x+\bm c$的不动点。$\bm T$称为\term{迭代矩阵}（iteration matrix），$\bm c$是常向量。
 
-于是用一个固定、可逆且容易求解的矩阵$\bm M$代替$\bm A$，只解近似的修正方程：
-\[
-\bm M\bm\delta_k=\bm r_k,\qquad \bm x_{k+1}=\bm x_k+\bm\delta_k .
+\paragraph{迭代求解}
+有了不动点方程，自然的做法是把右端算出的值作为下一个近似，得到递推
+\begin{equation}
+ \bm x_{k+1}=\bm T\bm x_k+\bm c .
+ \label{eq:ls-stationary-iteration}
+\end{equation}
+若$\bm x_k$收敛，极限必然满足式~\eqref{eq:ls-stationary-fixed-point}，也就是原方程的解。
+
+整个过程中$\bm T$和$\bm c$固定不变，每一轮都用同一套规则修正当前的解，所以这类方法称为\term{定常迭代}（stationary iteration）。第~\ref{chap:krylov-methods}章的Krylov子空间法则不同：每一轮的搜索方向和步长系数都要由当前残差重新计算，相当于每轮的更新规则都在变化。
+
+\paragraph{修正的迭代求解}
+式~\eqref{eq:ls-stationary-iteration}中的$\bm M^{-1}$只是理论表示，执行时不形成逆矩阵。把它乘回去，得
+\[ 
+  \bm M\bm x_{k+1}=\bm N\bm x_k+\bm b=\bm M\bm x_k+(\bm b-\bm A\bm x_k) .
 \]
-$\bm M$越接近$\bm A$，修正越准确，但求解也越接近原问题的难度；$\bm M$越简单，每轮越便宜，修正却越粗糙。所以$\bm M$同时决定单步成本与每轮消除误差的程度。“容易求解”只说明每轮算得下去，并不保证迭代收敛，收敛要另行判断。因为$\bm M$不随轮次变化，这类方法称为\term{定常迭代}（stationary iteration）。
+记残差$\bm r_k=\bm b-\bm A\bm x_k$，修正量$\bm\delta_k=\bm x_{k+1}-\bm x_k$，就得到等价的修正形式
+\begin{equation}
+ \bm M\bm\delta_k=\bm r_k,\qquad \bm x_{k+1}=\bm x_k+\bm\delta_k .
+ \label{eq:ls-stationary-correction}
+\end{equation}
+每轮只需算一次残差，再解一个以$\bm M$为系数的方程。
 
-把两式合并，可以看清$\bm M$与$\bm A$的关系。代入$\bm r_k$得$\bm M\bm x_{k+1}=\bm M\bm x_k+\bm b-\bm A\bm x_k=(\bm M-\bm A)\bm x_k+\bm b$。记$\bm N=\bm M-\bm A$，就有\term{矩阵分裂}（matrix splitting）$\bm A=\bm M-\bm N$，更新写成
-\[
-\bm M\bm x_{k+1}=\bm N\bm x_k+\bm b,\qquad\text{即}\qquad
-\bm x_{k+1}=\bm M^{-1}\bm N\bm x_k+\bm M^{-1}\bm b .
-\]
-这里的$\bm M^{-1}$只是理论表示；执行时每轮解一次$\bm M\bm\delta_k=\bm r_k$，不形成逆矩阵。
+这个形式也说明了$\bm M$的作用。式~\eqref{eq:ls-stationary-correction}用$\bm M$代替了$\bm A$，只解近似的修正方程。$\bm M$越接近$\bm A$，修正越准确，但求解也越接近原问题的难度；$\bm M$越简单，每轮越便宜，修正却越粗糙。所以$\bm M$同时决定单步成本与每轮消除误差的程度。“容易求解”只说明每轮算得下去，并不保证迭代收敛，收敛要另行判断。
 
-误差怎样传播，由同一式读出。精确解满足$\bm M\bm x_\star=\bm N\bm x_\star+\bm b$，与更新式相减得$\bm M\bm e_{k+1}=\bm N\bm e_k$，即
-\[
-\bm e_{k+1}=\bm M^{-1}\bm N\bm e_k=(\bm I-\bm M^{-1}\bm A)\bm e_k .
-\]
-每轮误差乘一个固定矩阵，这正是第~\ref{chap:linear-recurrence-stability}章研究过的矩阵幂问题；算法分析一小节据此给出收敛判据。
+\paragraph{执行过程} 按这一形式，整个算法的执行流程如下。
 
-后面的方法要按元素构造$\bm M$，为此统一写
-\[
-\bm A=\bm D+\bm L+\bm U ,
-\]
-其中$\bm D$是$\bm A$的对角部分，$\bm L$与$\bm U$分别是严格下三角与严格上三角部分，元素保留$\bm A$中原来的符号。有些文献写作$\bm A=\bm D-\bm L-\bm U$，那里的$\bm L,\bm U$与这里差一个负号；本章只用前一种约定，各方法的公式都据此推导。凡涉及除以对角元的方法，都要求所有$a_{i,i}\neq0$。
+先算$\bm r_0=\bm b-\bm A\bm x_0$，取停止阈值$\tau=\mathrm{atol}+\mathrm{rtol}\lVert\bm b\rVert_2$。
 
-\subsection{算法实现}
+每一轮依次做三件事：
+\begin{enumerate}
+ \item \textbf{停止检查。}若$\lVert\bm r_k\rVert_2\leq\tau$，以“达到容差”结束；若$k=K$，以“步数耗尽”结束；出现溢出或非数时以“数值异常”结束，残差长期几乎不降时可报告“停滞”。只有第一种表示达到了残差目标，第~\ref{sec:ls-stationary-stopping}节再解释。
+ \item \textbf{求修正量。}按式~\eqref{eq:ls-stationary-correction}解$\bm M\bm\delta_k=\bm r_k$；这一步随$\bm M$的选取而不同，是后面各节的主要内容。
+ \item \textbf{更新。}令$\bm x_{k+1}=\bm x_k+\bm\delta_k$，按原方程重算$\bm r_{k+1}=\bm b-\bm A\bm x_{k+1}$，再令$k\leftarrow k+1$回到停止检查。
+\end{enumerate}
 
-\paragraph{初始化}
-算法的输入为$\bm A$和$\bm b$，输出为近似解$\bm x$。超参数单独列出：初值$\bm x_0$，绝对容差$\mathrm{atol}\geq0$与相对容差$\mathrm{rtol}\geq0$，最大迭代次数$K$，以及各方法自己的固定参数。若$\bm M$需要预处理（例如保存对角元的倒数），在开始前完成。计算中保存当前解$\bm x_k$、残差$\bm r_k$和本轮修正量$\bm\delta_k$。初始化时计算$\bm r_0=\bm b-\bm A\bm x_0$，并令停止阈值$\tau=\mathrm{atol}+\mathrm{rtol}\lVert\bm b\rVert_2$。
+后面各方法都沿用这套流程，只替换求$\bm\delta_k$的一步。
 
-\paragraph{停止检查}
-每轮开始先检查是否停止：若$\lVert\bm r_k\rVert_2\leq\tau$，就以“达到容差”结束；若$k=K$，就以“步数耗尽”结束；两种情况都取$\bm x=\bm x_k$。初始残差已经达标时，不做任何修正就返回。若计算中出现溢出或非数，以“数值异常”结束；若残差在许多轮内几乎不再下降，可以报告“停滞”。四种结束状态要分别报告，只有第一种表示达到了所要求的残差目标，第~\ref{sec:ls-stationary-stopping}节再解释其含义。
-
-\paragraph{求修正量并更新}
-通过检查后，先求本轮修正量
-\[
-\bm M\bm\delta_k=\bm r_k .
-\]
-$\bm M$选得不同，这一步的算法也不同，下面各节分别给出具体公式。得到修正量后更新当前解，并按原方程重新计算残差：
-\[
-\bm x_{k+1}=\bm x_k+\bm\delta_k ,\qquad
-\bm r_{k+1}=\bm b-\bm A\bm x_{k+1},
-\]
-然后把$k$加一，回到停止检查。理论上也可以用递推$\bm r_{k+1}=\bm r_k-\bm A\bm\delta_k$更新残差，两者花费相同；但递推值会因舍入逐渐偏离真实残差，所以用递推的实现至少要定期按$\bm b-\bm A\bm x_{k+1}$重新计算，停止判断以重算值为准。后面各方法都沿用这套状态和终止规则，只替换求$\bm\delta_k$的一步。
-
-\paragraph{贯穿例}
-各方法用同一个小例子对照。下面先取对角矩阵作$\bm M$，只为核对上述流程中每个量怎样得到；为什么这样选$\bm M$，在第~\ref{sec:ls-jacobi}节说明。
+后面各方法用同一个小例子对照。下面先取对角矩阵作$\bm M$，只为核对流程中每个量怎样得到。
 \begin{example}[定常迭代的贯穿例]
 \label{ex:ls-stationary-running-example}
-取
+取下面的系数矩阵与右端，初值为$\bm x_0=\bm 0$：
 \[
 \bm A=\begin{bmatrix}4&1\\1&3\end{bmatrix},\qquad
-\bm b=\begin{bmatrix}1\\2\end{bmatrix},\qquad
-\bm x_0=\bm 0,
+\bm b=\begin{bmatrix}1\\2\end{bmatrix}.
 \]
-精确解为$\bm x_\star=(1/11,7/11)^\top\approx(0.0909,0.6364)^\top$。取$\bm M=\operatorname{diag}(4,3)$，它就是$\bm A$的对角部分$\bm D$。每一轮按流程做三件事：由当前残差解修正方程，更新近似解，再用原矩阵重算残差。
+精确解为$\bm x_\star=(1/11,7/11)^\top\approx(0.0909,0.6364)^\top$。
 
-第一轮从初始残差$\bm r_0=\bm b=(1,2)^\top$开始。$\bm M$是对角矩阵，解$\bm M\bm\delta_0=\bm r_0$只需逐分量相除，得$\bm\delta_0=(1/4,2/3)^\top$，于是$\bm x_1=(1/4,2/3)^\top$。重新乘原矩阵得$\bm A\bm x_1=(5/3,9/4)^\top$，所以$\bm r_1=(-2/3,-1/4)^\top$。
-
-第二轮重复同样的三步：$\bm\delta_1=(-\tfrac23/4,\,-\tfrac14/3)^\top=(-1/6,-1/12)^\top$，$\bm x_2=(1/12,7/12)^\top$，重算得$\bm r_2=(1/12,1/6)^\top$。残差范数依次约为$2.24$、$0.71$、$0.19$，在下降，但没有降到零。
-
-每一轮的修正方程都精确地解出了，$\bm x_2$却仍不是解，原因在于修正方程用$\bm M$代替了$\bm A$：“修正已算出”不等于“方程已解完”。是否完成，只能由原方程的残差判断。
+取$\bm M=\operatorname{diag}(4,3)$，解修正方程只需逐分量相除。第一轮从$\bm r_0=\bm b$出发，修正量与新的近似解为
+\[
+ \bm\delta_0=\begin{bmatrix}\tfrac14\\\tfrac23\end{bmatrix},\qquad
+ \bm x_1=\begin{bmatrix}\tfrac14\\\tfrac23\end{bmatrix},
+\]
+按原方程算出的残差为
+\[
+ \bm r_1=\bm b-\bm A\bm x_1=\begin{bmatrix}-\tfrac23\\-\tfrac14\end{bmatrix}.
+\]
+第二轮同样先求修正量并更新：
+\[
+ \bm\delta_1=\begin{bmatrix}-\tfrac16\\-\tfrac1{12}\end{bmatrix},\qquad
+ \bm x_2=\begin{bmatrix}\tfrac1{12}\\\tfrac7{12}\end{bmatrix},
+\]
+再算出残差
+\[
+ \bm r_2=\begin{bmatrix}\tfrac1{12}\\\tfrac16\end{bmatrix}.
+\]
+残差范数依次约为$2.24$、$0.71$、$0.19$，在下降但没有降到零。每轮的修正方程都精确地解出了，$\bm x_2$却仍不是解，因为修正方程用$\bm M$代替了$\bm A$；是否解完，只能由原方程的残差判断。
 \end{example}
+
+\paragraph{按元素构造分裂}
+后面的方法要按元素构造$\bm M$，为此统一写
+\begin{equation}
+\bm A=\bm D+\bm L+\bm U ,
+ \label{eq:ls-stationary-dlu-splitting}
+\end{equation}
+其中$\bm D$是$\bm A$的对角部分，$\bm L$与$\bm U$分别是严格下三角与严格上三角部分，元素保留$\bm A$中原来的符号。
 
 \subsection{算法分析}
 
+精确解满足$\bm x_\star=\bm T\bm x_\star+\bm c$，与式~\eqref{eq:ls-stationary-iteration}相减，误差$\bm e_k=\bm x_k-\bm x_\star$满足
+\[
+ \bm e_{k+1}=\bm T\bm e_k=(\bm I-\bm M^{-1}\bm A)\bm e_k .
+\]
+每轮误差乘同一个固定矩阵，这正是第~\ref{chap:linear-recurrence-stability}章研究过的矩阵幂问题，下面据此给出收敛判据。
+
 \paragraph{收敛条件}
-各方法是否收敛，取决于每轮把误差变成什么。令$\bm T=\bm I-\bm M^{-1}\bm A$为\term{迭代矩阵}（iteration matrix）。下面的定理把收敛问题归结为$\bm T$的谱半径，后面各节只需分别估计各自的$\rho(\bm T)$。
+各方法是否收敛，取决于迭代矩阵$\bm T=\bm I-\bm M^{-1}\bm A$每轮把误差变成什么。下面的定理把收敛问题归结为$\bm T$的谱半径，后面各节只需分别估计各自的$\rho(\bm T)$。
 \begin{theorem}[定常迭代的收敛判据]
 \label{thm:ls-stationary-convergence}
 设$\bm A$与$\bm M$可逆，$\bm x_\star$是$\bm A\bm x=\bm b$的解。按$\bm M\bm\delta_k=\bm r_k$，$\bm x_{k+1}=\bm x_k+\bm\delta_k$迭代时，误差满足
-\[
+\begin{equation}
 \bm e_{k+1}=\bm T\bm e_k,\qquad \bm e_k=\bm T^k\bm e_0 ,
-\]
+ \label{eq:ls-stationary-error-recursion}
+\end{equation}
 且迭代对任意初值$\bm x_0$都收敛到$\bm x_\star$，当且仅当$\rho(\bm T)<1$。
 \end{theorem}
 \begin{proof}
-由$\bm r_k=\bm b-\bm A\bm x_k=-\bm A\bm e_k$，更新式给出$\bm e_{k+1}=\bm e_k-\bm M^{-1}\bm A\bm e_k=\bm T\bm e_k$，归纳得$\bm e_k=\bm T^k\bm e_0$。更新也可写成仿射映射$\bm x\mapsto\bm T\bm x+\bm M^{-1}\bm b$。因为$\bm I-\bm T=\bm M^{-1}\bm A$可逆，它只有一个固定点，满足$\bm M^{-1}\bm A\bm x=\bm M^{-1}\bm b$，就是$\bm x_\star$。由第~\ref{sec:ls-convergence}章的定理~\ref{thm:ls-affine-common-limit}，从任意初值出发的轨迹都收敛到同一个向量当且仅当$\rho(\bm T)<1$，而这个共同极限只能是固定点$\bm x_\star$。
+由$\bm r_k=\bm b-\bm A\bm x_k=-\bm A\bm e_k$，更新式给出
+\[
+ \bm e_{k+1}=\bm e_k-\bm M^{-1}\bm A\bm e_k=\bm T\bm e_k ,
+\]
+归纳得$\bm e_k=\bm T^k\bm e_0$。
+
+更新也可写成仿射映射$\bm x\mapsto\bm T\bm x+\bm M^{-1}\bm b$。因为$\bm I-\bm T=\bm M^{-1}\bm A$可逆，它只有一个固定点，满足$\bm M^{-1}\bm A\bm x=\bm M^{-1}\bm b$，就是$\bm x_\star$。
+
+由第~\ref{sec:ls-convergence}章的定理~\ref{thm:ls-affine-common-limit}，从任意初值出发的轨迹都收敛到同一个向量当且仅当$\rho(\bm T)<1$，而这个共同极限只能是固定点$\bm x_\star$。
 \end{proof}
+
 算法可执行与算法收敛是两个条件：$a_{i,i}\neq0$只保证每轮能算下去，不保证$\rho(\bm T)<1$；反过来，$\rho(\bm T)<1$也不保证某种逐元素公式可以执行。
 
 \paragraph{收敛速度与总成本}
@@ -115,215 +162,382 @@ $\bm M$选得不同，这一步的算法也不同，下面各节分别给出具�
 \section{Richardson迭代}
 \label{sec:ls-richardson}
 
-\subsection{主要思想}
+最简单的选择是用标量矩阵代替$\bm A$：取非零步长$\alpha$，令修正矩阵$\bm M=\alpha^{-1}\bm I$。这相当于认为$\bm A$在各个方向上都大致把向量放大$1/\alpha$倍。迭代矩阵为$\bm T=\bm I-\alpha\bm A$，常向量为$\bm c=\alpha\bm b$。
 
-最简单的选择是用标量矩阵代替$\bm A$：取非零步长$\alpha$，令$\bm M=\alpha^{-1}\bm I$。修正方程$\alpha^{-1}\bm\delta_k=\bm r_k$直接给出$\bm\delta_k=\alpha\bm r_k$，更新为
-\[
-\bm x_{k+1}=\bm x_k+\alpha(\bm b-\bm A\bm x_k).
-\]
-这就是Richardson迭代：每个残差分量按同一比例转成对应分量的修正。$\bm A$只通过矩阵乘向量进入计算，方法不必读取矩阵元素。
+$\bm M$是单位矩阵的倍数，修正方程$\alpha^{-1}\bm\delta_k=\bm r_k$两边乘以$\alpha$就解出了修正量：
+\begin{equation}
+ \bm\delta_k=\alpha\bm r_k ,\qquad\text{即}\qquad (\bm\delta_k)_i=\alpha(\bm r_k)_i .
+ \label{eq:ls-richardson-correction}
+\end{equation}
+每个残差分量按同一比例转成对应分量的修正，不需要读取$\bm A$的任何元素。
 
-沿残差方向修正有一个直观解释，但要说清对象。当$\bm A$实对称正定时，$\bm r_k$是二次函数$\phi(\bm x)=\tfrac12\bm x^\top\bm A\bm x-\bm b^\top\bm x$在$\bm x_k$处的负梯度，而$\phi$的唯一极小点就是$\bm x_\star$；所以Richardson迭代是对$\phi$的固定步长最速下降。残差范数平方$\lVert\bm b-\bm A\bm x\rVert_2^2$的负梯度方向是$2\bm A^\top\bm r_k$，一般与$\bm r_k$不同，不能说沿残差方向走一定使残差范数下降最快。
-
-步长怎样取，要看误差怎样传播。此时$\bm T=\bm I-\alpha\bm A$，误差递推为$\bm e_{k+1}=(\bm I-\alpha\bm A)\bm e_k$。$\bm A$实对称正定时，把$\bm e_k$按正交特征基展开，特征值$\lambda_i$对应的误差系数每轮乘$1-\alpha\lambda_i$。要求所有方向都缩小，即每个$|1-\alpha\lambda_i|<1$，等价于$0<\alpha\lambda_i<2$，也就是$0<\alpha<2/\lambda_{\max}$。步长过大时，大特征值方向的倍率小于$-1$，误差在该方向上正负交替地放大；所以残差没有消失并不意味着应当加大修正。
+把修正量加到当前近似上，一轮迭代就是
+\begin{equation}
+ \bm x_{k+1}=\bm x_k+\alpha(\bm b-\bm A\bm x_k)=(\bm I-\alpha\bm A)\bm x_k+\alpha\bm b .
+ \label{eq:ls-richardson-update}
+\end{equation}
 
 \subsection{算法实现}
 
-每轮的内部状态沿用$\bm x_k,\bm r_k,\bm\delta_k$。使用对称正定情形的收敛保证时，先按已知的谱界核对步长是否在$(0,2/\lambda_{\max})$内，没有验证过的经验步长不能写成收敛条件。每轮通过开头的检查后计算
+输入是$\bm A$与$\bm b$，输出是近似解$\bm x$。除第~\ref{sec:ls-matrix-splitting}节执行流程中的初值、容差与最大轮数外，还要预先选定步长$\alpha$。下面在例~\ref{ex:ls-stationary-running-example}上取$\alpha=1/4$，每一步之后给出前两轮的数值。
+\begin{enumerate}
+ \item \textbf{核对步长。}使用对称正定情形的收敛保证（定理~\ref{thm:ls-richardson-spd}）时，先按已知的谱界核对
+ \begin{equation}
+  0<\alpha<\frac{2}{\lambda_{\max}} ;
+  \label{eq:ls-richardson-step-range}
+ \end{equation}
+ 
+ 例中$\bm A$对称正定，最大特征值为$(7+\sqrt5)/2\approx4.618<5$，所以$2/\lambda_{\max}>2/5>1/4$，步长$\alpha=1/4$在收敛区间内。
+
+ \item \textbf{求修正量。}通过停止检查后，按式~\eqref{eq:ls-richardson-correction}把残差的每个分量乘以同一个步长：
+ \[
+  (\bm\delta_k)_i=\alpha(\bm r_k)_i,\qquad i=1,\ldots,d .
+ \]
+
+ 例中第一轮的残差为$\bm r_0=\bm b-\bm A\bm 0=(1,2)^\top$，于是
+ \[
+  \bm\delta_0=\frac14\begin{bmatrix}1\\2\end{bmatrix}=\begin{bmatrix}\tfrac14\\\tfrac12\end{bmatrix}.
+ \]
+
+ \item \textbf{更新并重算残差。}令$\bm x_{k+1}=\bm x_k+\bm\delta_k$，再用原矩阵算一次$\bm q_{k+1}=\bm A\bm x_{k+1}$，得到残差$\bm r_{k+1}=\bm b-\bm q_{k+1}$。按分量写出就是
+ \begin{equation}
+  (\bm r_{k+1})_i=b_i-\sum_{j=1}^d a_{i,j}(\bm x_{k+1})_j ,\qquad i=1,\ldots,d .
+  \label{eq:ls-stationary-residual-update}
+ \end{equation}
+ 重算的残差既用于下一轮的停止检查，也是下一轮修正的输入，所以每轮只需一次矩阵乘向量。
+
+ 例中$\bm x_1=\bm 0+\bm\delta_0=(1/4,1/2)^\top$，
+ \[
+  \begin{aligned}
+  (\bm r_1)_1&=1-\bigl(4\cdot\tfrac14+1\cdot\tfrac12\bigr)=1-\tfrac32=-\tfrac12,\\
+  (\bm r_1)_2&=2-\bigl(1\cdot\tfrac14+3\cdot\tfrac12\bigr)=2-\tfrac74=\tfrac14 .
+  \end{aligned}
+ \]
+
+ \item \textbf{进入下一轮。}令$k\leftarrow k+1$，回到执行流程的停止检查；没有停止时重复第2、3步。
+
+ 例中$\lVert\bm r_1\rVert_2\approx0.56$，继续第二轮。修正量与新的近似解为
+ \[
+  \bm\delta_1=\frac14\bm r_1=\begin{bmatrix}-\tfrac18\\\tfrac1{16}\end{bmatrix},\qquad
+  \bm x_2=\bm x_1+\bm\delta_1=\begin{bmatrix}\tfrac18\\\tfrac9{16}\end{bmatrix}.
+ \]
+
+\end{enumerate}
+
+两轮后残差长度约为$0.198$。与精确解比较，误差为
 \[
-\bm\delta_k=\alpha\bm r_k,\qquad
-\bm x_{k+1}=\bm x_k+\bm\delta_k,\qquad
-\bm q_{k+1}=\bm A\bm x_{k+1},\qquad
-\bm r_{k+1}=\bm b-\bm q_{k+1},
+\bm e_2=\bm x_2-\bm x_\star=\begin{bmatrix}\tfrac3{88}\\-\tfrac{13}{176}\end{bmatrix},
 \]
-然后按第~\ref{sec:ls-matrix-splitting}节的条件决定停止或继续。重算的残差同时用于检查和下一轮修正，所以每轮只需一次矩阵乘向量。
-
-\begin{example}[Richardson迭代的前两轮]
-\label{ex:ls-richardson-two-sweeps}
-在例~\ref{ex:ls-stationary-running-example}中取$\alpha=1/4$。$\bm A$的最大特征值为$(7+\sqrt5)/2\approx4.618<5$，所以$2/\lambda_{\max}>2/5>1/4$，这个步长在收敛区间内。
-
-第一轮由$\bm r_0=(1,2)^\top$得$\bm\delta_0=(1/4,1/2)^\top$，$\bm x_1=(1/4,1/2)^\top$；继而$\bm A\bm x_1=(3/2,7/4)^\top$，$\bm r_1=(-1/2,1/4)^\top$。第二轮修正为$\tfrac14\bm r_1=(-1/8,1/16)^\top$，所以$\bm x_2=(1/8,9/16)^\top$，$\bm r_2=(-1/16,3/16)^\top$。
-
-与精确解比较，误差$\bm e_2=\bm x_2-\bm x_\star=(3/88,-13/176)^\top$，长度约$0.081$，而残差长度约$0.198$。由$\bm e_k=-\bm A^{-1}\bm r_k$，误差是残差经$\bm A^{-1}$变换后的结果，两者方向和大小都不同，是不同的数值对象。
-\end{example}
+长度约$0.081$。由$\bm e_k=-\bm A^{-1}\bm r_k$，误差是残差经$\bm A^{-1}$变换后的结果，两者方向和大小都不同，是不同的数值对象。
 
 \subsection{算法分析}
 
 \paragraph{收敛条件与最优步长}
-当$\bm A$实对称正定时，由定理~\ref{thm:ls-stationary-convergence}，收敛条件和最优步长都可以从$\bm A$的特征值直接读出。
+当$\bm A$实对称正定时，误差递推$\bm e_{k+1}=(\bm I-\alpha\bm A)\bm e_k$可以按特征方向分开看：把$\bm e_k$按$\bm A$的正交特征基展开，特征值$\lambda_i$对应的误差系数每轮乘$1-\alpha\lambda_i$。由定理~\ref{thm:ls-stationary-convergence}，收敛条件和最优步长都可以从这些倍率直接读出。
 \begin{theorem}[对称正定矩阵的Richardson迭代]
 \label{thm:ls-richardson-spd}
 设$\bm A$实对称正定，特征值落在$[\lambda_{\min},\lambda_{\max}]$中且两端取到。Richardson迭代对所有初值收敛当且仅当$0<\alpha<2/\lambda_{\max}$；最优固定步长为$\alpha_\star=2/(\lambda_{\min}+\lambda_{\max})$，对应的收缩因子为
-\[
+\begin{equation}
 \rho(\bm T)=\frac{\kappa_2(\bm A)-1}{\kappa_2(\bm A)+1}.
-\]
+ \label{eq:ls-richardson-optimal-rate}
+\end{equation}
 \end{theorem}
 \begin{proof}
-由主要思想中的展开，$\rho(\bm T)=\max_i|1-\alpha\lambda_i|$，它小于一当且仅当每个$\alpha\lambda_i\in(0,2)$，即$0<\alpha<2/\lambda_{\max}$。$|1-\alpha\lambda|$作为$\lambda$的函数在区间端点取最大，所以
+由上面的特征展开，
+\[
+ \rho(\bm T)=\max_i|1-\alpha\lambda_i| ,
+\]
+它小于一当且仅当每个$\alpha\lambda_i\in(0,2)$，即$0<\alpha<2/\lambda_{\max}$。
+
+$|1-\alpha\lambda|$作为$\lambda$的函数在区间端点取最大，所以
 \[
 \rho(\bm T)=q(\alpha)=\max\{|1-\alpha\lambda_{\min}|,\ |1-\alpha\lambda_{\max}|\}.
 \]
-$\alpha$从零增大时，$|1-\alpha\lambda_{\min}|$先变小，$|1-\alpha\lambda_{\max}|$在$\alpha>1/\lambda_{\max}$后变大；两者大小相等、符号相反时最大值最小，即$1-\alpha\lambda_{\min}=\alpha\lambda_{\max}-1$，解得$\alpha_\star$。代回得$q(\alpha_\star)=(\lambda_{\max}-\lambda_{\min})/(\lambda_{\max}+\lambda_{\min})$，再用$\kappa_2(\bm A)=\lambda_{\max}/\lambda_{\min}$。
+$\alpha$从零增大时，$|1-\alpha\lambda_{\min}|$先变小，$|1-\alpha\lambda_{\max}|$在$\alpha>1/\lambda_{\max}$后变大；两者大小相等、符号相反时最大值最小，即
+\[
+ 1-\alpha\lambda_{\min}=\alpha\lambda_{\max}-1 ,
+\]
+解得$\alpha_\star$。代回得
+\[
+ q(\alpha_\star)=\frac{\lambda_{\max}-\lambda_{\min}}{\lambda_{\max}+\lambda_{\min}} ,
+\]
+再用$\kappa_2(\bm A)=\lambda_{\max}/\lambda_{\min}$即得式~\eqref{eq:ls-richardson-optimal-rate}。
 \end{proof}
+步长过大时，大特征值方向的倍率$1-\alpha\lambda_{\max}$小于$-1$，误差在该方向上正负交替地放大；所以残差没有消失并不意味着应当加大修正。
 
 一般非对称矩阵仍可使用同一更新式，但特征值可能是复数，也没有正交特征基，上面的步长区间与最优步长不再直接适用；这时要回到定理~\ref{thm:ls-stationary-convergence}，检查$\rho(\bm I-\alpha\bm A)<1$。
 
 \paragraph{收敛速度与代价}
-谱范围越宽，$\kappa_2(\bm A)$越大，收缩因子越接近一，收敛越慢。实际中谱端点往往未知，步长按已知的谱界选取，例如用$\lVert\bm A\rVert$作$\lambda_{\max}$的上界。贯穿例中$\lambda_{\min}\approx2.382$，$\lambda_{\max}\approx4.618$：$\alpha=1/4$时$\rho(\bm T)=1-\lambda_{\min}/4\approx0.40$；最优步长$\alpha_\star=2/7$给出$\rho(\bm T)=\sqrt5/7\approx0.32$。每轮的主要代价是一次矩阵乘向量，约$2\operatorname{nnz}(\bm A)$次运算。停止时的残差与解误差之间的关系在第~\ref{sec:ls-stationary-stopping}节解释。
+谱范围越宽，$\kappa_2(\bm A)$越大，收缩因子越接近一，收敛越慢。实际中谱端点往往未知，步长按已知的谱界选取，例如用$\lVert\bm A\rVert$作$\lambda_{\max}$的上界。
+
+贯穿例中$\lambda_{\min}\approx2.382$，$\lambda_{\max}\approx4.618$：$\alpha=1/4$时$\rho(\bm T)=1-\lambda_{\min}/4\approx0.40$；最优步长$\alpha_\star=2/7$给出$\rho(\bm T)=\sqrt5/7\approx0.32$。
+
+每轮的主要代价是一次矩阵乘向量，约$2\operatorname{nnz}(\bm A)$次运算。停止时的残差与解误差之间的关系在第~\ref{sec:ls-stationary-stopping}节解释。
 
 \section{Jacobi迭代}
 \label{sec:ls-jacobi}
 
-\subsection{主要思想}
+Richardson迭代对所有方程用同一个比例，没有利用各个方程自身的尺度。Jacobi迭代取$\bm A$的对角部分作修正矩阵，$\bm M=\bm D$：第$i$个方程只用来修正“自己的”未知量$x_i$，其余分量一律取上一轮的值。对角元相对非对角元越大，$\bm D$越接近$\bm A$，这个近似越好；例~\ref{ex:ls-stationary-running-example}所取的$\bm M=\operatorname{diag}(4,3)$正是这个分裂。
 
-Richardson迭代对所有方程用同一个比例，没有利用各个方程自身的尺度。Jacobi迭代让每个方程只修正“自己的”未知量。第$i$个方程可以写成
+\paragraph{求修正量}
+修正方程$\bm D\bm\delta_k=\bm r_k$的系数矩阵只有对角元，按元素写出是
 \[
-a_{i,i}x_i=b_i-\sum_{j\neq i}a_{i,j}x_j .
+ \begin{bmatrix}a_{1,1}&&&\\&a_{2,2}&&\\&&\ddots&\\&&&a_{d,d}\end{bmatrix}
+ \begin{bmatrix}(\bm\delta_k)_1\\(\bm\delta_k)_2\\\vdots\\(\bm\delta_k)_d\end{bmatrix}
+ =\begin{bmatrix}(\bm r_k)_1\\(\bm r_k)_2\\\vdots\\(\bm r_k)_d\end{bmatrix},
 \]
-在$a_{i,i}\neq0$时可以隔离出$x_i$；若暂时把其余分量冻结在已知值上，耦合的方程组就拆成了$d$个独立的标量计算。
-
-Jacobi迭代把右端的其余分量统一取上一轮的值：
+其中空白位置都是零。左边乘出来，第$i$行只剩对角元一项，所以按行的方程是
 \[
-(\bm x_{k+1})_i=\frac{b_i-\sum_{j\neq i}a_{i,j}(\bm x_k)_j}{a_{i,i}},\qquad i=1,\ldots,d .
+ a_{i,i}(\bm\delta_k)_i=(\bm r_k)_i\qquad(i=1,\ldots,d).
 \]
-同一轮中，右端不能混入已经算出的本轮新值；混入新值得到的是第~\ref{sec:ls-gauss-seidel}节的Gauss--Seidel迭代。
+与前代不同，这里每个方程只含一个未知量，不需要用到其他方程的结果。两边除以$a_{i,i}$，得
+\begin{equation}
+ (\bm\delta_k)_i=\frac{(\bm r_k)_i}{a_{i,i}}\qquad(i=1,\ldots,d).
+ \label{eq:ls-jacobi-correction}
+\end{equation}
+耦合的方程组就这样拆成了$d$个独立的标量计算，可以按任意次序或同时进行。
 
-把分量式汇总成矩阵形式，可以找到对应的分裂。各分量式合起来是$\bm D\bm x_{k+1}=\bm b-(\bm L+\bm U)\bm x_k$；两边减去$\bm D\bm x_k$，得$\bm D(\bm x_{k+1}-\bm x_k)=\bm b-\bm A\bm x_k$，即
+\paragraph{迭代公式}
+把式~\eqref{eq:ls-jacobi-correction}加到当前近似上，得到第$i$个分量的新值
+\begin{equation}
+ (\bm x_{k+1})_i=(\bm x_k)_i+\frac{(\bm r_k)_i}{a_{i,i}}\qquad(i=1,\ldots,d),
+ \label{eq:ls-jacobi-update}
+\end{equation}
+写成向量形式是
 \[
-\bm x_{k+1}=\bm x_k+\bm D^{-1}\bm r_k ,\qquad \bm M=\bm D .
+  \bm x_{k+1}=\bm x_k+\bm D^{-1}\bm r_k .
 \]
-这相当于用对角部分近似$\bm A$；对角元相对非对角元越大，这个近似越好。例~\ref{ex:ls-stationary-running-example}所取的$\bm M$正是这个分裂。
 
-三个条件要分开看。非零对角元保证每个分量都算得出来；各分量只读取上一轮的状态，所以可以同时计算，这是并行性的来源；是否收敛则要由迭代矩阵$\bm T_{\mathrm J}=\bm I-\bm D^{-1}\bm A=-\bm D^{-1}(\bm L+\bm U)$的谱半径或下面的充分条件判断。
+残差$\bm r_k$由上一轮的$\bm x_k$算出，所以各分量可以同时计算。
 
 \subsection{算法实现}
 
-\paragraph{逐分量修正}
-开始前检查所有$a_{i,i}\neq0$并保存它们的倒数。若某个对角元为零，当前的变量排列下方法不可执行；重排行列属于另一步，重排后要重新核对条件。每轮在通过检查后，全部分量都由同一个旧状态$\bm x_k,\bm r_k$计算：
-\[
-(\bm\delta_k)_i=\frac{(\bm r_k)_i}{a_{i,i}},\qquad
-(\bm x_{k+1})_i=(\bm x_k)_i+(\bm\delta_k)_i ,
-\qquad i=1,\ldots,d .
-\]
-直接按上面的分量式计算也可以：对每一行求$s_i=\sum_{j\neq i}a_{i,j}(\bm x_k)_j$，令$(\bm x_{k+1})_i=(b_i-s_i)/a_{i,i}$；稀疏实现只遍历该行的非零元素。
+输入是$\bm A$与$\bm b$，输出是近似解$\bm x$，执行流程的参数之外不需要其他参数。停止检查与残差重算沿用第~\ref{sec:ls-matrix-splitting}节的流程，求修正量的一步换成逐分量除以对角元。实现时维护新旧两个向量：旧向量$\bm x_k$在整轮中只读不写，新分量写进另一个向量。下面在例~\ref{ex:ls-stationary-running-example}上给出前两轮，并标明每个代入值的轮次。
+\begin{enumerate}
+ \item \textbf{检查对角元。}确认所有$a_{i,i}\neq0$，并保存倒数$1/a_{i,i}$。若某个对角元为零，当前的变量排列下方法不可执行；重排行列属于另一步，重排后要重新核对条件。
 
-\paragraph{整体替换}
-右端求和只读旧向量$\bm x_k$，新分量写进另一个向量，全部$d$个分量算完之前旧向量保持不变。整轮结束后计算$\bm r_{k+1}=\bm b-\bm A\bm x_{k+1}$并检查终止，达标时返回新向量，否则交换新旧向量进入下一轮。单个分量变化很小不能代替这个全局残差检查。若算出一个分量就覆盖旧值，后面的行会读到本轮的新值，方法就不再是Jacobi迭代。
+ 例中$a_{1,1}=4$，$a_{2,2}=3$，都不为零。
 
-\paragraph{加权Jacobi}
-加权Jacobi迭代只增加一个固定超参数$\omega>0$，把修正改成$\bm\delta_k=\omega\bm D^{-1}\bm r_k$，其余流程不变；$\omega=1$恢复原方法。
+ \item \textbf{逐分量计算新值。}根据式~\eqref{eq:ls-jacobi-update}，对$i=1,\ldots,d$计算$(\bm x_{k+1})_i$，其中的残差$\bm r_k$是由旧向量算出的。各分量只读旧向量和$\bm r_k$，彼此不依赖，可以按任意次序或并行计算。
 
-\begin{example}[Jacobi迭代的前两轮]
-\label{ex:ls-jacobi-first-sweep}
-在例~\ref{ex:ls-stationary-running-example}中按分量式计算，并标明每个代入值的轮次。第一轮读取$\bm x_0=\bm 0$：
-\[
-(\bm x_1)_1=\frac{1-1\cdot0}{4}=\frac14,\qquad
-(\bm x_1)_2=\frac{2-1\cdot0}{3}=\frac23 ;
-\]
-第二个式子读的是旧值$0$，不能代入刚得到的$1/4$。第二轮统一读取$\bm x_1=(1/4,2/3)^\top$：
-\[
-(\bm x_2)_1=\frac{1-2/3}{4}=\frac1{12},\qquad
-(\bm x_2)_2=\frac{2-1/4}{3}=\frac7{12}.
-\]
-结果与例~\ref{ex:ls-stationary-running-example}中按修正量计算的完全一致，残差由$\bm r_1=(-2/3,-1/4)^\top$变为$\bm r_2=(1/12,1/6)^\top$。
+ 例中第一轮的残差为$\bm r_0=\bm b=(1,2)^\top$：
+ \[
+  \begin{aligned}
+  (\bm x_1)_1&=(\bm x_0)_1+\frac{(\bm r_0)_1}{a_{1,1}}=0+\frac14=\frac14,\\
+  (\bm x_1)_2&=(\bm x_0)_2+\frac{(\bm r_0)_2}{a_{2,2}}=0+\frac23=\frac23 .
+  \end{aligned}
+ \]
 
-第一轮之后两个残差分量都变成负的，说明两个修正都过了头：每个分量都在假定另一个分量不变的前提下修正，而另一个分量同时也在变。
-\end{example}
+ \item \textbf{整体替换并重算残差。}全部$d$个分量算完之后，才用新向量替换旧向量，并按原方程重算
+ \[
+  (\bm r_{k+1})_i=b_i-\sum_{j=1}^d a_{i,j}(\bm x_{k+1})_j ,\qquad i=1,\ldots,d .
+ \]
+ 若算出一个分量就覆盖旧值，再按新值重算后面的残差分量，后面的行就会读到本轮的新值，方法就不再是Jacobi迭代。单个分量变化很小，也不能代替这个全局残差检查。
+
+ 例中$\bm x_1=(1/4,2/3)^\top$，
+ \[
+  \begin{aligned}
+  (\bm r_1)_1&=1-\bigl(4\cdot\tfrac14+1\cdot\tfrac23\bigr)=-\tfrac23,\\
+  (\bm r_1)_2&=2-\bigl(1\cdot\tfrac14+3\cdot\tfrac23\bigr)=-\tfrac14 .
+  \end{aligned}
+ \]
+ 两个残差分量都变成负的，说明两个修正都过了头：每个分量都在假定另一个分量不变的前提下修正，而另一个分量同时也在变。
+
+ \item \textbf{进入下一轮。}令$k\leftarrow k+1$，回到执行流程的停止检查；没有停止时重复第2、3步。
+
+ 例中$\lVert\bm r_1\rVert_2\approx0.71$，继续第二轮。用$\bm r_1=(-2/3,-1/4)^\top$修正$\bm x_1=(1/4,2/3)^\top$：
+ \[
+  \begin{aligned}
+  (\bm x_2)_1&=(\bm x_1)_1+\frac{(\bm r_1)_1}{a_{1,1}}=\frac14-\frac{2/3}{4}=\frac1{12},\\
+  (\bm x_2)_2&=(\bm x_1)_2+\frac{(\bm r_1)_2}{a_{2,2}}=\frac23-\frac{1/4}{3}=\frac7{12},
+  \end{aligned}
+ \]
+ 重算残差得
+ \[
+  \begin{aligned}
+  (\bm r_2)_1&=1-\bigl(4\cdot\tfrac1{12}+1\cdot\tfrac7{12}\bigr)=\tfrac1{12},\\
+  (\bm r_2)_2&=2-\bigl(1\cdot\tfrac1{12}+3\cdot\tfrac7{12}\bigr)=\tfrac16 .
+  \end{aligned}
+ \]
+ 结果与例~\ref{ex:ls-stationary-running-example}中按修正量计算的完全一致，残差长度由约$0.71$降到约$0.19$。
+\end{enumerate}
 
 \subsection{算法分析}
 
 \paragraph{收敛条件}
-Jacobi迭代矩阵$\bm T_{\mathrm J}=-\bm D^{-1}(\bm L+\bm U)$第$i$行的非对角元为$-a_{i,j}/a_{i,i}$，对角元为零。当每行的对角元压过同一行其余元素时，这个矩阵的行和范数小于一，由此得到常用的充分条件。称$\bm A$\term{严格行对角占优}（strictly row diagonally dominant），如果每行都有$|a_{i,i}|>\sum_{j\neq i}|a_{i,j}|$。
+Jacobi迭代矩阵$\bm T_{\mathrm J}=-\bm D^{-1}(\bm L+\bm U)$第$i$行的非对角元为$-a_{i,j}/a_{i,i}$，对角元为零。当每行的对角元压过同一行其余元素时，这个矩阵的行和范数小于一，由此得到常用的充分条件。
+
+称$\bm A$\term{严格行对角占优}（strictly row diagonally dominant），如果每行都有$|a_{i,i}|>\sum_{j\neq i}|a_{i,j}|$。
 \begin{theorem}[Jacobi迭代的收敛条件]
 \label{thm:ls-jacobi-convergence}
 若$\bm A$严格行对角占优，则
-\[
+\begin{equation}
 q=\lVert\bm T_{\mathrm J}\rVert_\infty=\max_i\frac{\sum_{j\neq i}|a_{i,j}|}{|a_{i,i}|}<1,
-\]
+ \label{eq:ls-jacobi-contraction}
+\end{equation}
 Jacobi迭代对所有初值收敛，且$\lVert\bm e_k\rVert_\infty\leq q^k\lVert\bm e_0\rVert_\infty$。
 \end{theorem}
 \begin{proof}
 $\infty$-范数诱导的矩阵范数等于最大行绝对值和，$\bm T_{\mathrm J}$第$i$行的绝对值和正是$\sum_{j\neq i}|a_{i,j}|/|a_{i,i}|$，对角占优使它小于一。由定理~\ref{thm:ls-stationary-convergence}，$\bm e_k=\bm T_{\mathrm J}^k\bm e_0$，再用范数的次乘性得$\lVert\bm e_k\rVert_\infty\leq q^k\lVert\bm e_0\rVert_\infty\to0$。
 \end{proof}
-贯穿例两行的比值分别为$1/4$与$1/3$，所以$q=1/3$。对称正定本身并不够：$\bm A=\bm I+2\bm 1\bm 1^\top\in\mathbb R^{3\times3}$的特征值为$7,1,1$，是对称正定矩阵，而它的对角部分为$3\bm I$，$\bm T_{\mathrm J}=-\tfrac23(\bm 1\bm 1^\top-\bm I)$沿$\bm 1$方向的特征值为$-\tfrac23(3-1)=-4/3$，在与$\bm 1$正交的方向上为$2/3$，所以$\rho(\bm T_{\mathrm J})=4/3$，迭代发散。
+贯穿例两行的比值分别为$1/4$与$1/3$，所以$q=1/3$。
 
-\paragraph{并行性与数值敏感度}
-各分量的更新互不依赖，可以并行；一轮工作量与$\operatorname{nnz}(\bm A)$同阶。单步便宜、易于并行，不等于误差衰减快：$\rho(\bm T_{\mathrm J})$接近一时需要很多轮。很小的对角元会把残差分量放大成很大的修正，也放大其中的舍入误差。
-
-\paragraph{加权Jacobi的步长范围}
-对加权Jacobi，设$\bm A$实对称正定，则$\bm D$的对角元为正，迭代矩阵$\bm I-\omega\bm D^{-1}\bm A$与$\bm I-\omega\bm D^{-1/2}\bm A\bm D^{-1/2}$相似，后者对称。按Richardson迭代的同样论证，收敛当且仅当
+对称正定本身并不够。$\bm A=\bm I+2\bm 1\bm 1^\top\in\mathbb R^{3\times3}$的特征值为$7,1,1$，是对称正定矩阵，而它的对角部分为$3\bm I$，于是
 \[
-0<\omega<\frac{2}{\lambda_{\max}(\bm D^{-1/2}\bm A\bm D^{-1/2})}.
+ \bm T_{\mathrm J}=-\tfrac23(\bm 1\bm 1^\top-\bm I) .
 \]
-原方法对应$\omega=1$，未必位于这个区间：在前面的三阶反例$\bm A=\bm I+2\bm 1\bm 1^\top$中，$\bm D^{-1/2}\bm A\bm D^{-1/2}=\bm A/3$，最大特征值为$7/3$，区间为$(0,6/7)$。
+它沿$\bm 1$方向的特征值为$-\tfrac23(3-1)=-4/3$，在与$\bm 1$正交的方向上为$2/3$，所以$\rho(\bm T_{\mathrm J})=4/3$，迭代发散。
+
+\paragraph{并行性}
+各分量的更新互不依赖，可以并行；一轮工作量与$\operatorname{nnz}(\bm A)$同阶。单步便宜、易于并行，不等于误差衰减快：$\rho(\bm T_{\mathrm J})$接近一时需要很多轮。
+
+\paragraph{数值敏感度}
+式~\eqref{eq:ls-jacobi-correction}要除以对角元。很小的对角元会把残差分量放大成很大的修正，也放大其中的舍入误差。
 
 \section{Gauss--Seidel迭代}
 \label{sec:ls-gauss-seidel}
 
-\subsection{主要思想}
+Jacobi迭代求第$i$个分量的修正时，只用本轮开始时的残差，没有计入本轮已经求出的前面各分量的修正。Gauss--Seidel迭代按顺序处理各行，把已经求出的修正立即计入后面的方程；原方程没有变，改变的只是读取信息的时刻。这相当于修正矩阵取$\bm A$的下三角部分，$\bm M=\bm D+\bm L$：它比$\bm D$多保留了严格下三角的元素，更接近$\bm A$，而下三角方程仍可以逐行前代求解。
 
-Jacobi在计算后面的分量时，没有用到本轮已经算出的前面分量。Gauss--Seidel迭代按顺序处理各行，并把本轮已经得到的分量立即代入后面的方程。仍从$a_{i,i}x_i=b_i-\sum_{j\neq i}a_{i,j}x_j$出发：处理第$i$行时，$j<i$的分量已经更新，取本轮的新值；$j>i$的分量尚未访问，取上一轮的旧值。改变的只是信息读取的时刻，原方程没有变。由此得到
+\paragraph{求修正量}
+修正方程$(\bm D+\bm L)\bm\delta_k=\bm r_k$按元素写出是
 \[
-(\bm x_{k+1})_i=\frac{b_i-\sum_{j<i}a_{i,j}(\bm x_{k+1})_j-\sum_{j>i}a_{i,j}(\bm x_k)_j}{a_{i,i}},\qquad i=1,\ldots,d .
+ \begin{bmatrix}a_{1,1}&&&\\a_{2,1}&a_{2,2}&&\\\vdots&\vdots&\ddots&\\a_{d,1}&a_{d,2}&\cdots&a_{d,d}\end{bmatrix}
+ \begin{bmatrix}(\bm\delta_k)_1\\(\bm\delta_k)_2\\\vdots\\(\bm\delta_k)_d\end{bmatrix}
+ =\begin{bmatrix}(\bm r_k)_1\\(\bm r_k)_2\\\vdots\\(\bm r_k)_d\end{bmatrix},
 \]
-本轮前面的分量构成了真正的计算依赖：第$i$个分量必须等前$i-1$个算完。
+其中对角线以上的空白位置都是零。左边乘出来，第$i$行只含前$i$个分量，按行的方程是
+\[
+ \sum_{j<i}a_{i,j}(\bm\delta_k)_j+a_{i,i}(\bm\delta_k)_i=(\bm r_k)_i\qquad(i=1,\ldots,d).
+\]
+这是第~\ref{sec:ls-lu}节的下三角方程，按前代求解。第一个方程只含$(\bm\delta_k)_1$，得
+\[
+ (\bm\delta_k)_1=\frac{(\bm r_k)_1}{a_{1,1}} .
+\]
+第二个方程中$(\bm\delta_k)_1$已经求出，移项后得
+\[
+ (\bm\delta_k)_2=\frac{(\bm r_k)_2-a_{2,1}(\bm\delta_k)_1}{a_{2,2}} .
+\]
+一般地，第$i$个方程中$(\bm\delta_k)_1,\ldots,(\bm\delta_k)_{i-1}$已由前面的方程求出，把它们移到右边，再除以$a_{i,i}$，得
+\begin{equation}
+ (\bm\delta_k)_i=\frac{(\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j}{a_{i,i}}\qquad(i=1,\ldots,d).
+ \label{eq:ls-gauss-seidel-correction}
+\end{equation}
+与Jacobi的式~\eqref{eq:ls-jacobi-correction}相比，分子多减去了前面各分量的修正对第$i$个方程的影响。$(\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j$正是前$i-1$个分量修正之后第$i$个方程的残差，所以$(\bm\delta_k)_i$使第$i$个方程在此刻恰好成立。代价是第$i$个分量必须等前$i-1$个算完，各分量不能再同时计算。
 
-这个顺序对应一次下三角求解。把所有本轮新量移到左边，分量式合起来是$(\bm D+\bm L)\bm x_{k+1}=\bm b-\bm U\bm x_k$；两边减去$(\bm D+\bm L)\bm x_k$，得
+\paragraph{迭代公式}
+把式~\eqref{eq:ls-gauss-seidel-correction}加到当前近似上，得到第$i$个分量的新值
+\begin{equation}
+ (\bm x_{k+1})_i=(\bm x_k)_i+\frac{(\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j}{a_{i,i}}\qquad(i=1,\ldots,d),
+ \label{eq:ls-gauss-seidel-update}
+\end{equation}
+写成向量形式是
 \[
-(\bm D+\bm L)\bm\delta_k=\bm r_k ,\qquad \bm M=\bm D+\bm L .
+ \bm x_{k+1}=\bm x_k+(\bm D+\bm L)^{-1}\bm r_k ,
 \]
-所以每轮的修正量由第~\ref{sec:ls-lu}节的前代求得。逐分量写出前代，就是
-\[
-(\bm\delta_k)_i=\frac{(\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j}{a_{i,i}},
-\]
-其中$\bm r_k$是本轮开始时冻结的旧残差，求和只读同一轮已经算好的前面修正。旧残差与部分更新后的残差不能混用。
+这里的逆只是记号，计算时按式~\eqref{eq:ls-gauss-seidel-correction}逐行前代。
 
-迭代矩阵为$\bm T_{\mathrm{GS}}=-(\bm D+\bm L)^{-1}\bm U$。重新排列变量会改变哪些元素落在$\bm L$、哪些落在$\bm U$，从而改变分裂本身和收敛速度。“用了较新的信息”只是直观理由，不能据此推出对所有矩阵都比Jacobi快。
+变量的排列决定哪些元素落在$\bm L$、哪些落在$\bm U$，重新排列会改变$\bm M$本身；“用了较新的信息”只是直观理由，不能据此推出对所有矩阵都比Jacobi快。
 
 \subsection{算法实现}
 
-\paragraph{直接更新形式}
-变量顺序作为超参数固定为$1,\ldots,d$，开始前检查对角元非零。每轮通过检查后，对$i=1,\ldots,d$依次计算
-\[
-s_{\mathrm{new}}=\sum_{j<i}a_{i,j}(\bm x_{k+1})_j,\qquad
-s_{\mathrm{old}}=\sum_{j>i}a_{i,j}(\bm x_k)_j,\qquad
-(\bm x_{k+1})_i=\frac{b_i-s_{\mathrm{new}}-s_{\mathrm{old}}}{a_{i,i}} .
-\]
-实现时直接在一个向量上原位覆盖即可：第$i$个位置被改写时，前面的位置已是新值，后面的位置仍是旧值。解释公式时仍要区分两者。
+输入是$\bm A$与$\bm b$，输出是近似解$\bm x$；预先选定的规则是变量顺序，这里固定为$1,\ldots,d$。停止检查与残差重算沿用第~\ref{sec:ls-matrix-splitting}节的流程，求修正量的一步换成按顺序的前代。本轮的残差$\bm r_k$在整轮中保持不变，修正量的各分量依次写入$\bm\delta_k$，整轮算完再加到$\bm x_k$上。下面仍在例~\ref{ex:ls-stationary-running-example}上给出前两轮，并与第~\ref{sec:ls-jacobi}节的结果对照。
+\begin{enumerate}
+ \item \textbf{检查对角元。}与Jacobi迭代相同，确认所有$a_{i,i}\neq0$。
 
-\paragraph{修正形式与检查}
-等价地，可以先冻结$\bm r_k$，逐行前代求出整个$\bm\delta_k$，最后一次性令$\bm x_{k+1}=\bm x_k+\bm\delta_k$。两种写法得到同一个$\bm x_{k+1}$，但不能混杂：直接更新形式不使用残差，修正形式在本轮内不修改$\bm x$。一整轮完成后重算$\bm r_{k+1}=\bm b-\bm A\bm x_{k+1}$并检查终止。
+ 例中$a_{1,1}=4$，$a_{2,2}=3$。
 
-\begin{example}[Gauss--Seidel迭代的前两轮]
-\label{ex:ls-gauss-seidel-first-sweep}
-仍从例~\ref{ex:ls-stationary-running-example}的$\bm x_0=\bm 0$出发。第一轮先算$(\bm x_1)_1=(1-0)/4=1/4$，与Jacobi相同；随后第二行使用这个新值，$(\bm x_1)_2=(2-1\cdot\tfrac14)/3=7/12$。于是$\bm x_1=(1/4,\,7/12)^\top$，重算得$\bm r_1=(-7/12,\,0)^\top$，$\lVert\bm r_1\rVert_2\approx0.58$。与例~\ref{ex:ls-jacobi-first-sweep}的$(1/4,2/3)^\top$相比，差别正来自第二行用了新的第一分量。
+ \item \textbf{按顺序求修正量。}根据式~\eqref{eq:ls-gauss-seidel-correction}，对$i=1,\ldots,d$依次计算$(\bm\delta_k)_i$。处理第$i$行时，$(\bm\delta_k)_1,\ldots,(\bm\delta_k)_{i-1}$已在本轮求出，这是真正的计算依赖。右端始终是本轮开始时的$\bm r_k$，不能与部分更新后重算的残差混用。
 
-第二轮先算$(\bm x_2)_1=(1-7/12)/4=5/48$，再用它算$(\bm x_2)_2=(2-5/48)/3=91/144$。完整残差为$\bm r_2=(-7/144,\,0)^\top$，长度约$0.049$。
+ 例中第一轮的残差为$\bm r_0=\bm b=(1,2)^\top$：
+ \[
+  \begin{aligned}
+  (\bm\delta_0)_1&=\frac{(\bm r_0)_1}{a_{1,1}}=\frac14,\\
+  (\bm\delta_0)_2&=\frac{(\bm r_0)_2-a_{2,1}(\bm\delta_0)_1}{a_{2,2}}=\frac{2-1\cdot\tfrac14}{3}=\frac7{12} .
+  \end{aligned}
+ \]
+ 第一个分量与Jacobi相同；第二个分量扣除了第一个分量的修正对第二个方程的影响$a_{2,1}(\bm\delta_0)_1=1/4$，所以比Jacobi的$2/3$小。
 
-两轮的第二个残差分量都是零，因为每轮最后一次坐标修正恰好让第二个方程成立；第一个方程却因第二分量随后改变而不再成立。末行已经满足，不代表前面各行也都满足，所以停止判断必须用完整残差。
-\end{example}
+ \item \textbf{更新并重算残差。}根据式~\eqref{eq:ls-gauss-seidel-update}，令$(\bm x_{k+1})_i=(\bm x_k)_i+(\bm\delta_k)_i$，再按原方程重算
+ \[
+  (\bm r_{k+1})_i=b_i-\sum_{j=1}^d a_{i,j}(\bm x_{k+1})_j ,\qquad i=1,\ldots,d .
+ \]
+ 实现时也常省去$\bm\delta_k$，在一个向量上原位逐分量更新：处理第$i$行时现算这一行的残差，前面的位置已是新值，后面的位置仍是旧值，结果与这里相同。
+
+ 例中$\bm x_1=\bm x_0+\bm\delta_0=(1/4,7/12)^\top$，
+ \[
+  \begin{aligned}
+  (\bm r_1)_1&=1-\bigl(4\cdot\tfrac14+1\cdot\tfrac7{12}\bigr)=-\tfrac7{12},\\
+  (\bm r_1)_2&=2-\bigl(1\cdot\tfrac14+3\cdot\tfrac7{12}\bigr)=0 ,
+  \end{aligned}
+ \]
+ 第二个残差分量为零，因为最后求出的$(\bm\delta_0)_2$恰好让第二个方程成立；第一个方程却因第二分量随后改变而不再成立。末行已经满足，不代表前面各行也都满足，所以停止判断必须用完整残差。
+
+ \item \textbf{进入下一轮。}令$k\leftarrow k+1$，回到执行流程的停止检查；没有停止时重复第2、3步。
+
+ 例中$\lVert\bm r_1\rVert_2\approx0.58$，继续第二轮。用$\bm r_1=(-7/12,0)^\top$求修正量：
+ \[
+  \begin{aligned}
+  (\bm\delta_1)_1&=\frac{(\bm r_1)_1}{a_{1,1}}=\frac{-7/12}{4}=-\frac7{48},\\
+  (\bm\delta_1)_2&=\frac{(\bm r_1)_2-a_{2,1}(\bm\delta_1)_1}{a_{2,2}}=\frac{0+1\cdot\tfrac7{48}}{3}=\frac7{144},
+  \end{aligned}
+ \]
+ 于是
+ \[
+  \bm x_2=\bm x_1+\bm\delta_1=\begin{bmatrix}\tfrac14-\tfrac7{48}\\\tfrac7{12}+\tfrac7{144}\end{bmatrix}=\begin{bmatrix}\tfrac5{48}\\\tfrac{91}{144}\end{bmatrix}.
+ \]
+ 重算残差得
+ \[
+  \begin{aligned}
+  (\bm r_2)_1&=1-\bigl(4\cdot\tfrac5{48}+1\cdot\tfrac{91}{144}\bigr)=-\tfrac7{144},\\
+  (\bm r_2)_2&=2-\bigl(1\cdot\tfrac5{48}+3\cdot\tfrac{91}{144}\bigr)=0 ,
+  \end{aligned}
+ \]
+ 长度约$0.049$。第二个残差分量再次为零，原因与第一轮相同。
+\end{enumerate}
 
 \subsection{算法分析}
 
 \paragraph{收敛条件}
-由定理~\ref{thm:ls-stationary-convergence}，只需说明$\rho(\bm T_{\mathrm{GS}})<1$；下面的定理给出两类常用的充分条件。
+由迭代公式的向量形式，Gauss--Seidel的迭代矩阵为
+\begin{equation}
+\bm T_{\mathrm{GS}}=\bm I-(\bm D+\bm L)^{-1}\bm A=-(\bm D+\bm L)^{-1}\bm U ,
+ \label{eq:ls-gauss-seidel-iteration-matrix}
+\end{equation}
+第二个等号用到$(\bm D+\bm L)-\bm A=-\bm U$。由定理~\ref{thm:ls-stationary-convergence}，只需说明$\rho(\bm T_{\mathrm{GS}})<1$；下面的定理给出两类常用的充分条件。
 \begin{theorem}[Gauss--Seidel迭代的收敛条件]
 \label{thm:ls-gauss-seidel-convergence}
 若$\bm A$严格行对角占优，或$\bm A$实对称正定，则$\rho(\bm T_{\mathrm{GS}})<1$，Gauss--Seidel迭代对所有初值收敛。
 \end{theorem}
 \begin{proof}
-先设严格行对角占优。若$\bm T_{\mathrm{GS}}\bm v=\lambda\bm v$，$\bm v\neq\bm 0$，$|\lambda|\geq1$，则$-\bm U\bm v=\lambda(\bm D+\bm L)\bm v$。取$|v_i|$最大的分量，第$i$行给出$\lambda a_{i,i}v_i=-\lambda\sum_{j<i}a_{i,j}v_j-\sum_{j>i}a_{i,j}v_j$，两边除以$|\lambda|$并取绝对值，
+先设严格行对角占优。若$\bm T_{\mathrm{GS}}\bm v=\lambda\bm v$，$\bm v\neq\bm 0$，$|\lambda|\geq1$，则$-\bm U\bm v=\lambda(\bm D+\bm L)\bm v$。取$|v_i|$最大的分量，第$i$行给出
+\[
+ \lambda a_{i,i}v_i=-\lambda\sum_{j<i}a_{i,j}v_j-\sum_{j>i}a_{i,j}v_j .
+\]
+两边除以$|\lambda|$并取绝对值，
 \[
 |a_{i,i}||v_i|\leq\sum_{j<i}|a_{i,j}||v_j|+\frac{1}{|\lambda|}\sum_{j>i}|a_{i,j}||v_j|
 \leq|v_i|\sum_{j\neq i}|a_{i,j}|,
 \]
 与对角占优矛盾。
 
-再设$\bm A$实对称正定，令$\phi(\bm x)=\tfrac12\bm x^\top\bm A\bm x-\bm b^\top\bm x$，则$\phi(\bm x)-\phi(\bm x_\star)=\tfrac12\bm e^\top\bm A\bm e$，其中$\bm e=\bm x-\bm x_\star$。沿第$i$个坐标移动$t$时，$\phi$的变化为$-t\,r_i+\tfrac12t^2a_{i,i}$，其中$r_i$是移动前残差的第$i$个分量。Gauss--Seidel取$t=r_i/a_{i,i}$，使$\phi$减少$r_i^2/(2a_{i,i})\geq0$。若一整轮$\phi$没有减少，则每次坐标修正时都有$r_i=0$，各分量都没有改变，从而本轮开始时的残差$\bm r_k=-\bm A\bm e_k$为零，$\bm e_k=\bm0$。所以对$\bm e\neq\bm 0$有
+再设$\bm A$实对称正定，令$\phi(\bm x)=\tfrac12\bm x^\top\bm A\bm x-\bm b^\top\bm x$，则
+\[
+ \phi(\bm x)-\phi(\bm x_\star)=\tfrac12\bm e^\top\bm A\bm e ,
+\]
+其中$\bm e=\bm x-\bm x_\star$。沿第$i$个坐标移动$t$时，$\phi$的变化为
+\[
+ -t\,r_i+\tfrac12t^2a_{i,i} ,
+\]
+其中$r_i$是移动前残差的第$i$个分量。Gauss--Seidel取$t=r_i/a_{i,i}$，使$\phi$减少$r_i^2/(2a_{i,i})\geq0$。
+
+若一整轮$\phi$没有减少，则每次坐标修正时都有$r_i=0$，各分量都没有改变，从而本轮开始时的残差$\bm r_k=-\bm A\bm e_k$为零，$\bm e_k=\bm0$。所以对$\bm e\neq\bm 0$有
 \[
 \bm e^\top\bm A\bm e>(\bm T_{\mathrm{GS}}\bm e)^\top\bm A(\bm T_{\mathrm{GS}}\bm e),
 \]
-即实对称矩阵$\bm A-\bm T_{\mathrm{GS}}^\top\bm A\bm T_{\mathrm{GS}}$正定。现在设$\bm T_{\mathrm{GS}}\bm v=\lambda\bm v$，$\bm v=\bm a+\mathrm i\bm c\neq\bm 0$可以是复向量。对实对称矩阵$\bm S$，$\bm v^*\bm S\bm v=\bm a^\top\bm S\bm a+\bm c^\top\bm S\bm c$，所以正定矩阵对非零复向量的二次型仍为正。于是
+即实对称矩阵$\bm A-\bm T_{\mathrm{GS}}^\top\bm A\bm T_{\mathrm{GS}}$正定。
+
+现在设$\bm T_{\mathrm{GS}}\bm v=\lambda\bm v$，$\bm v=\bm a+\mathrm i\bm c\neq\bm 0$可以是复向量。对实对称矩阵$\bm S$，$\bm v^*\bm S\bm v=\bm a^\top\bm S\bm a+\bm c^\top\bm S\bm c$，所以正定矩阵对非零复向量的二次型仍为正。于是
 \[
 0<\bm v^*(\bm A-\bm T_{\mathrm{GS}}^\top\bm A\bm T_{\mathrm{GS}})\bm v
 =\bm v^*\bm A\bm v-|\lambda|^2\bm v^*\bm A\bm v
@@ -334,7 +548,9 @@ s_{\mathrm{old}}=\sum_{j>i}a_{i,j}(\bm x_k)_j,\qquad
 证明的第二部分还说明，对称正定时误差的能量范数$\lVert\bm e\rVert_{\bm A}=(\bm e^\top\bm A\bm e)^{1/2}$每轮严格减小。
 
 \paragraph{收敛速度与代价}
-收敛速度取决于$\bm T_{\mathrm{GS}}$的谱，而重新排列变量会改变迭代矩阵本身。一轮是一次三角扫掠，工作量与$\operatorname{nnz}(\bm A)$同阶，但各行之间有先后依赖，不像Jacobi那样直接并行。贯穿例中$\rho(\bm T_{\mathrm{GS}})=1/12$，小于Jacobi的$\rho(\bm T_{\mathrm J})=1/\sqrt{12}\approx0.289$。
+收敛速度取决于$\bm T_{\mathrm{GS}}$的谱，而重新排列变量会改变迭代矩阵本身。一轮是一次三角扫掠，工作量与$\operatorname{nnz}(\bm A)$同阶，但各行之间有先后依赖，不像Jacobi那样直接并行。
+
+贯穿例中$\rho(\bm T_{\mathrm{GS}})=1/12$，小于Jacobi的$\rho(\bm T_{\mathrm J})=1/\sqrt{12}\approx0.289$。
 
 图~\ref{fig:ls-stationary-iteration-paths}画出了这一差别。左图中Gauss--Seidel的每个半步只改一个坐标，并恰好落在对应方程的直线上，折线很快收拢到$\bm x_\star$；Jacobi的两个分量同时按旧值修正，在解的两侧来回跳动。右图的半对数坐标中，各方法的误差大致沿直线下降，斜率对应各自的谱半径。新值的复用带来了顺序依赖，却不保证对所有矩阵都比Jacobi快：有的矩阵上Jacobi收敛而Gauss--Seidel发散。
 
@@ -348,72 +564,120 @@ s_{\mathrm{old}}=\sum_{j>i}a_{i,j}(\bm x_k)_j,\qquad
 \section{SOR迭代}
 \label{sec:ls-sor}
 
-\subsection{主要思想}
+Gauss--Seidel的每个分量修正都恰好让当前方程成立，修正幅度是固定的。\term{逐次超松弛迭代}（successive over-relaxation，SOR）引入固定的\term{松弛参数}（relaxation parameter）$\omega\neq0$，把每个分量的这一修正乘以$\omega$，目的是在误差沿同一方向缓慢衰减时走得更快，或在修正过冲时收敛得更稳。
 
-Gauss--Seidel每次坐标修正都恰好让当前方程成立，修正幅度是固定的。\term{逐次超松弛迭代}（successive over-relaxation，SOR）引入固定的\term{松弛参数}（relaxation parameter）$\omega\neq0$，调节每次坐标修正走多远。目的是在误差沿同一方向缓慢衰减时走得更快，或在修正过冲时收敛得更稳。
+这相当于把下三角修正矩阵的对角部分除以$\omega$，取$\bm M=\frac1\omega\bm D+\bm L$。$\omega=1$就是Gauss--Seidel；$0<\omega<1$称为欠松弛，只走一部分；$\omega>1$称为过松弛，越过Gauss--Seidel的修正继续走。松弛参数改变的是修正，目标方程没有变。
 
-具体做法分两步。处理第$i$行时，先用当前可用的数据算出Gauss--Seidel候选值
+\paragraph{求修正量}
+修正方程$\bigl(\frac1\omega\bm D+\bm L\bigr)\bm\delta_k=\bm r_k$按元素写出是
 \[
-\widehat x_i=\frac{b_i-\sum_{j<i}a_{i,j}(\bm x_{k+1})_j-\sum_{j>i}a_{i,j}(\bm x_k)_j}{a_{i,i}} ,
+ \begin{bmatrix}\frac{a_{1,1}}{\omega}&&&\\a_{2,1}&\frac{a_{2,2}}{\omega}&&\\\vdots&\vdots&\ddots&\\a_{d,1}&a_{d,2}&\cdots&\frac{a_{d,d}}{\omega}\end{bmatrix}
+ \begin{bmatrix}(\bm\delta_k)_1\\(\bm\delta_k)_2\\\vdots\\(\bm\delta_k)_d\end{bmatrix}
+ =\begin{bmatrix}(\bm r_k)_1\\(\bm r_k)_2\\\vdots\\(\bm r_k)_d\end{bmatrix},
 \]
-再让旧值朝候选值移动$\omega$倍的距离：
+其中对角线以上的空白位置都是零。第$i$行的方程是
 \[
-(\bm x_{k+1})_i=(\bm x_k)_i+\omega\bigl(\widehat x_i-(\bm x_k)_i\bigr)=(1-\omega)(\bm x_k)_i+\omega\widehat x_i .
+ \sum_{j<i}a_{i,j}(\bm\delta_k)_j+\frac{a_{i,i}}{\omega}(\bm\delta_k)_i=(\bm r_k)_i\qquad(i=1,\ldots,d).
 \]
-$\omega=1$就是Gauss--Seidel；$0<\omega<1$称为欠松弛，只走一部分；$\omega>1$称为过松弛，越过候选值继续走。松弛参数改变的是修正，目标方程没有变。
+两边乘以$\omega$，各行合起来就是$(\bm D+\omega\bm L)\bm\delta_k=\omega\bm r_k$，与上面的方程等价。系数矩阵仍是下三角矩阵，按前代求解。第一个方程只含$(\bm\delta_k)_1$，得
+\[
+ (\bm\delta_k)_1=\frac{\omega(\bm r_k)_1}{a_{1,1}} .
+\]
+第二个方程中$(\bm\delta_k)_1$已经求出，移项后得
+\[
+ (\bm\delta_k)_2=\frac{\omega}{a_{2,2}}\bigl((\bm r_k)_2-a_{2,1}(\bm\delta_k)_1\bigr) .
+\]
+一般地，把第$i$个方程中已经求出的前$i-1$个分量移到右边，再乘以$\omega/a_{i,i}$，得
+\begin{equation}
+ (\bm\delta_k)_i=\frac{\omega}{a_{i,i}}\Bigl((\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j\Bigr)\qquad(i=1,\ldots,d).
+ \label{eq:ls-sor-correction}
+\end{equation}
+括号里仍是前$i-1$个分量修正之后第$i$个方程的残差，除以$a_{i,i}$就是Gauss--Seidel在此刻给出的修正，SOR再把它乘以$\omega$。$\omega=1$时上式逐项退化为式~\eqref{eq:ls-gauss-seidel-correction}。前面的$(\bm\delta_k)_j$已经是松弛后的修正，所以SOR不等于先做一轮Gauss--Seidel再把整个修正量乘以$\omega$。
 
-松弛发生在每个坐标内部：后面的行读到的是前面已经松弛后的值。先做一次完整的Gauss--Seidel扫掠、再把整个向量与旧向量按$\omega$线性组合，一般得到的是另一种方法，不是逐坐标的SOR。
-
-对应的分裂可以照Gauss--Seidel的办法得到。把分量式乘$a_{i,i}$并把本轮新量移到左边，合起来是
+\paragraph{迭代公式}
+把式~\eqref{eq:ls-sor-correction}加到当前近似上，得到第$i$个分量的新值
+\begin{equation}
+ \begin{aligned}
+ (\bm x_{k+1})_i&=(\bm x_k)_i+\frac{\omega}{a_{i,i}}\Bigl((\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j\Bigr),\\
+ i&=1,\ldots,d,
+ \end{aligned}
+ \label{eq:ls-sor-update}
+\end{equation}
+写成向量形式是
 \[
-(\bm D+\omega\bm L)\bm x_{k+1}=\omega\bm b+\bigl[(1-\omega)\bm D-\omega\bm U\bigr]\bm x_k .
+ \bm x_{k+1}=\bm x_k+\omega(\bm D+\omega\bm L)^{-1}\bm r_k .
 \]
-两边减去$(\bm D+\omega\bm L)\bm x_k$，右边化为$\omega(\bm b-\bm D\bm x_k-\bm L\bm x_k-\bm U\bm x_k)=\omega\bm r_k$，即
-\[
-(\bm D+\omega\bm L)\bm\delta_k=\omega\bm r_k ,\qquad
-\bm M=\frac1\omega\bm D+\bm L .
-\]
-$\omega$同时影响每个坐标的修正幅度与整轮的误差传播，收敛条件在算法分析中讨论。
 
 \subsection{算法实现}
 
-\paragraph{松弛前代}
-输入除初值、容差和上限外还有$\omega$，并记录变量顺序。参数是否合格与矩阵是否满足假设是两项不同的检查：对称正定情形的保证要求$0<\omega<2$，同时要求$\bm A$确实对称正定。每轮通过检查后，按既定顺序求解$(\bm D+\omega\bm L)\bm\delta_k=\omega\bm r_k$，即
-\[
-(\bm\delta_k)_i=\frac{\omega}{a_{i,i}}\Bigl((\bm r_k)_i-\sum_{j<i}a_{i,j}(\bm\delta_k)_j\Bigr),\qquad i=1,\ldots,d .
-\]
-计算当前分量时用到的，已经是前面分量松弛后的修正；$\omega=1$时这一步逐项退化为Gauss--Seidel的前代。
+输入是$\bm A$与$\bm b$，输出是近似解$\bm x$。除执行流程的参数外，还要预先选定松弛参数$\omega$和变量顺序，顺序固定为$1,\ldots,d$。停止检查与残差重算沿用第~\ref{sec:ls-matrix-splitting}节的流程，求修正量的一步换成带松弛参数的前代；与Gauss--Seidel一样，本轮的$\bm r_k$在整轮中保持不变。下面在例~\ref{ex:ls-stationary-running-example}上取$\omega=6/5$给出前两轮。
+\begin{enumerate}
+ \item \textbf{核对参数与对角元。}确认所有$a_{i,i}\neq0$。参数是否合格与矩阵是否满足假设是两项不同的检查：对称正定情形的收敛保证（定理~\ref{thm:ls-sor-convergence}）要求$0<\omega<2$，同时要求$\bm A$确实对称正定。
 
-\paragraph{直接更新与检查}
-等价地，可以原位逐坐标更新：对$i=1,\ldots,d$保存旧分量，算出$\widehat x_i$，写回$(1-\omega)(\bm x_k)_i+\omega\widehat x_i$；已访问的坐标立即供后面的行读取，未访问的坐标保持旧值。一轮结束后重算残差，满足容差才以成功返回。
+ 例中$\bm A$对称正定，$\omega=6/5$在$(0,2)$内。
 
-\begin{example}[SOR迭代的前两轮]
-\label{ex:ls-sor-first-sweep}
-在例~\ref{ex:ls-stationary-running-example}中取$\omega=6/5$。第一轮中，第一行的候选值为$1/4$，松弛后$(\bm x_1)_1=\tfrac65\cdot\tfrac14=3/10$；第二行用这个松弛后的值，候选值为$(2-3/10)/3=17/30$，于是$(\bm x_1)_2=\tfrac65\cdot\tfrac{17}{30}=17/25$。所以$\bm x_1=(3/10,\,17/25)^\top$，残差$\bm r_1=(-22/25,\,-17/50)^\top$。
+ \item \textbf{按顺序求修正量。}根据式~\eqref{eq:ls-sor-correction}，对$i=1,\ldots,d$依次计算$(\bm\delta_k)_i$。后面的行扣除的是前面已经松弛后的修正。
 
-第二轮先算
-\[
-(\bm x_2)_1=-\tfrac15\cdot\tfrac3{10}+\tfrac65\cdot\frac{1-17/25}{4}=\frac9{250},
-\]
-再用它算
-\[
-(\bm x_2)_2=-\tfrac15\cdot\tfrac{17}{25}+\tfrac65\cdot\frac{2-9/250}{3}=\frac{406}{625},
-\]
-残差$\bm r_2=(129/625,\,19/1250)^\top$。
+ 例中第一轮的残差为$\bm r_0=\bm b=(1,2)^\top$：
+ \[
+  \begin{aligned}
+  (\bm\delta_0)_1&=\frac{\omega}{a_{1,1}}(\bm r_0)_1=\frac{6/5}{4}\cdot1=\frac3{10},\\
+  (\bm\delta_0)_2&=\frac{\omega}{a_{2,2}}\bigl((\bm r_0)_2-a_{2,1}(\bm\delta_0)_1\bigr)=\frac{6/5}{3}\Bigl(2-1\cdot\tfrac3{10}\Bigr)=\frac{17}{25} .
+  \end{aligned}
+ \]
+ 第二行扣除的是松弛后的$3/10$，而不是Gauss--Seidel的$1/4$。
 
-与例~\ref{ex:ls-gauss-seidel-first-sweep}不同，第二个方程不再恰好成立，因为它的修正被放大了五分之一。若先做完整一轮Gauss--Seidel、再按$\omega$把它与旧向量组合，得到的是$\tfrac65(1/4,7/12)^\top=(3/10,7/10)^\top$，与$\bm x_1$不同。
+ 若先做完整一轮Gauss--Seidel，再把修正量乘以$\omega$，得到的是$\tfrac65(1/4,7/12)^\top=(3/10,7/10)^\top$，与$\bm\delta_0$不同；这一般是另一种方法，不是SOR。
+
+ \item \textbf{更新并重算残差。}根据式~\eqref{eq:ls-sor-update}，令$(\bm x_{k+1})_i=(\bm x_k)_i+(\bm\delta_k)_i$，再按原方程重算残差。与Gauss--Seidel一样，也可以在一个向量上原位逐分量更新，处理第$i$行时现算这一行的残差。
+
+ 例中$\bm x_1=\bm x_0+\bm\delta_0=(3/10,17/25)^\top$，
+ \[
+  \begin{aligned}
+  (\bm r_1)_1&=1-\bigl(4\cdot\tfrac3{10}+1\cdot\tfrac{17}{25}\bigr)=1-\tfrac{47}{25}=-\tfrac{22}{25},\\
+  (\bm r_1)_2&=2-\bigl(1\cdot\tfrac3{10}+3\cdot\tfrac{17}{25}\bigr)=2-\tfrac{117}{50}=-\tfrac{17}{50} .
+  \end{aligned}
+ \]
+ 与第~\ref{sec:ls-gauss-seidel}节不同，第二个方程不再恰好成立，因为它的修正被放大了五分之一。
+
+ \item \textbf{进入下一轮。}令$k\leftarrow k+1$，回到执行流程的停止检查；没有停止时重复第2、3步。
+
+ 例中$\lVert\bm r_1\rVert_2\approx0.94$，继续第二轮。用$\bm r_1=(-22/25,-17/50)^\top$求修正量：
+ \[
+  \begin{aligned}
+  (\bm\delta_1)_1&=\frac{6/5}{4}\cdot\Bigl(-\frac{22}{25}\Bigr)=-\frac{33}{125},\\
+  (\bm\delta_1)_2&=\frac{6/5}{3}\Bigl(-\frac{17}{50}-1\cdot\Bigl(-\frac{33}{125}\Bigr)\Bigr)\\
+  &=\frac25\cdot\Bigl(-\frac{19}{250}\Bigr)=-\frac{19}{625},
+  \end{aligned}
+ \]
+ 于是
+ \[
+  \bm x_2=\bm x_1+\bm\delta_1=\begin{bmatrix}\tfrac3{10}-\tfrac{33}{125}\\\tfrac{17}{25}-\tfrac{19}{625}\end{bmatrix}=\begin{bmatrix}\tfrac9{250}\\\tfrac{406}{625}\end{bmatrix}.
+ \]
+ 重算残差得
+ \[
+  \begin{aligned}
+  (\bm r_2)_1&=1-\bigl(4\cdot\tfrac9{250}+1\cdot\tfrac{406}{625}\bigr)=\tfrac{129}{625},\\
+  (\bm r_2)_2&=2-\bigl(1\cdot\tfrac9{250}+3\cdot\tfrac{406}{625}\bigr)=\tfrac{19}{1250} .
+  \end{aligned}
+ \]
+\end{enumerate}
 
 就这个例子而言，过松弛并没有带来好处：两轮的残差长度约为$0.94$与$0.21$，都大于Gauss--Seidel的$0.58$与$0.049$。有限轮的算例只用来解释计算过程；参数的优劣要由下面的谱半径判断。
-\end{example}
 
 \subsection{算法分析}
 
 \paragraph{收敛条件}
-SOR的迭代矩阵为
-\[
-\bm T_\omega=\bm I-\omega(\bm D+\omega\bm L)^{-1}\bm A=(\bm D+\omega\bm L)^{-1}\bigl[(1-\omega)\bm D-\omega\bm U\bigr].
-\]
-松弛参数不能随意取：它的取值范围对一般矩阵有一条必要条件，对实对称正定矩阵则恰好也是充分条件。
+由迭代公式的向量形式，SOR的修正矩阵满足$\bm M^{-1}=\omega(\bm D+\omega\bm L)^{-1}$，迭代矩阵为
+\begin{equation}
+\begin{aligned}
+\bm T_\omega&=\bm I-\omega(\bm D+\omega\bm L)^{-1}\bm A\\
+&=(\bm D+\omega\bm L)^{-1}\bigl[(1-\omega)\bm D-\omega\bm U\bigr],
+\end{aligned}
+ \label{eq:ls-sor-iteration-matrix}
+\end{equation}
+第二个等号用到$(\bm D+\omega\bm L)-\omega(\bm D+\bm L+\bm U)=(1-\omega)\bm D-\omega\bm U$。
+$\omega$同时影响每个坐标的修正幅度与整轮的误差传播，所以不能随意取：它的取值范围对一般矩阵有一条必要条件，对实对称正定矩阵则恰好也是充分条件。
 \begin{theorem}[SOR迭代的收敛条件]
 \label{thm:ls-sor-convergence}
 设$\bm A$的对角元全不为零。
@@ -423,7 +687,11 @@ SOR的迭代矩阵为
 \end{enumerate}
 \end{theorem}
 \begin{proof}
-（1）$\bm D+\omega\bm L$是下三角阵，行列式为$\prod_i a_{i,i}$；$(1-\omega)\bm D-\omega\bm U$是上三角阵，行列式为$(1-\omega)^d\prod_i a_{i,i}$。所以$\det\bm T_\omega=(1-\omega)^d$。行列式等于全部特征值之积，其模不超过$\rho(\bm T_\omega)^d$，故$\rho(\bm T_\omega)\geq|1-\omega|$。若$\omega\leq0$或$\omega\geq2$，则$\rho(\bm T_\omega)\geq1$，由定理~\ref{thm:ls-stationary-convergence}不能对所有初值收敛。
+（1）$\bm D+\omega\bm L$是下三角阵，行列式为$\prod_i a_{i,i}$；$(1-\omega)\bm D-\omega\bm U$是上三角阵，行列式为$(1-\omega)^d\prod_i a_{i,i}$。所以
+\[
+ \det\bm T_\omega=(1-\omega)^d .
+\]
+行列式等于全部特征值之积，其模不超过$\rho(\bm T_\omega)^d$，故$\rho(\bm T_\omega)\geq|1-\omega|$。若$\omega\leq0$或$\omega\geq2$，则$\rho(\bm T_\omega)\geq1$，由定理~\ref{thm:ls-stationary-convergence}不能对所有初值收敛。
 
 （2）第$i$次坐标修正的步长是$t=\omega r_i/a_{i,i}$，代入定理~\ref{thm:ls-gauss-seidel-convergence}证明中的能量变化式，$\phi$减少
 \[
@@ -433,106 +701,241 @@ SOR的迭代矩阵为
 \end{proof}
 
 \paragraph{参数选择与代价}
-区间内收敛不等于每个参数都比Gauss--Seidel快。收敛速度取决于参数和变量排列：三对角等特殊结构的矩阵有由$\rho(\bm T_{\mathrm J})$给出的最优参数公式，但不能普遍套用。贯穿例的$\omega=6/5$就使谱半径从Gauss--Seidel的$1/12$升到$0.2$。$\omega$接近区间端点时，由第一部分$\rho(\bm T_\omega)\geq|1-\omega|$接近一，收敛可能很弱。一轮成本与Gauss--Seidel同阶。
+区间内收敛不等于每个参数都比Gauss--Seidel快。收敛速度取决于参数和变量排列：三对角等特殊结构的矩阵有由$\rho(\bm T_{\mathrm J})$给出的最优参数公式，但不能普遍套用。
+
+贯穿例的$\omega=6/5$就使谱半径从Gauss--Seidel的$1/12$升到$0.2$。$\omega$接近区间端点时，由第一部分$\rho(\bm T_\omega)\geq|1-\omega|$接近一，收敛可能很弱。一轮成本与Gauss--Seidel同阶。
 
 \section{SSOR迭代}
 \label{sec:ls-ssor}
 
-\subsection{主要思想}
+单向扫掠依赖变量顺序，对应的$\bm M=\bm D/\omega+\bm L$也不对称。对实对称正定的$\bm A$，\term{对称逐次超松弛迭代}（symmetric SOR，SSOR）把一次前向SOR扫掠与一次反向SOR扫掠配成一轮，参数取固定的$0<\omega<2$。
 
-单向扫掠依赖变量顺序，对应的$\bm M=\bm D/\omega+\bm L$也不对称。对实对称正定的$\bm A$，\term{对称逐次超松弛迭代}（symmetric SOR，SSOR）把一次前向SOR扫掠与一次反向SOR扫掠配成一轮，超参数取固定的$0<\omega<2$。下面把两次修正合并成一个修正矩阵，并推导缩放常数，使独立迭代与作为预条件的实现使用同一约定。
+前向扫掠按$i=1,\ldots,d$的顺序做一次第~\ref{sec:ls-sor}节的SOR，得到中间近似$\bm x_{k+1/2}$；反向扫掠再按$i=d,\ldots,1$的顺序做一次SOR，每个坐标用后面的新值和前面的半步值，得到$\bm x_{k+1}$。
 
-对称性给出$\bm U=\bm L^\top$。记
+由对称性$\bm U=\bm L^\top$，记$\bm F=\bm D+\omega\bm L$，则$\bm F^\top=\bm D+\omega\bm U$。算法分析将证明，这两次扫掠合起来等价于取修正矩阵
+\begin{equation}
+ \bm M_{\mathrm{SSOR}}=\frac{1}{\omega(2-\omega)}\bm F\bm D^{-1}\bm F^\top .
+ \label{eq:ls-ssor-correction-matrix}
+\end{equation}
+它是一个下三角、一个对角和一个上三角因子之积，修正方程可以逐个因子求解；它还对称正定，所以SSOR除了单独迭代，还能为第~\ref{chap:krylov-methods}章的共轭梯度法提供预条件。
+
+\paragraph{求修正量}
+修正方程$\bm M_{\mathrm{SSOR}}\bm\delta_k=\bm r_k$两边乘以$\omega(2-\omega)$，得
 \[
-\bm F=\bm D+\omega\bm L,\qquad \bm F^\top=\bm D+\omega\bm U .
+ \bm F\bm D^{-1}\bm F^\top\bm\delta_k=\omega(2-\omega)\bm r_k .
 \]
-前向半步就是一次SOR：解$\bm F\bm\delta_{\mathrm f}=\omega\bm r_k$，令$\bm x_{k+1/2}=\bm x_k+\bm\delta_{\mathrm f}$。反向半步按$i=d,\ldots,1$的顺序做SOR，此时先访问的是下标大的分量，所以新值出现在上三角部分，对应的方程是$\bm F^\top\bm\delta_{\mathrm b}=\omega\bm r_{k+1/2}$，再令$\bm x_{k+1}=\bm x_{k+1/2}+\bm\delta_{\mathrm b}$。右端必须是半步后的残差
+令$\bm z=\bm\delta_k/\bigl(\omega(2-\omega)\bigr)$，$\bm y=\bm D^{-1}\bm F^\top\bm z$，它拆成两个三角方程：先前代解$\bm F\bm y=\bm r_k$，再回代解$\bm F^\top\bm z=\bm D\bm y$，最后$\bm\delta_k=\omega(2-\omega)\bm z$。
+
+下三角因子按元素写出是
 \[
-\bm r_{k+1/2}=\bm b-\bm A\bm x_{k+1/2}=\bm r_k-\bm A\bm\delta_{\mathrm f},
+ \bm F=\begin{bmatrix}a_{1,1}&&&\\\omega a_{2,1}&a_{2,2}&&\\\vdots&\vdots&\ddots&\\\omega a_{d,1}&\omega a_{d,2}&\cdots&a_{d,d}\end{bmatrix},
 \]
-第二次扫掠不能继续使用未经修正的旧残差。
+对角元取$\bm A$的对角元，严格下三角元乘以$\omega$，对角线以上都是零。$\bm F\bm y=\bm r_k$的第$i$行是
+\[
+ \omega\sum_{j<i}a_{i,j}y_j+a_{i,i}y_i=(\bm r_k)_i\qquad(i=1,\ldots,d).
+\]
+第一个方程只含$y_1$，得$y_1=(\bm r_k)_1/a_{1,1}$；此后第$i$个方程中$y_1,\ldots,y_{i-1}$已经求出，移项后除以$a_{i,i}$，得
+\begin{equation}
+ y_i=\frac{(\bm r_k)_i-\omega\sum_{j<i}a_{i,j}y_j}{a_{i,i}}\qquad(i=1,\ldots,d).
+ \label{eq:ls-ssor-forward}
+\end{equation}
+
+上三角因子$\bm F^\top$的对角元仍是$a_{i,i}$，由对称性，它在$j>i$处的$(i,j)$元为$\omega a_{j,i}=\omega a_{i,j}$；右端$\bm D\bm y$的第$i$个分量是$a_{i,i}y_i$。所以$\bm F^\top\bm z=\bm D\bm y$的第$i$行是
+\[
+ a_{i,i}z_i+\omega\sum_{j>i}a_{i,j}z_j=a_{i,i}y_i\qquad(i=1,\ldots,d).
+\]
+这次最后一个方程只含$z_d$，得$z_d=y_d$；此后第$i$个方程中$z_{i+1},\ldots,z_d$已经求出，移项后除以$a_{i,i}$，得
+\begin{equation}
+ z_i=y_i-\frac{\omega}{a_{i,i}}\sum_{j>i}a_{i,j}z_j\qquad(i=d,d-1,\ldots,1).
+ \label{eq:ls-ssor-backward}
+\end{equation}
+最后乘以常数，
+\begin{equation}
+ (\bm\delta_k)_i=\omega(2-\omega)z_i\qquad(i=1,\ldots,d).
+ \label{eq:ls-ssor-correction}
+\end{equation}
+
+\paragraph{迭代公式}
+把式~\eqref{eq:ls-ssor-correction}加到当前近似上，得到第$i$个分量的新值
+\begin{equation}
+ (\bm x_{k+1})_i=(\bm x_k)_i+\omega(2-\omega)z_i\qquad(i=1,\ldots,d),
+ \label{eq:ls-ssor-update}
+\end{equation}
+其中$\bm z$由式~\eqref{eq:ls-ssor-forward}与式~\eqref{eq:ls-ssor-backward}依次求出。写成向量形式是
+\[
+ \bm x_{k+1}=\bm x_k+\omega(2-\omega)\bm F^{-\top}\bm D\bm F^{-1}\bm r_k .
+\]
+
+\subsection{算法实现}
+
+输入是实对称正定的$\bm A$与$\bm b$，输出是近似解$\bm x$。除执行流程的参数外，还要预先选定$\omega$。停止检查与残差重算沿用第~\ref{sec:ls-matrix-splitting}节的流程，求修正量的一步换成一次前代与一次回代，内部多两个与$\bm x$同长的向量$\bm y$与$\bm z$。下面在例~\ref{ex:ls-stationary-running-example}上取$\omega=1$给出前两轮；这时$\bm F=\bm D+\bm L=\left[\begin{smallmatrix}4&0\\1&3\end{smallmatrix}\right]$，$\omega(2-\omega)=1$。
+\begin{enumerate}
+ \item \textbf{核对条件。}确认$\bm A$对称正定且$0<\omega<2$；正定矩阵的对角元都为正，所以各次除法都能执行。
+
+ 例中$\bm A$对称正定，$a_{1,1}=4$，$a_{2,2}=3$，$\omega=1$。
+
+ \item \textbf{前代。}根据式~\eqref{eq:ls-ssor-forward}，对$i=1,\ldots,d$依次计算$y_i$，右端是本轮开始时的残差$\bm r_k$。
+
+ 例中第一轮的残差为$\bm r_0=\bm b=(1,2)^\top$：
+ \[
+  \begin{aligned}
+  y_1&=\frac{(\bm r_0)_1}{a_{1,1}}=\frac14,\\
+  y_2&=\frac{(\bm r_0)_2-\omega a_{2,1}y_1}{a_{2,2}}=\frac{2-1\cdot\tfrac14}{3}=\frac7{12} .
+  \end{aligned}
+ \]
+ $\omega=1$时$\bm F=\bm D+\bm L$，$\bm y$就是Gauss--Seidel的修正量$\bm\delta_0$。
+
+ \item \textbf{回代并缩放。}根据式~\eqref{eq:ls-ssor-backward}，对$i=d,\ldots,1$依次计算$z_i$，再按式~\eqref{eq:ls-ssor-correction}乘以$\omega(2-\omega)$得到$\bm\delta_k$。
+
+ 例中先处理第二行，再用刚得到的$z_2$处理第一行：
+ \[
+  \begin{aligned}
+  z_2&=y_2=\frac7{12},\\
+  z_1&=y_1-\frac{\omega}{a_{1,1}}a_{1,2}z_2=\frac14-\frac14\cdot\frac7{12}=\frac5{48},
+  \end{aligned}
+ \]
+ 所以$\bm\delta_0=\bm z=(5/48,7/12)^\top$。
+
+ \item \textbf{更新并重算残差。}根据式~\eqref{eq:ls-ssor-update}，令$(\bm x_{k+1})_i=(\bm x_k)_i+(\bm\delta_k)_i$，再按原方程重算$\bm r_{k+1}=\bm b-\bm A\bm x_{k+1}$。
+
+ 例中$\bm x_1=\bm x_0+\bm\delta_0=(5/48,7/12)^\top$，
+ \[
+  \begin{aligned}
+  (\bm r_1)_1&=1-\bigl(4\cdot\tfrac5{48}+1\cdot\tfrac7{12}\bigr)=0,\\
+  (\bm r_1)_2&=2-\bigl(1\cdot\tfrac5{48}+3\cdot\tfrac7{12}\bigr)=\tfrac7{48} .
+  \end{aligned}
+ \]
+ 这次为零的是第一个分量，因为按双向扫掠来看，反向扫掠最后修正的是第一行。
+
+ \item \textbf{进入下一轮。}令$k\leftarrow k+1$，回到执行流程的停止检查；没有停止时重复第2至4步。
+
+ 例中$\lVert\bm r_1\rVert_2=7/48\approx0.15$，继续第二轮。由$\bm r_1=(0,7/48)^\top$，前代与回代给出
+ \[
+  \begin{aligned}
+  y_1&=\frac{0}{4}=0, & y_2&=\frac{\tfrac7{48}-1\cdot0}{3}=\frac7{144},\\
+  z_2&=y_2=\frac7{144}, & z_1&=0-\frac14\cdot\frac7{144}=-\frac7{576},
+  \end{aligned}
+ \]
+ 于是
+ \[
+  \bm x_2=\bm x_1+\bm z=\begin{bmatrix}\tfrac5{48}-\tfrac7{576}\\\tfrac7{12}+\tfrac7{144}\end{bmatrix}=\begin{bmatrix}\tfrac{53}{576}\\\tfrac{91}{144}\end{bmatrix}.
+ \]
+ 重算残差得
+ \[
+  \begin{aligned}
+  (\bm r_2)_1&=1-\bigl(4\cdot\tfrac{53}{576}+1\cdot\tfrac{91}{144}\bigr)=0,\\
+  (\bm r_2)_2&=2-\bigl(1\cdot\tfrac{53}{576}+3\cdot\tfrac{91}{144}\bigr)=\tfrac7{576} .
+  \end{aligned}
+ \]
+ 两轮中各个三角子问题都精确解出了，残差却仍不为零。验收用的是原方程的残差，不能以子问题已经解完代替。
+\end{enumerate}
+
+\paragraph{双向扫掠}
+等价的实现按本节开头的描述做两次SOR扫掠，代替上面的第2、3步。前向扫掠按式~\eqref{eq:ls-sor-correction}由$\bm r_k$求出修正量$\bm\delta_{\mathrm f}$，令$\bm x_{k+1/2}=\bm x_k+\bm\delta_{\mathrm f}$，再按原方程算出半步后的残差$\bm r_{k+1/2}=\bm b-\bm A\bm x_{k+1/2}$。
+
+反向扫掠按$i=d,\ldots,1$的顺序求
+\begin{equation}
+ (\bm\delta_{\mathrm b})_i=\frac{\omega}{a_{i,i}}\Bigl((\bm r_{k+1/2})_i-\sum_{j>i}a_{i,j}(\bm\delta_{\mathrm b})_j\Bigr),
+ \label{eq:ls-ssor-backward-sweep}
+\end{equation}
+令$\bm x_{k+1}=\bm x_{k+1/2}+\bm\delta_{\mathrm b}$。反向扫掠的右端必须是半步后的残差，不能继续使用本轮开始时的$\bm r_k$。
+
+两次扫掠也都可以在同一个向量上原位逐坐标更新，每行的残差在访问时现算，不必单独形成$\bm r_{k+1/2}$。算法分析中的推导说明，两次修正之和正是式~\eqref{eq:ls-ssor-correction}给出的$\bm\delta_k$。
+
+例中第一轮的前向扫掠就是一轮Gauss--Seidel，给出
+\[
+ \bm\delta_{\mathrm f}=\bm x_{1/2}=\begin{bmatrix}1/4\\7/12\end{bmatrix},\qquad
+ \bm r_{1/2}=\begin{bmatrix}-7/12\\0\end{bmatrix}.
+\]
+反向扫掠先处理第二行，再处理第一行：
+\[
+ (\bm\delta_{\mathrm b})_2=\frac{0}{3}=0,\qquad
+ (\bm\delta_{\mathrm b})_1=\frac{-\tfrac7{12}-1\cdot0}{4}=-\frac7{48},
+\]
+所以$\bm x_1=(1/4-7/48,\,7/12)^\top=(5/48,7/12)^\top$，与因子求解一致。第二分量保持不变，因为前向扫掠的最后一步已经让第二个方程成立。
+
+\paragraph{作为预条件}
+作为共轭梯度法的预条件使用时，SSOR不更新近似解，只把外层迭代给出的残差$\bm r$变成修正方向：以$\bm r$代替$\bm r_k$，按式~\eqref{eq:ls-ssor-forward}、式~\eqref{eq:ls-ssor-backward}前代、回代并缩放，返回$\bm M_{\mathrm{SSOR}}^{-1}\bm r$，近似解由外层方法另行更新。同一次外层求解中，$\omega$和三角因子要保持不变，否则预条件矩阵逐轮变化，外层方法依赖的固定内积结构就不成立。具体用法见第~\ref{sec:ls-preconditioning}节。
+
+\subsection{算法分析}
+
+\paragraph{修正矩阵}
+先把两次扫掠的修正合并成一个修正矩阵，并确定缩放常数，使独立迭代与作为预条件的实现使用同一约定。
+
+前向半步就是一次SOR：解$\bm F\bm\delta_{\mathrm f}=\omega\bm r_k$，令$\bm x_{k+1/2}=\bm x_k+\bm\delta_{\mathrm f}$。
+
+反向半步按$i=d,\ldots,1$的顺序做SOR，先访问的是下标大的分量，所以本轮新值出现在上三角部分，对应的方程是$\bm F^\top\bm\delta_{\mathrm b}=\omega\bm r_{k+1/2}$，再令$\bm x_{k+1}=\bm x_{k+1/2}+\bm\delta_{\mathrm b}$。右端是半步后的残差
+\[
+\bm r_{k+1/2}=\bm b-\bm A\bm x_{k+1/2}=\bm r_k-\bm A\bm\delta_{\mathrm f}.
+\]
 
 把两次修正相加。由$\bm\delta_{\mathrm f}=\omega\bm F^{-1}\bm r_k$，
 \[
 \begin{aligned}
 \bm\delta_{\mathrm f}+\bm\delta_{\mathrm b}
 &=\omega\bm F^{-1}\bm r_k+\omega\bm F^{-\top}\bigl(\bm r_k-\omega\bm A\bm F^{-1}\bm r_k\bigr)\\
-&=\omega\bm F^{-\top}\bigl(\bm F^\top\bm F^{-1}+\bm F\bm F^{-1}-\omega\bm A\bm F^{-1}\bigr)\bm r_k
-=\omega\bm F^{-\top}\bigl(\bm F^\top+\bm F-\omega\bm A\bigr)\bm F^{-1}\bm r_k ,
+&=\omega\bm F^{-\top}\bigl(\bm F^\top\bm F^{-1}+\bm F\bm F^{-1}-\omega\bm A\bm F^{-1}\bigr)\bm r_k\\
+&=\omega\bm F^{-\top}\bigl(\bm F^\top+\bm F-\omega\bm A\bigr)\bm F^{-1}\bm r_k ,
 \end{aligned}
 \]
-第二个等号在第一项前插入$\bm F^{-\top}\bm F^\top$，在第二项中插入$\bm F\bm F^{-1}$。又$\bm F^\top+\bm F-\omega\bm A=2\bm D+\omega(\bm L+\bm U)-\omega(\bm D+\bm L+\bm U)=(2-\omega)\bm D$，所以一整轮的修正为
+第二个等号在第一项前插入$\bm F^{-\top}\bm F^\top$，在第二项中插入$\bm F\bm F^{-1}$。又由$\bm F=\bm D+\omega\bm L$与$\bm F^\top=\bm D+\omega\bm U$，
 \[
-\bm\delta_k=\omega(2-\omega)\,\bm F^{-\top}\bm D\bm F^{-1}\bm r_k .
+\begin{aligned}
+\bm F^\top+\bm F-\omega\bm A
+&=2\bm D+\omega(\bm L+\bm U)-\omega(\bm D+\bm L+\bm U)\\
+&=(2-\omega)\bm D ,
+\end{aligned}
 \]
+所以一整轮的修正为
+\begin{equation}
+\bm\delta_k=\omega(2-\omega)\,\bm F^{-\top}\bm D\bm F^{-1}\bm r_k ,
+ \label{eq:ls-ssor-combined-correction}
+\end{equation}
+即$\bm M_{\mathrm{SSOR}}\bm\delta_k=\bm r_k$，$\bm M_{\mathrm{SSOR}}$就是本节开头给出的矩阵。
 
-于是SSOR的一轮等价于以
-\[
-\bm M_{\mathrm{SSOR}}=\frac{1}{\omega(2-\omega)}(\bm D+\omega\bm L)\bm D^{-1}(\bm D+\omega\bm U)
-=\frac{1}{\omega(2-\omega)}\bm F\bm D^{-1}\bm F^\top
-\]
-为修正矩阵的定常迭代：$\bm M_{\mathrm{SSOR}}\bm\delta_k=\bm r_k$。求解的次序是先解$\bm F$、再乘$\bm D$、最后解$\bm F^\top$，不必显式形成$\bm M_{\mathrm{SSOR}}$或它的逆。
+求解的次序是先解$\bm F$、再乘$\bm D$、最后解$\bm F^\top$，不必显式形成$\bm M_{\mathrm{SSOR}}$或它的逆；算法实现的第2、3步正是按这个次序。
 
-这个修正矩阵对称正定。对称性由形式$\bm F\bm D^{-1}\bm F^\top$直接看出。$\bm A$正定使对角元$a_{i,i}=\bm e_i^\top\bm A\bm e_i>0$，所以$\bm D\succ0$；$\bm F$是对角元为正的下三角阵，可逆。于是对$\bm v\neq\bm0$，
+这个修正矩阵对称正定。对称性由形式$\bm F\bm D^{-1}\bm F^\top$直接看出。$\bm A$正定，把第$i$个坐标单位向量代入二次型即得$a_{i,i}>0$，所以$\bm D\succ0$；$\bm F$是对角元为正的下三角阵，可逆。于是对$\bm v\neq\bm0$，
 \[
 \bm v^\top\bm M_{\mathrm{SSOR}}\bm v=\frac{(\bm F^\top\bm v)^\top\bm D^{-1}(\bm F^\top\bm v)}{\omega(2-\omega)}>0 ,
 \]
-这里用到$0<\omega<2$使分母为正。注意对称正定的是修正矩阵$\bm M_{\mathrm{SSOR}}$；迭代矩阵$\bm I-\bm M_{\mathrm{SSOR}}^{-1}\bm A$一般不是对称矩阵。正是$\bm M_{\mathrm{SSOR}}$的对称正定性，使SSOR除了单独迭代，还能为第~\ref{chap:krylov-methods}章的共轭梯度法提供预条件。
-
-\subsection{算法实现}
-
-\paragraph{双向扫掠}
-内部状态除$\bm x_k,\bm r_k$外，多一个半步向量$\bm x_{k+1/2}$。第一步按SOR的分量公式完成$i=1,\ldots,d$的前向扫掠，得到$\bm x_{k+1/2}$。第二步反向遍历$i=d,\ldots,1$：
-\[
-(\bm x_{k+1})_i=(1-\omega)(\bm x_{k+1/2})_i+\frac{\omega}{a_{i,i}}\Bigl(b_i-\sum_{j<i}a_{i,j}(\bm x_{k+1/2})_j-\sum_{j>i}a_{i,j}(\bm x_{k+1})_j\Bigr),
-\]
-下标比$i$大的分量已在本次反向扫掠中更新，比$i$小的仍是半步值。原位覆盖同样成立。
-
-\paragraph{因子求解}
-等价的实现直接按$\bm M_{\mathrm{SSOR}}$的三个因子求修正量。从$\bm r_k=\bm b-\bm A\bm x_k$出发，依次
-\[
-\bm F\bm y=\bm r_k,\qquad \bm t=\bm D\bm y,\qquad \bm F^\top\bm z=\bm t,\qquad \bm\delta_k=\omega(2-\omega)\bm z ,
-\]
-其中第一步是第~\ref{sec:ls-lu}节的前代，第三步是回代；最后令$\bm x_{k+1}=\bm x_k+\bm\delta_k$，重算$\bm r_{k+1}=\bm b-\bm A\bm x_{k+1}$并检查终止。由主要思想中的推导，这四步与双向扫掠的缩放完全对应。
-
-\begin{example}[SSOR迭代的前两轮]
-\label{ex:ls-ssor-two-sweeps}
-在例~\ref{ex:ls-stationary-running-example}中取$\omega=1$。按双向扫掠，前向半步就是一轮Gauss--Seidel，$\bm x_{1/2}=(1/4,\,7/12)^\top$。反向扫掠先处理第二行，$(\bm x_1)_2=(2-1/4)/3=7/12$，保持不变；再处理第一行，用刚得到的第二分量，$(\bm x_1)_1=(1-7/12)/4=5/48$。
-
-按因子路径核对同一轮：$\bm F=\left[\begin{smallmatrix}4&0\\1&3\end{smallmatrix}\right]$，解$\bm F\bm y=\bm b$得$\bm y=(1/4,7/12)^\top$；$\bm t=\bm D\bm y=(1,7/4)^\top$；解$\bm F^\top\bm z=\bm t$，先得$z_2=7/12$，再得$z_1=(1-7/12)/4=5/48$。此时$\omega(2-\omega)=1$，$\bm x_1=\bm z=(5/48,\,7/12)^\top$，与双向扫掠一致。
-
-用原方程重算，第一轮的真实残差为$\bm r_1=(0,\,7/48)^\top$。这次为零的是第一个分量，因为反向扫掠最后修正的是第一行。第二轮得到
-\[
- \bm x_2=(53/576,\,91/144)^\top,\qquad \bm r_2=(0,\,7/576)^\top .
-\]
-两轮中各个三角子问题都精确解出了，残差却仍不为零。验收用的是原方程的残差，不能以子问题已经解完代替。
-\end{example}
-
-\paragraph{作为预条件}
-作为共轭梯度法的预条件使用时，SSOR不更新近似解，只把外层迭代给出的残差$\bm r$变成修正方向：执行$\bm F\bm y=\bm r$、$\bm t=\bm D\bm y$、$\bm F^\top\bm z=\bm t$及缩放，返回$\bm M_{\mathrm{SSOR}}^{-1}\bm r$，近似解由外层方法另行更新。同一次外层求解中，$\omega$和三角因子要保持不变，否则预条件矩阵逐轮变化，外层方法依赖的固定内积结构就不成立。具体用法见第~\ref{sec:ls-preconditioning}节。
-
-\subsection{算法分析}
+这里用到$0<\omega<2$使分母为正。注意对称正定的是修正矩阵$\bm M_{\mathrm{SSOR}}$；迭代矩阵$\bm I-\bm M_{\mathrm{SSOR}}^{-1}\bm A$一般不是对称矩阵。
 
 \paragraph{收敛性}
-$\bm M_{\mathrm{SSOR}}$正定本身还不足以断言定常迭代收敛；还需要它在二次型意义下不小于$\bm A$。展开$\bm F\bm D^{-1}\bm F^\top=\bm D+\omega\bm L+\omega\bm U+\omega^2\bm L\bm D^{-1}\bm U$，减去$\omega(2-\omega)\bm A=\omega(2-\omega)(\bm D+\bm L+\bm U)$，整理得
+$\bm M_{\mathrm{SSOR}}$正定本身还不足以断言定常迭代收敛；还需要它在二次型意义下不小于$\bm A$。先展开
 \[
+ \bm F\bm D^{-1}\bm F^\top=\bm D+\omega\bm L+\omega\bm U+\omega^2\bm L\bm D^{-1}\bm U ,
+\]
+再减去$\omega(2-\omega)\bm A=\omega(2-\omega)(\bm D+\bm L+\bm U)$，整理得
+\[
+\begin{aligned}
 \omega(2-\omega)(\bm M_{\mathrm{SSOR}}-\bm A)
-=(1-\omega)^2\bm D-\omega(1-\omega)(\bm L+\bm U)+\omega^2\bm L\bm D^{-1}\bm U
-=\bm C\bm D^{-1}\bm C^\top ,
+&=(1-\omega)^2\bm D-\omega(1-\omega)(\bm L+\bm U)+\omega^2\bm L\bm D^{-1}\bm U\\
+&=\bm C\bm D^{-1}\bm C^\top ,
+\end{aligned}
 \]
 其中$\bm C=(1-\omega)\bm D-\omega\bm L$，最后一步把$\bm C\bm D^{-1}\bm C^\top$展开即可核对。因为$\bm D\succ0$，$\bm C\bm D^{-1}\bm C^\top\succeq0$，所以
-\[
+\begin{equation}
 \bm 0\prec\bm A\preceq\bm M_{\mathrm{SSOR}} .
-\]
+ \label{eq:ls-ssor-dominates}
+\end{equation}
 
 由此读出迭代矩阵的谱。$\bm M_{\mathrm{SSOR}}$对称正定，有正定平方根（第~\ref{sec:ls-matrix-square-root}节）。令$\bm S=\bm M_{\mathrm{SSOR}}^{-1/2}\bm A\bm M_{\mathrm{SSOR}}^{-1/2}$，它实对称。若$\bm S\bm w=\mu\bm w$，$\bm w\neq\bm0$，令$\bm y=\bm M_{\mathrm{SSOR}}^{-1/2}\bm w$，则
 \[
 \mu=\frac{\bm w^\top\bm S\bm w}{\bm w^\top\bm w}=\frac{\bm y^\top\bm A\bm y}{\bm y^\top\bm M_{\mathrm{SSOR}}\bm y}\in(0,1].
 \]
-迭代矩阵$\bm T_{\mathrm{SSOR}}=\bm I-\bm M_{\mathrm{SSOR}}^{-1}\bm A=\bm M_{\mathrm{SSOR}}^{-1/2}(\bm I-\bm S)\bm M_{\mathrm{SSOR}}^{1/2}$与实对称矩阵$\bm I-\bm S$相似，特征值$1-\mu$全部落在$[0,1)$中，所以$\rho(\bm T_{\mathrm{SSOR}})<1$。由定理~\ref{thm:ls-stationary-convergence}，在$\bm A$实对称正定、$0<\omega<2$时SSOR对所有初值收敛。这里$\bm T_{\mathrm{SSOR}}$本身一般不对称，只是相似于对称矩阵，因而特征值为实数。
+迭代矩阵可以写成
+\[
+ \bm T_{\mathrm{SSOR}}=\bm I-\bm M_{\mathrm{SSOR}}^{-1}\bm A=\bm M_{\mathrm{SSOR}}^{-1/2}(\bm I-\bm S)\bm M_{\mathrm{SSOR}}^{1/2} ,
+\]
+它与实对称矩阵$\bm I-\bm S$相似，特征值$1-\mu$全部落在$[0,1)$中，所以$\rho(\bm T_{\mathrm{SSOR}})<1$。
+
+由定理~\ref{thm:ls-stationary-convergence}，在$\bm A$实对称正定、$0<\omega<2$时SSOR对所有初值收敛。这里$\bm T_{\mathrm{SSOR}}$本身一般不对称，只是相似于对称矩阵，因而特征值为实数。
 
 \paragraph{代价与用途}
-一轮含两次三角扫掠（或等价的前代、对角缩放与回代），另加一次计算残差的矩阵乘向量，工作量约为SOR一轮的两倍；存储只多一个与$\bm x$同长的中间向量。比较时不能只数轮数：贯穿例中$\omega=1$的SSOR谱半径为$1/12$，与Gauss--Seidel相同，每轮却多花一倍计算。SSOR作为独立迭代往往并不比SOR省；它的主要价值在于对称正定的修正矩阵：作为预条件时，每次外层迭代多付两次三角求解，换来外层共轭梯度法所需步数的减少，是否划算要按总成本比较（第~\ref{sec:ls-preconditioning}节）。
+一轮含两次三角扫掠（或等价的前代、对角缩放与回代），另加一次计算残差的矩阵乘向量，工作量约为SOR一轮的两倍；存储只多一个与$\bm x$同长的中间向量。
+
+比较时不能只数轮数：贯穿例中$\omega=1$的SSOR谱半径为$1/12$，与Gauss--Seidel相同，每轮却多花一倍计算。SSOR作为独立迭代往往并不比SOR省；它的主要价值在于对称正定的修正矩阵：作为预条件时，每次外层迭代多付两次三角求解，换来外层共轭梯度法所需步数的减少，是否划算要按总成本比较（第~\ref{sec:ls-preconditioning}节）。
 
 \section{收敛检验与停止准则}
 \label{sec:ls-stationary-stopping}
@@ -541,7 +944,9 @@ $\bm M_{\mathrm{SSOR}}$正定本身还不足以断言定常迭代收敛；还需
 
 几种量不能代替原方程的残差检验。修正量$\lVert\bm\delta_k\rVert$很小，可能只说明收缩因子接近一、迭代走得很慢，而不是已经接近解。残差在很多轮内几乎不降，应作为停滞报告，而不是当作收敛。计算中出现溢出或非数，应作为数值异常报告；这通常说明迭代发散或对角元过小。
 
-残差小也不等于解的误差小。由$\bm x_\star-\bm x_k=\bm A^{-1}\bm r_k$，误差是残差经$\bm A^{-1}$放大的结果，两者之间隔着问题本身的敏感性；第~\ref{sec:ls-numerical-sensitivity}节再给出误差界和后向误差的解释。比较不同方法时，应在相同精度要求下比较总工作量，而不是轮数；分析中的收敛率和代价用于解释算法，不加入求解器的输出。其他用递推方式维护残差的方法，递推值会因舍入而偏离真实残差，停止前也须用$\bm b-\bm A\bm x_k$复核。
+残差小也不等于解的误差小。由$\bm x_\star-\bm x_k=\bm A^{-1}\bm r_k$，误差是残差经$\bm A^{-1}$放大的结果，两者之间隔着问题本身的敏感性；第~\ref{sec:ls-numerical-sensitivity}节再给出误差界和后向误差的解释。
+
+比较不同方法时，应在相同精度要求下比较总工作量，而不是轮数；分析中的收敛率和代价用于解释算法，不加入求解器的输出。其他用递推方式维护残差的方法，递推值会因舍入而偏离真实残差，停止前也须用$\bm b-\bm A\bm x_k$复核。
 
 \FloatBarrier
 \section{本章小结}

@@ -17,7 +17,9 @@
 \end{definition}
 按这一定义，向量是一阶数组，矩阵是二阶数组；并约定单个标量是零阶数组。阶是索引的个数，形状记录各轴的长度。轴的长度再大也不改变阶：$\mathbb R^{100}$中的向量仍是一阶数组。
 
-例如$\bm X\in\mathbb R^{b\times\ell\times d}$可以记录$b$个样本、每个样本$\ell$个位置、每个位置$d$个特征，元素$x_{i,j,k}$由三个索引共同定位。固定一部分索引，得到切片：$\bm X_{i,:,:}$保留第$i$个样本，是一个$\ell\times d$矩阵；$\bm X_{i,j,:}$再固定位置，是一个$d$维向量。图~\ref{fig:ls-scalar-vector-matrix-tensor}按“定位一个数需要几个索引”并排比较四类数组。
+例如$\bm X\in\mathbb R^{b\times\ell\times d}$可以记录$b$个样本、每个样本$\ell$个位置、每个位置$d$个特征，元素$x_{i,j,k}$由三个索引共同定位。
+
+固定一部分索引，得到切片：$\bm X_{i,:,:}$保留第$i$个样本，是一个$\ell\times d$矩阵；$\bm X_{i,j,:}$再固定位置，是一个$d$维向量。图~\ref{fig:ls-scalar-vector-matrix-tensor}按“定位一个数需要几个索引”并排比较四类数组。
 \begin{figure}[!htb]
   \centering
   \includegraphics[width=112mm]{figures/00-shared/mathematical-preliminaries-upper/02-linear-spaces/tikz/comprehension-additions/scalar-vector-matrix-tensor.pdf}
@@ -41,7 +43,12 @@
 \[
  y_{i,k,j}=x_{i,j,k}.
 \]
-第一轴保持原位，每个样本的切片被转置：$\bm Y_{i,:,:}=(\bm X_{i,:,:})^\top$。下面取一个具体的小数组。
+第一轴保持原位，每个样本的切片被转置：
+\[
+ \bm Y_{i,:,:}=(\bm X_{i,:,:})^\top.
+\]
+
+下面取一个具体的小数组。
 \begin{example}[交换后两条轴]
 \label{ex:ls-axis-swap}
 取$b=1$、$\ell=2$、$d=3$，这时数组只有一个样本切片
@@ -84,10 +91,20 @@ $\bm R$与$\bm A^\top$形状相同、所含的数相同，排列却不同。$\bm
 \end{figure}
 
 最常用的一种形状重整，是把矩阵按列堆叠成一个长列向量，称为\term{向量化}（vectorization）：
+\begin{equation}
+ \begin{aligned}
+ \operatorname{vec}(\bm A)=(&a_{1,1},\ldots,a_{m,1},a_{1,2},\ldots,a_{m,2},\\
+ &\ldots,a_{1,n},\ldots,a_{m,n})^\top.
+ \end{aligned}
+ \label{eq:ls-vectorization}
+\end{equation}
+$m\times n$矩阵的元素$a_{i,j}$位于第$i+(j-1)m$个位置。
+
+例如上面的$\bm A$给出
 \[
- \operatorname{vec}(\bm A)=(a_{1,1},\ldots,a_{m,1},a_{1,2},\ldots,a_{m,2},\ldots,a_{1,n},\ldots,a_{m,n})^\top.
+ \operatorname{vec}(\bm A)=(1,4,2,5,3,6)^\top,
 \]
-$m\times n$矩阵的元素$a_{i,j}$位于第$i+(j-1)m$个位置。例如上面的$\bm A$给出$\operatorname{vec}(\bm A)=(1,4,2,5,3,6)^\top$，其中$a_{2,3}=6$位于第$2+(3-1)\cdot2=6$个位置。
+其中$a_{2,3}=6$位于第$2+(3-1)\cdot2=6$个位置。
 
 多维数组也可以重整成矩阵，称为矩阵展开（unfolding）：把一部分轴合并成行索引，其余轴合并成列索引。例如把$\bm X\in\mathbb R^{b\times\ell\times d}$的前两轴合并为行，得到$b\ell\times d$矩阵，每行是一个样本在一个位置上的特征。合并哪些轴，决定了展开结果的形状，也决定了后续乘积汇总哪条轴。
 
@@ -130,7 +147,9 @@ $m\times n$矩阵的元素$a_{i,j}$位于第$i+(j-1)m$个位置。例如上面�
 \[
  \bm A\bm R=\begin{bmatrix}1+6+15&2+8+18\\4+15+30&8+20+36\end{bmatrix}=\begin{bmatrix}22&28\\49&64\end{bmatrix}.
 \]
-$\bm R$与$\bm A^\top$形状相同、所含的数相同，两个乘积却完全不同：$\bm A\bm R$不对称，迹也从$14+77=91$变成$22+64=86$。原因是乘积按行列配对元素，而重整改变了哪些元素同在一列。
+$\bm R$与$\bm A^\top$形状相同、所含的数相同，两个乘积却完全不同：$\bm A\bm R$不对称，迹也从$14+77=91$变成$22+64=86$。
+
+原因是乘积按行列配对元素，而重整改变了哪些元素同在一列。
 \end{example}
 把存储格式的改变误当成计算上的变换，是使用重整时最常见的错误。
 
@@ -142,10 +161,23 @@ $\bm R$与$\bm A^\top$形状相同、所含的数相同，两个乘积却完全�
 第二类运算把几个数组组合起来。最基本的情形是两个向量：把它们的全部两两乘积排成一个数组，就是张量积。
 
 设$\bm x\in\mathbb R^m$、$\bm y\in\mathbb R^n$，\term{张量积}（tensor product）$\bm x\otimes\bm y$是$m\times n$数组，
-\[
+\begin{equation}
  (\bm x\otimes\bm y)_{i,j}=x_i y_j.
+ \label{eq:ls-tensor-product}
+\end{equation}
+写成矩阵，
+\[
+ \bm x\otimes\bm y=\bm x\bm y^\top,
 \]
-写成矩阵，$\bm x\otimes\bm y=\bm x\bm y^\top$，正是分块乘法式~\eqref{eq:ls-product-outer-sum}中“一列乘一行”的矩阵。每个因子各占结果的一条轴，下面把这条轴称为该因子的槽位。三个向量的张量积$(\bm x\otimes\bm y\otimes\bm z)_{i,j,k}=x_i y_j z_k$有三个槽位，更多因子按同样规则逐槽位相乘。下面计算两个二维向量的张量积。
+正是分块乘法式~\eqref{eq:ls-product-outer-sum}中“一列乘一行”的矩阵。
+
+每个因子各占结果的一条轴，下面把这条轴称为该因子的槽位。三个向量的张量积
+\[
+ (\bm x\otimes\bm y\otimes\bm z)_{i,j,k}=x_i y_j z_k
+\]
+有三个槽位，更多因子按同样规则逐槽位相乘。
+
+下面计算两个二维向量的张量积。
 \begin{example}[两个二维向量的张量积]
 \label{ex:ls-tensor-product-two-vectors}
 取$\bm x=(1,2)^\top$与$\bm y=(3,-1)^\top$，把$x_i$与$y_j$的乘积填在位置$(i,j)$：
@@ -182,10 +214,16 @@ $\bm I_2$的两行为$(1,0)$与$(0,1)$。假设$\bm I_2=\bm x\otimes\bm y$，则
 
 张量积的用处，是把同时依赖两组输入的计算，化为对单个数组的线性计算。设实值函数$B(\bm x,\bm y)$对$\bm x$、$\bm y$分别保持线性组合，这样的函数称为双线性的。把$\bm x=\sum_ix_i\bm e_i$、$\bm y=\sum_jy_j\bm f_j$代入，按两次线性展开，
 \[
- B(\bm x,\bm y)=\sum_{i,j}x_iy_j\,B(\bm e_i,\bm f_j)=\sum_{i,j}g_{i,j}(\bm x\otimes\bm y)_{i,j}
- =\langle\bm G,\bm x\otimes\bm y\rangle_{\mathrm F},
+ \begin{aligned}
+ B(\bm x,\bm y)
+ &=\sum_{i,j}x_iy_j\,B(\bm e_i,\bm f_j)\\
+ &=\sum_{i,j}g_{i,j}(\bm x\otimes\bm y)_{i,j}\\
+ &=\langle\bm G,\bm x\otimes\bm y\rangle_{\mathrm F},
+ \end{aligned}
 \]
-其中$g_{i,j}=B(\bm e_i,\bm f_j)$。所以双线性函数由一张固定的系数表$\bm G$决定，并且它作为$\bm x\otimes\bm y$的函数是线性的。以欧氏内积$B(\bm x,\bm y)=\bm x^\top\bm y$（$m=n$）为例，$g_{i,j}=\langle\bm e_i,\bm e_j\rangle$，即$\bm G=\bm I$，这时计算就是把$\bm x\otimes\bm y$的对角元加起来。
+其中$g_{i,j}=B(\bm e_i,\bm f_j)$。所以双线性函数由一张固定的系数表$\bm G$决定，并且它作为$\bm x\otimes\bm y$的函数是线性的。
+
+以欧氏内积$B(\bm x,\bm y)=\bm x^\top\bm y$（$m=n$）为例，$g_{i,j}=\langle\bm e_i,\bm e_j\rangle$，即$\bm G=\bm I$，这时计算就是把$\bm x\otimes\bm y$的对角元加起来。
 
 二阶张量与矩阵是同一组数的两种看法：张量强调每个槽位来自哪一组输入，矩阵强调行与列在乘法中的角色。
 
@@ -224,14 +262,22 @@ $\bm I_2$的两行为$(1,0)$与$(0,1)$。假设$\bm I_2=\bm x\otimes\bm y$，则
 \lVert\bm x\otimes\bm y\rVert_{\mathrm F}=\lVert\bm x\rVert_2\,\lVert\bm y\rVert_2.
  \end{gathered}
 \]
-第一式来自$\sum_{i,j}x_iy_jx'_iy'_j=(\sum_ix_ix'_i)(\sum_jy_jy'_j)$；在第一式中取$\bm x'=\bm x$、$\bm y'=\bm y$，再开平方，得到第二式。下面在示例~\ref{ex:ls-tensor-product-two-vectors}的数组上核对第二式。
+第一式来自把双重和分离成两个单重和的乘积：
+\[
+ \sum_{i,j}x_iy_jx'_iy'_j=\Bigl(\sum_ix_ix'_i\Bigr)\Bigl(\sum_jy_jy'_j\Bigr).
+\]
+在第一式中取$\bm x'=\bm x$、$\bm y'=\bm y$，再开平方，得到第二式。下面在示例~\ref{ex:ls-tensor-product-two-vectors}的数组上核对第二式。
 \begin{example}[张量积范数的数值核对]
 \label{ex:ls-tensor-product-norm-check}
 仍取$\bm x=(1,2)^\top$与$\bm y=(3,-1)^\top$，它们的张量积为
 \[
  \bm x\otimes\bm y=\begin{pmatrix}3&-1\\6&-2\end{pmatrix}.
 \]
-按公式右端，只需两个向量各自的长度：$\lVert\bm x\rVert_2=\sqrt5$，$\lVert\bm y\rVert_2=\sqrt{10}$，乘积为$\sqrt5\cdot\sqrt{10}=\sqrt{50}=5\sqrt2$。直接对四个元素求Frobenius范数，
+按公式右端，只需两个向量各自的长度：
+\[
+ \lVert\bm x\rVert_2\,\lVert\bm y\rVert_2=\sqrt5\cdot\sqrt{10}=\sqrt{50}=5\sqrt2.
+\]
+直接对四个元素求Frobenius范数，
 \[
  \lVert\bm x\otimes\bm y\rVert_{\mathrm F}=\sqrt{3^2+(-1)^2+6^2+(-2)^2}=\sqrt{50},
 \]
@@ -284,7 +330,17 @@ $\bm I_2$的两行为$(1,0)$与$(0,1)$。假设$\bm I_2=\bm x\otimes\bm y$，则
   \label{fig:ls-kronecker-block-structure}
 \end{figure}
 
-Kronecker积与张量积用同一个记号$\otimes$，两者记录的是同一组数，只是排法不同。两个列向量按式~\eqref{eq:linear-algebra-kronecker-product}相乘，得到$mn$维长向量$(x_1\bm y^\top,\ldots,x_m\bm y^\top)^\top$，它正是把$m\times n$数组$\bm x\otimes\bm y$按行读出的结果。例如$(1,2)^\top\otimes(3,-1)^\top=(3,-1,6,-2)^\top$，与示例~\ref{ex:ls-tensor-product-two-vectors}中的数组按行读出的结果相同。对一般矩阵，数组张量积保留四条轴，Kronecker积把它们排成两条轴。遇到记号$\otimes$时，须根据上下文和输出形状判断是哪一种。
+Kronecker积与张量积用同一个记号$\otimes$，两者记录的是同一组数，只是排法不同。两个列向量按式~\eqref{eq:linear-algebra-kronecker-product}相乘，得到$mn$维长向量
+\[
+ (x_1\bm y^\top,\ldots,x_m\bm y^\top)^\top,
+\]
+它正是把$m\times n$数组$\bm x\otimes\bm y$按行读出的结果。例如
+\[
+ (1,2)^\top\otimes(3,-1)^\top=(3,-1,6,-2)^\top,
+\]
+与示例~\ref{ex:ls-tensor-product-two-vectors}中的数组按行读出的结果相同。
+
+对一般矩阵，数组张量积保留四条轴，Kronecker积把它们排成两条轴。遇到记号$\otimes$时，须根据上下文和输出形状判断是哪一种。
 
 \subsubsection{Kronecker积的性质}
 \label{sec:ls-kronecker-products}
@@ -295,7 +351,17 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
 \[
  (\bm A\otimes\bm B)(\bm x\otimes\bm y)=(\bm A\bm x)\otimes(\bm B\bm y).
 \]
-按分块乘法，左侧第$i$块为$\sum_jA_{i,j}\bm B(x_j\bm y)=(\sum_jA_{i,j}x_j)\bm B\bm y=(\bm A\bm x)_i\,\bm B\bm y$，正是右侧的第$i$块。第一个槽位只经过$\bm A$，第二个槽位只经过$\bm B$，两个作用并排进行。矩阵乘法则不同，它把前后两次作用串成一条链。
+按分块乘法，左侧第$i$块为
+\[
+ \begin{aligned}
+ \sum_jA_{i,j}\bm B(x_j\bm y)
+ &=\Bigl(\sum_jA_{i,j}x_j\Bigr)\bm B\bm y\\
+ &=(\bm A\bm x)_i\,\bm B\bm y,
+ \end{aligned}
+\]
+正是右侧的第$i$块。
+
+第一个槽位只经过$\bm A$，第二个槽位只经过$\bm B$，两个作用并排进行。矩阵乘法则不同，它把前后两次作用串成一条链。
 
 \paragraph{混合乘积}
 当$\bm A\bm C$与$\bm B\bm D$都有定义时，
@@ -304,7 +370,15 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
  =(\bm A\bm C)\otimes(\bm B\bm D).
  \label{eq:matrix-analysis-kronecker-mixed-product}
 \end{equation}
-按分块乘法，左侧的块$(i,k)$为$\sum_j(A_{i,j}\bm B)(C_{j,k}\bm D)=(\sum_jA_{i,j}C_{j,k})\bm B\bm D=(\bm A\bm C)_{i,k}\bm B\bm D$，恰是右侧的块。上一条是$\bm C,\bm D$各只有一列的特例。
+按分块乘法，左侧的块$(i,k)$为
+\[
+ \begin{aligned}
+ \sum_j(A_{i,j}\bm B)(C_{j,k}\bm D)
+ &=\Bigl(\sum_jA_{i,j}C_{j,k}\Bigr)\bm B\bm D\\
+ &=(\bm A\bm C)_{i,k}\bm B\bm D,
+ \end{aligned}
+\]
+恰是右侧的块。上一条是$\bm C,\bm D$各只有一列的特例。
 
 \paragraph{转置}
 \[
@@ -316,13 +390,24 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
 \[
  (\bm A\otimes\bm B)^{-1}=\bm A^{-1}\otimes\bm B^{-1}\qquad(\bm A,\bm B\text{都可逆}).
 \]
-由混合乘积，$(\bm A\otimes\bm B)(\bm A^{-1}\otimes\bm B^{-1})=(\bm A\bm A^{-1})\otimes(\bm B\bm B^{-1})=\bm I\otimes\bm I=\bm I$，另一侧同理。
+由混合乘积，
+\[
+ \begin{aligned}
+ (\bm A\otimes\bm B)(\bm A^{-1}\otimes\bm B^{-1})
+ &=(\bm A\bm A^{-1})\otimes(\bm B\bm B^{-1})\\
+ &=\bm I\otimes\bm I=\bm I,
+ \end{aligned}
+\]
+另一侧同理。
 
 \paragraph{迹}
 \[
  \operatorname{tr}(\bm A\otimes\bm B)=\operatorname{tr}\bm A\,\operatorname{tr}\bm B\qquad(\bm A,\bm B\text{都是方阵}).
 \]
-只有对角块$A_{i,i}\bm B$的对角元落在主对角线上，所以迹为$\sum_iA_{i,i}\operatorname{tr}\bm B=\operatorname{tr}\bm A\,\operatorname{tr}\bm B$。
+只有对角块$A_{i,i}\bm B$的对角元落在主对角线上，所以迹为
+\[
+ \sum_iA_{i,i}\operatorname{tr}\bm B=\operatorname{tr}\bm A\,\operatorname{tr}\bm B.
+\]
 
 \paragraph{向量化恒等式}
 对$\bm A\in\mathbb R^{p\times m}$、$\bm X\in\mathbb R^{m\times n}$、$\bm B\in\mathbb R^{n\times q}$，
@@ -331,7 +416,16 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
  =(\bm B^\top\otimes\bm A)\operatorname{vec}(\bm X).
  \label{eq:matrix-analysis-vec-kronecker}
 \end{equation}
-比较两侧输出的第$j$段（长度为$p$）。左侧是$\bm A\bm X\bm B$的第$j$列，$\bm A\bm X\bm B_{:,j}=\sum_kB_{k,j}\bm A\bm X_{:,k}$。右侧矩阵的第$j$个块行为$(B_{1,j}\bm A,\ldots,B_{n,j}\bm A)$，与$\operatorname{vec}(\bm X)$的各段$\bm X_{:,1},\ldots,\bm X_{:,n}$相乘，也得到$\sum_kB_{k,j}\bm A\bm X_{:,k}$。逐元素写出，两侧$(i,j)$位置的元素都是$\sum_{\ell=1}^m\sum_{k=1}^n A_{i,\ell}X_{\ell,k}B_{k,j}$。
+比较两侧输出的第$j$段（长度为$p$）。左侧是$\bm A\bm X\bm B$的第$j$列：
+\[
+ \bm A\bm X\bm B_{:,j}=\sum_kB_{k,j}\bm A\bm X_{:,k}.
+\]
+右侧矩阵的第$j$个块行为$(B_{1,j}\bm A,\ldots,B_{n,j}\bm A)$，与$\operatorname{vec}(\bm X)$的各段$\bm X_{:,1},\ldots,\bm X_{:,n}$相乘，也得到$\sum_kB_{k,j}\bm A\bm X_{:,k}$。
+
+逐元素写出，两侧$(i,j)$位置的元素都是
+\[
+ \sum_{\ell=1}^m\sum_{k=1}^n A_{i,\ell}X_{\ell,k}B_{k,j}.
+\]
 
 固定$\bm A,\bm B$后，这个恒等式把“两侧同时乘矩阵”写成长向量$\operatorname{vec}(\bm X)$左乘一张矩阵。关于未知矩阵的方程由此化成普通的线性方程组；第~\ref{chap:matrix-equations}章求解矩阵方程时会用到它。
 
@@ -379,16 +473,21 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
 \paragraph{线性}
 固定参与配对的另一个数组，缩约对被作用的数组是线性的。以示例~\ref{ex:ls-contraction-shapes}（2）中与$\bm W$的缩约为例，把$\bm X$换成$a\bm X+b\bm X'$，
 \[
- \sum_{k=1}^d\bigl(a\,x_{i,j,k}+b\,x'_{i,j,k}\bigr)w_{k,t}
- =a\sum_{k=1}^d x_{i,j,k}w_{k,t}+b\sum_{k=1}^d x'_{i,j,k}w_{k,t},
+ \begin{aligned}
+ &\sum_{k=1}^d\bigl(a\,x_{i,j,k}+b\,x'_{i,j,k}\bigr)w_{k,t}\\
+ &=a\sum_{k=1}^d x_{i,j,k}w_{k,t}+b\sum_{k=1}^d x'_{i,j,k}w_{k,t},
+ \end{aligned}
 \]
 输出变为两个输出的$a$倍与$b$倍之和。一般情形同理：每个输出元素都是被作用数组元素以固定系数作的加权和。
 
 \paragraph{求和次序可交换}
 多对轴的缩约是有限和，结果与先消去哪一对轴无关。例如示例~\ref{ex:ls-contraction-shapes}中的$c_{i,j}$，可以先对$s$求和得到中间数组，再对$k$求和，也可以反过来：
 \[
- c_{i,j}=\sum_{k=1}^d\Bigl(\sum_{s=1}^r a_{i,k,s}b_{k,j,s}\Bigr)
- =\sum_{s=1}^r\Bigl(\sum_{k=1}^d a_{i,k,s}b_{k,j,s}\Bigr).
+ \begin{aligned}
+ c_{i,j}
+ &=\sum_{k=1}^d\Bigl(\sum_{s=1}^r a_{i,k,s}b_{k,j,s}\Bigr)\\
+ &=\sum_{s=1}^r\Bigl(\sum_{k=1}^d a_{i,k,s}b_{k,j,s}\Bigr).
+ \end{aligned}
 \]
 
 \paragraph{简单张量系数可分离}
@@ -399,18 +498,32 @@ Kronecker积是分块矩阵，下面的乘法、转置、逆和迹的规则都�
  =(\bm a^\top\bm x)(\bm b^\top\bm y)(\bm c^\top\bm z).
  \label{eq:linear-algebra-rank-one-contraction}
 \end{equation}
-这是因为$\sum_{i,j,k}a_ib_jc_kx_iy_jz_k=(\sum_ia_ix_i)(\sum_jb_jy_j)(\sum_kc_kz_k)$：三重求和分离成三个内积的乘积，计算量从$mnp$项降到$m+n+p$项。下面用一组小数值核对。
+这是因为三重求和可以分离成三个单重和的乘积：
+\[
+ \sum_{i,j,k}a_ib_jc_kx_iy_jz_k
+ =\Bigl(\sum_ia_ix_i\Bigr)\Bigl(\sum_jb_jy_j\Bigr)\Bigl(\sum_kc_kz_k\Bigr).
+\]
+右端是三个内积的乘积，计算量从$mnp$项降到$m+n+p$项。下面用一组小数值核对。
 \begin{example}[简单张量系数的分离计算]
 \label{ex:ls-rank-one-contraction-check}
-取$m=n=p=2$，系数向量为$\bm a=(1,2)^\top$、$\bm b=(3,-1)^\top$、$\bm c=(2,1)^\top$，输入为$\bm x=(2,1)^\top$、$\bm y=(1,1)^\top$、$\bm z=(1,-1)^\top$。按式~\eqref{eq:linear-algebra-rank-one-contraction}右端，只需三个内积：
+取$m=n=p=2$，系数向量与输入分别为
 \[
  \begin{gathered}
- \bm a^\top\bm x=1\cdot2+2\cdot1=4,\qquad
+ \bm a=(1,2)^\top,\quad\bm b=(3,-1)^\top,\quad\bm c=(2,1)^\top,\\
+ \bm x=(2,1)^\top,\quad\bm y=(1,1)^\top,\quad\bm z=(1,-1)^\top.
+ \end{gathered}
+\]
+按式~\eqref{eq:linear-algebra-rank-one-contraction}右端，只需三个内积：
+\[
+ \begin{gathered}
+ \bm a^\top\bm x=1\cdot2+2\cdot1=4,\\
  \bm b^\top\bm y=3\cdot1+(-1)\cdot1=2,\\
  \bm c^\top\bm z=2\cdot1+1\cdot(-1)=1.
  \end{gathered}
 \]
-三个内积相乘得$4\cdot2\cdot1=8$。若直接展开三重求和，要累加$2^3=8$项、每项是六个数的乘积，结果同样是$8$。分离计算只需对$m+n+p=6$个坐标各做一次乘法，维数增大时，它比逐项展开省下的计算迅速增多。
+三个内积相乘得$4\cdot2\cdot1=8$。若直接展开三重求和，要累加$2^3=8$项、每项是六个数的乘积，结果同样是$8$。
+
+分离计算只需对$m+n+p=6$个坐标各做一次乘法，维数增大时，它比逐项展开省下的计算迅速增多。
 \end{example}
 
 \paragraph{非线性操作不是缩约}

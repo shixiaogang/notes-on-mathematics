@@ -1,0 +1,381 @@
+\section{广义最小残差法}
+\label{sec:ls-gmres}
+
+设$\bm A$是一般的非奇异方阵，不要求对称或正定。\term{广义最小残差法}（generalized minimal residual method，GMRES）在第$k$步取$\bm x_0+\mathcal K_k$中使原残差长度$\lVert\bm b-\bm A\bm x\rVert_2$最小的近似，与MINRES同样采用第~\ref{sec:ls-krylov-selection-criteria}节的极小残差条件。它紧接第~\ref{sec:ls-arnoldi-application}节：Arnoldi正交化已把这一准则化为一个$(k+1)\times k$的上Hessenberg最小二乘问题，本节说明怎样随步数逐列求解它、怎样读出残差长度并还原近似解。Arnoldi递推本身不再重述，只引用第~\ref{sec:ls-arnoldi}节的式子与定理。
+
+\subsection{主要思想}
+
+\paragraph{逐步长大的小问题}
+先看一个周期。记周期的起点为$\bm x^{(s)}$，残差为$\bm r^{(s)}=\bm b-\bm A\bm x^{(s)}$；不重启时只有一个周期，$\bm x^{(s)}=\bm x_0$。令
+\begin{equation}
+ \beta=\lVert\bm r^{(s)}\rVert_2,\qquad \bm v_1=\frac{\bm r^{(s)}}{\beta},
+ \label{eq:ls-gmres-start}
+\end{equation}
+按式~\eqref{eq:ls-arnoldi-coefficients}与\eqref{eq:ls-arnoldi-normalize}作$j$轮Arnoldi正交化。由定理~\ref{thm:ls-arnoldi-relation}，$\bm V_{j+1}$的列标准正交，并有关系~\eqref{eq:ls-arnoldi-relation}：
+\[
+ \bm A\bm V_j=\bm V_{j+1}\overline{\bm H}_j .
+\]
+按第~\ref{sec:ls-arnoldi-application}节，候选写成$\bm x=\bm x^{(s)}+\bm V_j\bm y$，残差等于$\bm V_{j+1}(\beta\bm e_1-\overline{\bm H}_j\bm y)$，而$\bm V_{j+1}$不改变长度，所以
+\begin{equation}
+ \lVert\bm b-\bm A\bm x\rVert_2=\lVert\beta\bm e_1-\overline{\bm H}_j\bm y\rVert_2 .
+ \label{eq:ls-gmres-small-problem}
+\end{equation}
+GMRES在每一步都要求出使右端最小的$\bm y$。
+
+这个小问题随步数长大。第$j$步的$(j+1)\times j$上Hessenberg矩阵是
+\[
+ \overline{\bm H}_j=
+ \begin{bmatrix}
+ h_{1,1}&h_{1,2}&\cdots&h_{1,j-1}&h_{1,j}\\
+ h_{2,1}&h_{2,2}&\cdots&h_{2,j-1}&h_{2,j}\\
+ &h_{3,2}&\cdots&h_{3,j-1}&h_{3,j}\\
+ &&\ddots&\vdots&\vdots\\
+ &&&h_{j,j-1}&h_{j,j}\\
+ &&&&h_{j+1,j}
+ \end{bmatrix}.
+\]
+与MINRES一样，从第$j-1$步到第$j$步，矩阵只在右侧添了一列、在下方添了一行，已有元素不变。不同的是，新的一列$(h_{1,j},\ldots,h_{j+1,j})^\top$来自Arnoldi正交化中$\bm A\bm v_j$对全部旧基向量的系数，一般全都不为零；新的一行仍只有末元素$h_{j+1,j}$。所以前一步的消元结果仍可沿用，但处理新列的工作比MINRES多。
+
+\paragraph{沿用前一步的消元结果}
+小问题用第~\ref{sec:ls-qr-method}节的Givens旋转化为上三角。第$i$个旋转$\bm G_i$只作用于第$i$、$i+1$两行，在这两行上的形式为
+\[
+ \begin{bmatrix}c_i&s_i\\-s_i&c_i\end{bmatrix},\qquad c_i^2+s_i^2=1 ,
+\]
+用来消去第$i$列的次对角元。设前$j-1$步已经用$\bm G_1,\ldots,\bm G_{j-1}$把$\overline{\bm H}_{j-1}$消成了上三角，记所得上三角矩阵的元素为$r_{i,l}$。由于$\overline{\bm H}_{j-1}$的各列一般都是满的，这个上三角矩阵也是满的。以$j=4$为例，前三列经过$\bm G_1,\bm G_2,\bm G_3$后成为
+\[
+ \begin{bmatrix}
+ r_{1,1}&r_{1,2}&r_{1,3}\\
+ 0&r_{2,2}&r_{2,3}\\
+ 0&0&r_{3,3}\\
+ 0&0&0
+ \end{bmatrix}.
+\]
+以后的旋转只作用于第$4$行及以下，这三列不再改变。
+
+\paragraph{新列要经过全部旧旋转}
+前$j-1$列已经过$\bm G_1,\ldots,\bm G_{j-1}$，新列必须也依次经过这些旧旋转，整个矩阵才是同一个正交变换的结果。新列在第$1$至$j+1$行都可能非零，所以每个旧旋转都会改变它，不能像MINRES那样只用最近两个。旧旋转作用完后，新列在对角线以下只剩第$j+1$行的$h_{j+1,j}$，再构造一个新旋转$\bm G_j$把它消去。
+
+以$j=4$为例，新列逐次旋转的变化为
+\[
+ \begin{bmatrix}h_{1,4}\\h_{2,4}\\h_{3,4}\\h_{4,4}\\h_{5,4}\end{bmatrix}
+ \xrightarrow{\ \bm G_1\ }
+ \begin{bmatrix}r_{1,4}\\\ast\\h_{3,4}\\h_{4,4}\\h_{5,4}\end{bmatrix}
+ \xrightarrow{\ \bm G_2\ }
+ \begin{bmatrix}r_{1,4}\\r_{2,4}\\\ast\\h_{4,4}\\h_{5,4}\end{bmatrix}
+ \xrightarrow{\ \bm G_3\ }
+ \begin{bmatrix}r_{1,4}\\r_{2,4}\\r_{3,4}\\a\\h_{5,4}\end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}r_{1,4}\\r_{2,4}\\r_{3,4}\\\rho_4\\0\end{bmatrix},
+\]
+其中$\ast$表示被旋转改动、随即又被下一个旋转改动的中间值，$a$是第$4$行在旧旋转作用完后的元素。每个旧旋转$\bm G_i$把第$i$、$i+1$两个分量换成
+\[
+ \begin{bmatrix}c_i&s_i\\-s_i&c_i\end{bmatrix}
+ \begin{bmatrix}h_{i,j}\\h_{i+1,j}\end{bmatrix},
+\]
+第$i$个分量就此定下，成为$r_{i,j}$。整个矩阵在新旋转之前与之后分别是
+\[
+ \begin{bmatrix}
+ r_{1,1}&r_{1,2}&r_{1,3}&r_{1,4}\\
+ 0&r_{2,2}&r_{2,3}&r_{2,4}\\
+ 0&0&r_{3,3}&r_{3,4}\\
+ 0&0&0&a\\
+ 0&0&0&h_{5,4}
+ \end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}
+ r_{1,1}&r_{1,2}&r_{1,3}&r_{1,4}\\
+ 0&r_{2,2}&r_{2,3}&r_{2,4}\\
+ 0&0&r_{3,3}&r_{3,4}\\
+ 0&0&0&\rho_4\\
+ 0&0&0&0
+ \end{bmatrix}.
+\]
+新旋转只处理右下角的$a$与$h_{5,4}$。一般地，记$h=h_{j+1,j}$，新旋转取
+\begin{equation}
+ \rho_j=\sqrt{a^2+h^2},\qquad c_j=\frac a{\rho_j},\qquad s_j=\frac h{\rho_j},
+ \label{eq:ls-gmres-givens}
+\end{equation}
+把$(a,h)$变为$(\rho_j,0)$，$\rho_j=r_{j,j}$；实际用不会溢出的$\operatorname{hypot}(a,h)$计算$\rho_j$。旋转都要保存下来，供以后各列使用。
+
+\paragraph{右端与残差}
+同一组旋转也作用于右端$\beta\bm e_1$。它的第$j+1$个分量起初为零，只有第$j$个旋转才把非零值带下来；记右端为$\bm g$，初值$\bm g=\beta\bm e_1$，则
+\begin{equation}
+ g_j\leftarrow c_jg_j,\qquad g_{j+1}=-s_jg_j ,
+ \label{eq:ls-gmres-rhs}
+\end{equation}
+右边都用旋转前的$g_j$，前面已确定的分量不变。以$j=4$为例，右端在$\bm G_4$前后分别是
+\[
+ \begin{bmatrix}g_1\\g_2\\g_3\\g_4\\0\end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}g_1\\g_2\\g_3\\c_4g_4\\-s_4g_4\end{bmatrix}.
+\]
+全部$j$个旋转作用后，小矩阵成为上三角块$\bm R_j$下接一行零。旋转保长，小问题的目标化为
+\begin{equation}
+ \lVert\beta\bm e_1-\overline{\bm H}_j\bm y\rVert_2^2
+ =\lVert(g_1,\ldots,g_j)^\top-\bm R_j\bm y\rVert_2^2+g_{j+1}^2 .
+ \label{eq:ls-gmres-rotated-objective}
+\end{equation}
+前$j$个方程可由上三角的$\bm R_j$精确满足，最后一个分量$g_{j+1}$无论$\bm y$取什么都无法消去，所以最小残差长度就是$\lvert g_{j+1}\rvert$。由式~\eqref{eq:ls-gmres-rhs}，它满足
+\[
+ \lvert g_{j+1}\rvert=\lvert s_j\rvert\,\lvert g_j\rvert\le\lvert g_j\rvert ,
+\]
+因而随步数不增。不形成$\bm y$和$\bm x$，每步就能读出残差长度，用来决定何时停下。
+
+\paragraph{与MINRES的差别}
+消元的框架与MINRES相同，残差长度也同样随消元得到；差别都来自新列是满的。
+
+其一，每步的工作量随步数增长：第$j$步要作用$j-1$个旧旋转，Arnoldi正交化还要与$j$个旧基向量求内积并扣除，全部旋转与基向量都须保存。
+
+其二，没有短递推。MINRES的$\bm R_k$只有三条非零对角线，可以把$\bm V_k\bm R_k^{-1}$的列写成方向的三项递推，边迭代边累加解；这里$\bm R_j$是满的上三角矩阵，新方向要与全部旧方向组合，而且每增加一列，回代所得$\bm y$的各个分量一般都会改变。所以GMRES不逐步更新$\bm x$，只在停下时由回代
+\begin{equation}
+ \bm R_j\bm y=(g_1,\ldots,g_j)^\top
+ \label{eq:ls-gmres-back-substitution}
+\end{equation}
+求出系数，再由
+\begin{equation}
+ \bm x=\bm x^{(s)}+\bm V_j\bm y
+ \label{eq:ls-gmres-solution}
+\end{equation}
+用整组基还原原变量。这组基本来也要用于Arnoldi的扣除，保存它并不额外增加存储。
+
+$\bm A$对称时，由第~\ref{sec:ls-lanczos}节，$\overline{\bm H}_j$成为三对角矩阵，新列只有三个非零元，只需经过两个旧旋转，回代也化为短递推，这就是第~\ref{sec:ls-minres}节的MINRES。
+
+\paragraph{重启}
+基的存储与正交化工作都随步数增长，实际常用重启：每个周期最多走$m$步，按式~\eqref{eq:ls-gmres-solution}更新$\bm x$，用原矩阵重算残差，再以它为新周期的$\bm r^{(s)}$重新生成基。重启限制了存储，代价是新周期不再利用旧周期的子空间。
+
+\subsection{算法实现}
+
+输入为非奇异方阵$\bm A$与右端$\bm b$，算法只需计算$\bm A$乘向量，输出为近似解$\bm x$。预先选定初值$\bm x_0$、容差$\mathrm{atol},\mathrm{rtol}$、总步数上限$K$与重启长度$m$（$1\le m\le d$）；停止阈值$\tau$与执行流程沿用第~\ref{sec:ls-matrix-splitting}节，各种结束原因的含义见第~\ref{sec:ls-stationary-stopping}节。
+
+按上一小节的推导，每轮作一轮Arnoldi扩展，让新列经过全部旧旋转，再构造一个新旋转并更新右端，由$\lvert g_{j+1}\rvert$判断是否停下；停下后回代、还原，并从真实残差决定是否重启。下面写出计算中用到的变量、它们怎样初始化、每轮怎样更新。每一步使用例~\ref{ex:ls-stationary-running-example}的数据进行演示，取$m=2$：
+\[
+ \bm A=\begin{bmatrix}4&1\\1&3\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\2\end{bmatrix},\qquad
+ \bm x_0=\bm 0 .
+\]
+Arnoldi部分的数值与第~\ref{sec:ls-arnoldi}节相同。
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm x^{(s)}\in\mathbb R^d$：本周期的起点，周期结束时更新为新的近似解。
+ \item $\bm v_1,\ldots,\bm v_{j+1}\in\mathbb R^d$：本周期的标准正交基，全部保存，回代后用来还原解。
+ \item $\bm w\in\mathbb R^d$：Arnoldi的工作向量。
+ \item $h_{1,j},\ldots,h_{j+1,j}$：$\overline{\bm H}_j$的第$j$列；经旋转后在原处变为$\bm R_j$的第$j$列，对角元为$\rho_j$，次对角元变为零。
+ \item $c_i,s_i$（$i\le j$）：已构造的旋转，全部保存。
+ \item $\bm g\in\mathbb R^{j+1}$：经旋转的右端，前$j$个分量用于回代，$\lvert g_{j+1}\rvert$是残差长度的估计。
+ \item $j$：本周期内的轮次；另记累计步数，与上限$K$比较。
+\end{itemize}
+
+\paragraph{初始化}
+把周期起点初始化为$\bm x_0$，计算残差并作停止检查：$\lVert\bm r^{(s)}\rVert_2\le\tau$时以“达到容差”结束，累计步数已达$K$时以“步数耗尽”结束，都输出$\bm x^{(s)}$，不再归一化。否则把第一个基向量初始化为残差的方向，右端初始化为$\beta\bm e_1$，轮次初始化为$1$：
+\[
+ \begin{gathered}
+ \bm x^{(s)}=\bm x_0,\qquad \bm r^{(s)}=\bm b-\bm A\bm x^{(s)},\qquad \beta=\lVert\bm r^{(s)}\rVert_2,\\
+ \bm v_1=\frac{\bm r^{(s)}}{\beta},\qquad \bm g=\beta\bm e_1,\qquad j=1 .
+ \end{gathered}
+\]
+重启时以新的$\bm x^{(s)}$回到这里，所以这里的停止检查用的总是原矩阵重算的真实残差。例中$\bm r^{(s)}=\bm b$，
+\[
+ \beta=\sqrt5,\qquad \bm v_1=\frac1{\sqrt5}\begin{bmatrix}1\\2\end{bmatrix},\qquad \bm g=\begin{bmatrix}\sqrt5\\0\end{bmatrix}.
+\]
+
+\paragraph{每轮更新}
+在第$j$轮：
+\begin{enumerate}
+ \item \textbf{Arnoldi扩展。}按第~\ref{sec:ls-arnoldi}节计算过程中每轮更新的第1—3步，即式~\eqref{eq:ls-arnoldi-coefficients}与\eqref{eq:ls-arnoldi-normalize}，计算
+ \[
+  \begin{gathered}
+  \bm w=\bm A\bm v_j ,\\
+  h_{i,j}=\bm v_i^\top\bm w,\qquad \bm w\leftarrow\bm w-h_{i,j}\bm v_i\qquad(i=1,\ldots,j),\\
+  h_{j+1,j}=\lVert\bm w\rVert_2,\qquad \bm v_{j+1}=\frac{\bm w}{h_{j+1,j}} ,
+  \end{gathered}
+ \]
+ 得到$\overline{\bm H}_j$的新列；$h_{j+1,j}=0$时不作归一化，不生成$\bm v_{j+1}$。必要时按该节的办法再正交化。例中第一轮
+ \[
+  \bm A\bm v_1=\frac1{\sqrt5}\begin{bmatrix}6\\7\end{bmatrix},\qquad
+  \begin{bmatrix}h_{1,1}\\h_{2,1}\end{bmatrix}=\begin{bmatrix}4\\1\end{bmatrix},\qquad
+  \bm v_2=\frac1{\sqrt5}\begin{bmatrix}2\\-1\end{bmatrix}.
+ \]
+
+ \item \textbf{作用旧旋转。}对$i=1,\ldots,j-1$依次计算
+ \begin{equation}
+  \begin{bmatrix}h_{i,j}\\h_{i+1,j}\end{bmatrix}\leftarrow
+  \begin{bmatrix}c_i&s_i\\-s_i&c_i\end{bmatrix}\begin{bmatrix}h_{i,j}\\h_{i+1,j}\end{bmatrix},
+  \label{eq:ls-gmres-old-rotations}
+ \end{equation}
+ 每次只改动相邻的两个元素。例中第一轮没有旧旋转，新列仍为$(4,1)^\top$。
+
+ \item \textbf{构造新旋转。}取$a=h_{j,j}$、$h=h_{j+1,j}$，按式~\eqref{eq:ls-gmres-givens}算出$\rho_j,c_j,s_j$并保存，令$h_{j,j}\leftarrow\rho_j$、$h_{j+1,j}\leftarrow0$。$h_{j+1,j}=0$时$s_j=0$，照常完成本列；若$a=h=0$，则$\rho_j=0$，小问题秩亏，要先检查$\bm A$是否奇异、小问题是否相容，不能直接相除。例中第一轮$a=4$、$h=1$，
+ \[
+  \rho_1=\sqrt{17},\qquad c_1=\frac4{\sqrt{17}},\qquad s_1=\frac1{\sqrt{17}} .
+ \]
+
+ \item \textbf{更新右端。}按式~\eqref{eq:ls-gmres-rhs}计算
+ \[
+  g_{j+1}=-s_jg_j,\qquad g_j\leftarrow c_jg_j ,
+ \]
+ $\lvert g_{j+1}\rvert$即本轮的残差估计。例中第一轮
+ \[
+  \bm g=\frac{\sqrt5}{\sqrt{17}}\begin{bmatrix}4\\-1\end{bmatrix},\qquad \lvert g_2\rvert=\sqrt{\frac5{17}}\approx0.542 .
+ \]
+
+ \item \textbf{停止。}若$\lvert g_{j+1}\rvert\le\tau$，或第1步给出$h_{j+1,j}=0$（这时$g_{j+1}=0$），或本周期已走$m$轮，或累计步数达到$K$，退出每轮更新，转入回代；否则令$j\leftarrow j+1$，进入下一轮。$\lvert g_{j+1}\rvert$只是小问题上的估计，是否真正结束要在回代、还原之后由初始化中的真实残差检查决定，见第~\ref{sec:ls-stationary-stopping}节。
+
+ 例中第一轮$0.542$未达标，$j=1<m$，进入第二轮。若在此退出，回代得
+ \[
+  y_1=\frac{g_1}{\rho_1}=\frac{4\sqrt5}{17},\qquad
+  \bm x_1=y_1\bm v_1=\begin{bmatrix}4/17\\8/17\end{bmatrix},
+ \]
+ 与MINRES的第一步相同。
+
+ 第二轮由第1步，$\bm A\bm v_2=(7,-1)^\top/\sqrt5$，
+ \[
+  h_{1,2}=1,\qquad h_{2,2}=3,\qquad h_{3,2}=0 ;
+ \]
+ 由第2步，前两个元素经$\bm G_1$变为
+ \[
+  \begin{bmatrix}c_1&s_1\\-s_1&c_1\end{bmatrix}\begin{bmatrix}1\\3\end{bmatrix}
+  =\frac1{\sqrt{17}}\begin{bmatrix}7\\11\end{bmatrix};
+ \]
+ 由第3、4步，$a=11/\sqrt{17}$、$h=0$，
+ \[
+  \rho_2=\frac{11}{\sqrt{17}},\qquad c_2=1,\qquad s_2=0,\qquad g_3=0 ,
+ \]
+ $g_2$不变。第二轮$h_{3,2}=0$，二维空间已经用尽，退出每轮更新。
+\end{enumerate}
+
+\paragraph{回代与重启}
+退出后，旋转过的各列组成上三角矩阵$\bm R_j$，按式~\eqref{eq:ls-gmres-back-substitution}自下而上回代求$\bm y$，再按式~\eqref{eq:ls-gmres-solution}还原$\bm x$。然后令$\bm x^{(s)}\leftarrow\bm x$，回到初始化：在那里用原矩阵重算残差并复核，满足阈值或已达累计步数上限就输出，否则从这个残差开始新的周期。若几个周期后真实残差几乎不再下降，应报告停滞，而不是继续无限重启。
+
+例中两轮的结果组成
+\[
+ \bm R_2=\frac1{\sqrt{17}}\begin{bmatrix}17&7\\0&11\end{bmatrix},\qquad
+ (g_1,g_2)^\top=\frac{\sqrt5}{\sqrt{17}}\begin{bmatrix}4\\-1\end{bmatrix},
+\]
+回代得
+\[
+ y_2=-\frac{\sqrt5}{11},\qquad y_1=\frac{4\sqrt5-7y_2}{17}=\frac{3\sqrt5}{11},
+\]
+于是
+\[
+ \bm x=\bm V_2\bm y=\frac3{11}\begin{bmatrix}1\\2\end{bmatrix}-\frac1{11}\begin{bmatrix}2\\-1\end{bmatrix}=\begin{bmatrix}\tfrac1{11}\\\tfrac7{11}\end{bmatrix}.
+\]
+
+最终得到本周期子空间中残差最小的近似解。例中回到初始化后真实残差为零，以“达到容差”结束，输出
+\[
+ \bm x_\star=\begin{bmatrix}\tfrac1{11}\\\tfrac7{11}\end{bmatrix} .
+\]
+代回核对：
+\[
+ \bm A\bm x_\star=\begin{bmatrix}4/11+7/11\\1/11+21/11\end{bmatrix}=\begin{bmatrix}1\\2\end{bmatrix}=\bm b ,
+\]
+与MINRES的结果相同；$\bm R_2$与$\bm g$也正是把第~\ref{sec:ls-arnoldi}节的$\overline{\bm H}_2$与$\sqrt5\,\bm e_1$用同两个旋转变换的结果。
+
+贯穿例的矩阵是对称的，小矩阵也对称。下面换用非对称矩阵，这是MINRES不再适用、GMRES仍然可用的情形。
+
+\begin{example}[非对称矩阵上的GMRES]
+\label{ex:ls-gmres-nonsymmetric}
+下面用以下数据演示，取$m=2$：
+\[
+ \bm A=\begin{bmatrix}3&1\\0&2\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\1\end{bmatrix},\qquad
+ \bm x_0=\bm0 .
+\]
+于是$\bm r_0=\bm b$，$\beta=\sqrt2$，$\bm v_1=(1,1)^\top/\sqrt2$。
+
+第一轮由第1步，$\bm A\bm v_1=(4,2)^\top/\sqrt2$，得新列与新基向量
+\[
+ \begin{bmatrix}h_{1,1}\\h_{2,1}\end{bmatrix}=\begin{bmatrix}3\\1\end{bmatrix},\qquad
+ \bm v_2=\frac1{\sqrt2}\begin{bmatrix}1\\-1\end{bmatrix}.
+\]
+由第3、4步，
+\[
+ \rho_1=\sqrt{10},\qquad c_1=\frac3{\sqrt{10}},\qquad s_1=\frac1{\sqrt{10}},\qquad
+ \bm g=\frac1{\sqrt5}\begin{bmatrix}3\\-1\end{bmatrix}.
+\]
+若在此结束，回代得
+\[
+ y_1=\frac{3\sqrt2}{10},\qquad \bm x_1=y_1\bm v_1=\begin{bmatrix}3/10\\3/10\end{bmatrix}.
+\]
+直接计算原残差
+\[
+ \bm r_1=\bm b-\bm A\bm x_1=\begin{bmatrix}-1/5\\2/5\end{bmatrix},\qquad
+ \lVert\bm r_1\rVert_2=\frac1{\sqrt5}=\lvert g_2\rvert .
+\]
+
+第二轮$\bm A\bm v_2=2\bm v_2$，新列为$(0,2,0)^\top$，与对角线下方的$h_{2,1}=1$不对称。由第2步，它经$\bm G_1$变为
+\[
+ \begin{bmatrix}2/\sqrt{10}\\6/\sqrt{10}\\0\end{bmatrix};
+\]
+由于$h_{3,2}=0$，新旋转为$c_2=1$、$s_2=0$，$g_3=0$。回代
+\[
+ \begin{bmatrix}\sqrt{10}&2/\sqrt{10}\\0&6/\sqrt{10}\end{bmatrix}\begin{bmatrix}y_1\\y_2\end{bmatrix}=\frac1{\sqrt5}\begin{bmatrix}3\\-1\end{bmatrix}
+\]
+得$y_2=-\sqrt2/6$、$y_1=\sqrt2/3$，恢复出
+\[
+ \bm x_2=\frac13\begin{bmatrix}1\\1\end{bmatrix}-\frac16\begin{bmatrix}1\\-1\end{bmatrix}=\begin{bmatrix}\tfrac16\\\tfrac12\end{bmatrix},
+\]
+代回得$\bm A\bm x_2=(1/2+1/2,\,1)^\top=\bm b$，原残差为零。两轮中的Arnoldi系数可以按第~\ref{sec:ls-arnoldi}节的计算过程逐步核对。
+\end{example}
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+下面的定理针对不重启的完整GMRES，即$m=d$、$\bm x^{(s)}=\bm x_0$的情形。
+
+\begin{theorem}[GMRES的最小残差性]
+\label{thm:ls-gmres-optimality}
+设$\bm A$非奇异，在精确算术下执行完整GMRES的第$k$步，记$\bm r_k=\bm b-\bm A\bm x_k$。则$\bm x_k$是$\bm x_0+\mathcal K_k$中残差长度的唯一最小点，$\lVert\bm r_k\rVert_2=\lvert g_{k+1}\rvert$，它等于上一步的残差长度乘以$\lvert s_k\rvert\le1$，因而随$k$不增；GMRES至多$d$步得到精确解。若$\bm A=\bm X\bm\Lambda\bm X^{-1}$可对角化（$\bm X,\bm\Lambda$可以是复矩阵），还有
+\begin{equation}
+ \lVert\bm r_k\rVert_2\le\kappa_2(\bm X)\min_{p\in\mathcal P_k}\max_{\lambda\in\sigma(\bm A)}\lvert p(\lambda)\rvert\,\lVert\bm r_0\rVert_2,
+ \label{eq:ls-gmres-residual-bound}
+\end{equation}
+其中$\mathcal P_k$同引理~\ref{lem:ls-krylov-residual-polynomial}。
+\end{theorem}
+
+\begin{proof}
+证明分四步：先把原问题化为小问题，再由旋转求出小问题的解与最小值，然后说明单调性与有限步终止，最后由残差多项式得到界。
+
+\emph{化为小问题。}由Arnoldi关系（定理~\ref{thm:ls-arnoldi-relation}），Arnoldi尚未停止时$\bm V_{k+1}$的列标准正交，且$\bm A\bm V_k=\bm V_{k+1}\overline{\bm H}_k$。由$\bm r_0=\beta\bm V_{k+1}\bm e_1$，
+\[
+ \bm b-\bm A(\bm x_0+\bm V_k\bm y)=\bm r_0-\bm A\bm V_k\bm y=\bm V_{k+1}(\beta\bm e_1-\overline{\bm H}_k\bm y),
+\]
+乘以$\bm V_{k+1}$不改变长度，即得式~\eqref{eq:ls-gmres-small-problem}。$\bm V_k$满列秩，$\bm y\mapsto\bm x_0+\bm V_k\bm y$是$\mathbb R^k$到$\bm x_0+\mathcal K_k$的双射，两个最小化问题的解一一对应。
+
+\emph{旋转后的小问题。}记$k$个旋转之积为正交矩阵$\bm\Omega_k$。每个新旋转只作用于第$j,j+1$行，而新列在此前已经过全部旧旋转，所以
+\[
+ \bm\Omega_k\overline{\bm H}_k=\begin{bmatrix}\bm R_k\\\bm 0^\top\end{bmatrix},\qquad
+ \bm\Omega_k\beta\bm e_1=\bm g=(g_1,\ldots,g_{k+1})^\top ,
+\]
+从而
+\[
+ \lVert\beta\bm e_1-\overline{\bm H}_k\bm y\rVert_2^2
+ =\lVert(g_1,\ldots,g_k)^\top-\bm R_k\bm y\rVert_2^2+g_{k+1}^2 .
+\]
+$\bm A$非奇异且$\bm V_k$满列秩，$\bm A\bm V_k=\bm V_{k+1}\overline{\bm H}_k$满列秩，故$\overline{\bm H}_k$与$\bm R_k$满秩，$\bm R_k$可逆。回代~\eqref{eq:ls-gmres-back-substitution}所得的$\bm y$使第一项为零，且是唯一使之为零的点，最小值为$\lvert g_{k+1}\rvert$。
+
+\emph{单调性与有限步终止。}第$k$个旋转把旋转前的$g_k$变为$c_kg_k$与$-s_kg_k$，而旋转前的$\lvert g_k\rvert$正是上一步的残差长度，所以
+\[
+ \lvert g_{k+1}\rvert=\lvert s_k\rvert\,\lvert g_k\rvert\le\lvert g_k\rvert .
+\]
+若$h_{k+1,k}=0$，则$s_k=0$，$g_{k+1}=0$，残差为零；子空间维数不超过$d$，所以至多$d$步出现这一情形或零残差。
+
+\emph{残差界。}由引理~\ref{lem:ls-krylov-residual-polynomial}与最小残差性，
+\[
+ \lVert\bm r_k\rVert_2=\min_{p\in\mathcal P_k}\lVert p(\bm A)\bm r_0\rVert_2 .
+\]
+而$p(\bm A)=\bm X\,p(\bm\Lambda)\bm X^{-1}$，对角矩阵$p(\bm\Lambda)$的谱范数是$\max_{\lambda\in\sigma(\bm A)}\lvert p(\lambda)\rvert$，于是
+\[
+ \lVert p(\bm A)\bm r_0\rVert_2\le\lVert\bm X\rVert_2\lVert\bm X^{-1}\rVert_2\max_{\lambda\in\sigma(\bm A)}\lvert p(\lambda)\rvert\,\lVert\bm r_0\rVert_2 ,
+\]
+其中$\lVert\bm X\rVert_2\lVert\bm X^{-1}\rVert_2=\kappa_2(\bm X)$，对$p$取最小即得所述界。
+\end{proof}
+
+\paragraph{收敛速度}
+定理中的界把收敛问题化为多项式逼近：要找在原点取值$1$、在全部特征值上都很小的低次多项式。非正规矩阵的$\kappa_2(\bm X)$可能很大，界因此变弱，只看特征值是否集中不能判断收敛快慢。
+
+\paragraph{重启与数值敏感度}
+重启的GMRES($m$)丢弃了历史空间：每个周期内的残差仍最小，但这只是在本周期子空间上的最优，不能说成累计全部历史空间上的最优。它可能停滞，也不再有$d$步得到精确解的保证。浮点计算中基不再精确正交，$\lvert g_{j+1}\rvert$与真实残差会偏离，这就是每个周期结束时用$\bm b-\bm A\bm x$复核的原因。
+
+\paragraph{计算代价}
+每轮需要一次$\bm A$乘向量。完整GMRES执行$k$步时，正交化共约$2dk^2$次浮点运算，基的存储约$kd$个数，都随步数增长；GMRES($m$)把历史基限制在一个周期内，每周期至多约$2dm^2$次运算，存储约$(m+1)d$个数，与总步数无关。

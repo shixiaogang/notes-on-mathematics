@@ -1181,7 +1181,7 @@
 
 3. 指出$C_r$可能大于$1$。示例`ex:ls-running-transient`在贯穿例中算出前两步误差变长。
 
-4. 把放大归因于耦合；示例`ex:ls-transient-growth`取$\left[\begin{smallmatrix}0.8&4\\0&0.5\end{smallmatrix}\right]$（式`eq:ch06-fixed-iteration-example`、`eq:ch06-diagonalizable-finite-trajectory`），前三步长度约$4.03$、$5.21$、$5.16$。
+4. 把放大归因于耦合；示例`ex:ls-transient-growth`取$\left[\begin{smallmatrix}0.8&4\\0&0.5\end{smallmatrix}\right]$，前三步长度约$4.03$、$5.21$、$5.16$。
 
 5. 用初值沿近乎反向的两条特征方向相消解释放大（图`fig:ch06-transient-growth`）。
 
