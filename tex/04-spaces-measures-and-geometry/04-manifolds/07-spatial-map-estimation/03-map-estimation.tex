@@ -1,0 +1,296 @@
+\section{空间映射的估计}
+\label{sec:smap-map-estimation}
+
+现在转向第二类观测：同一组点在两套坐标中都有记录，要求出两套坐标之间的映射。第一步是选定允许的映射类型，因为有限个点对本身几乎不约束任意的映射；选定以后，每一对对应点都给参数加上若干条件，精确数据下是方程，含噪数据下是拟合残差。本节依次处理刚体、仿射和射影三种模型。它们保留的几何结构不同，参数的约束、求解方法与合适的误差也随之不同。
+
+\subsection{对应关系与映射模型}
+\label{sec:smap-correspondence-models}
+
+设源点$\bm x_1,\ldots,\bm x_n\in\mathbb R^d$与目标点$\bm y_1,\ldots,\bm y_n\in\mathbb R^m$按下标一一对应。一对对应点给未知映射$f:\mathbb R^d\to\mathbb R^m$加上一个条件$f(\bm x_i)=\bm y_i$，即$m$个标量方程。$n$对点共给出$nm$个方程，这个数是有限的，而一般映射的自由度无穷多。
+
+\paragraph{有限对应不能确定任意映射}
+
+即使只要求光滑，有限个点对也确定不了映射。设$f$满足全部条件，取任意向量$\bm c\in\mathbb R^m$，令$\varphi(\bm x)=\prod_{i=1}^n\lVert\bm x-\bm x_i\rVert_2^2$，则$f+\varphi\,\bm c$光滑，并且在每个$\bm x_i$处与$f$取值相同。因此必须事先指定映射族$\mathcal F$，只在$\mathcal F$中寻找$f$。所选的族同时规定了定义域、值域和映射必须保留的结构。
+
+\paragraph{三种映射模型}
+
+本节使用表~\ref{tab:smap-models}中的三种模型。参数个数说明至少需要多少对应点：每对点提供$m$个方程，刚体与仿射模型中的方程关于参数分别是带正交约束的和线性的，射影模型中的方程则只在乘以一个非零倍数后成立。
+
+\begin{table}[htbp]
+ \centering
+ \caption{三种映射模型。刚体模型要求$m=d$，射影模型这里只讨论平面到平面的情形，$\widetilde{\bm x}$为齐次坐标，见第~\ref{sec:smap-projective}节。}
+ \label{tab:smap-models}
+ \begin{tabular}{@{}llll@{}}
+ \toprule
+ 模型 & 形式 & 参数个数 & 保留的结构\\
+ \midrule
+ 刚体 & $\bm R\bm x+\bm t$，$\bm R\in\mathrm{SO}(d)$ & $d(d+1)/2$ & 距离与定向\\
+ 仿射 & $\bm A\bm x+\bm b$，$\bm A\in\mathbb R^{m\times d}$ & $m(d+1)$ & 平行与共线点的比例\\
+ 射影 & $[\widetilde{\bm x}]\mapsto[\bm H\widetilde{\bm x}]$，$\bm H$可逆 & $8$ & 共线\\
+ \bottomrule
+ \end{tabular}
+\end{table}
+
+\paragraph{可满足、唯一与稳定}
+
+选定$\mathcal F$后，有三个需要分别回答的问题。第一，数据是否可满足：是否存在$f\in\mathcal F$使$f(\bm x_i)=\bm y_i$对所有$i$精确成立；含噪数据一般不可满足，这时改为最小化残差。第二，参数是否唯一：精确可满足时解是否只有一个，最小化残差时极小点是否只有一个。第三，结果是否稳定：数据有小扰动时，所得映射是否只有小变化。三个问题互不蕴含，后面的每种模型都要分别核对。
+
+对应关系在本节中始终是给定的输入。若对应本身有误，例如把第三个点错配给第五个点，所有结论都针对错误的数据成立，估计方法本身不会发现这种错误。
+
+\subsection{刚体变换估计}
+\label{sec:smap-rigid}
+
+刚体模型把源点送到$\bm R\bm x_i+\bm t$，其中$\bm R\in\mathrm{SO}(d)$，$\bm t\in\mathbb R^d$，这就是第~\ref{chap:lie-groups}章的刚体位姿。给定两组按下标对应的欧氏点，以平方距离残差
+\begin{equation}
+ F(\bm R,\bm t)=\sum_{i=1}^n\lVert\bm y_i-\bm R\bm x_i-\bm t\rVert_2^2
+ \label{eq:smap-rigid-objective}
+\end{equation}
+衡量拟合程度。未知量$\bm R$受正交约束，不能像普通最小二乘那样直接求导解线性方程。下面先消去平移，再把旋转问题化为一个矩阵上的迹最大化，最后讨论数据何时足以确定变换。
+
+\subsubsection{平移的消除}
+\label{sec:smap-translation}
+
+先固定$\bm R$，看最优平移是什么。记$\bm a_i=\bm y_i-\bm R\bm x_i$，目标变为$\sum_i\lVert\bm a_i-\bm t\rVert_2^2$，即找一个点使它到$\bm a_1,\ldots,\bm a_n$的平方距离和最小。
+
+\begin{lemma}[最优平移]
+\label{lem:smap-optimal-translation}
+记$\overline{\bm x}=\frac1n\sum_i\bm x_i$，$\overline{\bm y}=\frac1n\sum_i\bm y_i$，$\bm x_i'=\bm x_i-\overline{\bm x}$，$\bm y_i'=\bm y_i-\overline{\bm y}$。对固定的$\bm R$，$F(\bm R,\cdot)$的唯一极小点是$\bm t^\star(\bm R)=\overline{\bm y}-\bm R\overline{\bm x}$，并且
+\[
+ F(\bm R,\bm t^\star(\bm R))=\sum_{i=1}^n\lVert\bm y_i'-\bm R\bm x_i'\rVert_2^2 .
+\]
+\end{lemma}
+\begin{proof}
+记$\overline{\bm a}=\frac1n\sum_i\bm a_i=\overline{\bm y}-\bm R\overline{\bm x}$。由$\sum_i(\bm a_i-\overline{\bm a})=\bm0$，交叉项求和为零，
+\[
+ \sum_i\lVert\bm a_i-\bm t\rVert_2^2=\sum_i\lVert\bm a_i-\overline{\bm a}\rVert_2^2+n\lVert\overline{\bm a}-\bm t\rVert_2^2 ,
+\]
+所以唯一极小点是$\bm t=\overline{\bm a}$。代入后$\bm a_i-\overline{\bm a}=\bm y_i'-\bm R\bm x_i'$。
+\end{proof}
+
+引理把原问题化为中心化点之间的纯旋转拟合。中心化消去的只是平移这个未知量；点与点之间的配对仍然是输入，质心本身与配对无关，但下一小节的交叉矩阵逐对相乘，完全依赖于配对。本节不讨论配对的求法。
+
+\subsubsection{旋转的估计}
+\label{sec:smap-rotation}
+
+展开中心化后的目标。旋转保持长度，所以$\lVert\bm R\bm x_i'\rVert_2=\lVert\bm x_i'\rVert_2$，
+\[
+ \sum_i\lVert\bm y_i'-\bm R\bm x_i'\rVert_2^2=\sum_i\lVert\bm y_i'\rVert_2^2+\sum_i\lVert\bm x_i'\rVert_2^2-2\sum_i\bm y_i'^\top\bm R\bm x_i' .
+\]
+前两项与$\bm R$无关。最后一项可以用迹写成$\sum_i\bm y_i'^\top\bm R\bm x_i'=\operatorname{tr}(\bm R^\top\bm M)$，其中
+\begin{equation}
+ \bm M=\sum_{i=1}^n\bm y_i'\bm x_i'^\top\in\mathbb R^{d\times d}
+ \label{eq:smap-cross-matrix}
+\end{equation}
+称为两组中心化点的交叉矩阵。于是旋转估计等价于在$\mathrm{SO}(d)$中最大化$\operatorname{tr}(\bm R^\top\bm M)$。
+
+这个问题已在卷二的矩阵逼近一章解决：由$\lVert\bm M-\bm R\rVert_{\mathrm F}^2=\lVert\bm M\rVert_{\mathrm F}^2+d-2\operatorname{tr}(\bm R^\top\bm M)$，最大化迹就是找离$\bm M$最近的正交矩阵或旋转。那里的结论是：设$\bm M=\bm U\bm\Sigma\bm V^\top$为奇异值分解，在全部正交矩阵中，$\operatorname{tr}(\bm R^\top\bm M)\leq\sum_i\sigma_i$，由$\bm U\bm V^\top$取到，它就是$\bm M$的极分解的正交因子；只允许旋转时，记$s=\det(\bm U\bm V^\top)$，最优解为$\bm U\operatorname{diag}(1,\ldots,1,s)\bm V^\top$，迹的最大值为$\sigma_1+\cdots+\sigma_{d-1}+s\sigma_d$。极分解本身可参考\BookChapterRef{chap:polar-decomposition}{卷二第6章“极分解”}。
+
+\begin{theorem}[对应点的刚体估计]
+\label{thm:smap-rigid-estimate}
+设$\bm M=\bm U\bm\Sigma\bm V^\top$，$s=\det(\bm U\bm V^\top)$。则
+\[
+ \bm R^\star=\bm U\operatorname{diag}(1,\ldots,1,s)\bm V^\top,\qquad\bm t^\star=\overline{\bm y}-\bm R^\star\overline{\bm x}
+\]
+使式~\eqref{eq:smap-rigid-objective}在$\mathrm{SO}(d)\times\mathbb R^d$上取最小值，最小值为
+\[
+ \sum_i\lVert\bm x_i'\rVert_2^2+\sum_i\lVert\bm y_i'\rVert_2^2-2\Bigl(\sum_{l=1}^{d-1}\sigma_l+s\,\sigma_d\Bigr).
+\]
+若把$\mathrm{SO}(d)$换成$\mathrm O(d)$，则取$\bm R^\star=\bm U\bm V^\top$，最小值中的括号换成$\sum_l\sigma_l$。
+\end{theorem}
+\begin{proof}
+由引理~\ref{lem:smap-optimal-translation}，对每个$\bm R$，最优平移是$\bm t^\star(\bm R)$，剩下的目标是上面的展开式。它关于$\bm R$的最小化等价于$\operatorname{tr}(\bm R^\top\bm M)$的最大化，由上面引述的结论即得最优旋转与最大迹，代入展开式得最小值。正交情形同理。
+\end{proof}
+
+计算步骤是：求两组点的质心并中心化；按式~\eqref{eq:smap-cross-matrix}累加交叉矩阵；求$\bm M$的奇异值分解并按需要作行列式修正；恢复平移；最后把$\bm R^\star\bm x_i+\bm t^\star$与$\bm y_i$逐个比较，报告残差。
+
+\begin{example}[平面中的旋转与平移]
+\label{ex:smap-rigid-rotation}
+取$\bm x_1=(1,0)^\top$、$\bm x_2=(0,2)^\top$、$\bm x_3=(-1,0)^\top$、$\bm x_4=(0,-2)^\top$，质心为零。目标点由逆时针旋转$90^\circ$再平移$(3,1)^\top$得到：$\bm y_1=(3,2)^\top$、$\bm y_2=(1,1)^\top$、$\bm y_3=(3,0)^\top$、$\bm y_4=(5,1)^\top$，质心为$(3,1)^\top$，中心化后为$(0,1)^\top$、$(-2,0)^\top$、$(0,-1)^\top$、$(2,0)^\top$。
+
+逐项累加得$\bm M=\left[\begin{smallmatrix}0&-8\\2&0\end{smallmatrix}\right]$。它可以写成$\bm M=\bm R_{90}\operatorname{diag}(2,8)$，其中$\bm R_{90}=\left[\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right]$，这正是极分解：对称因子$\operatorname{diag}(2,8)$正定，正交因子$\bm R_{90}$的行列式为$1$，所以$\bm R^\star=\bm R_{90}$，无需修正。平移$\bm t^\star=(3,1)^\top-\bm R_{90}\bm0=(3,1)^\top$，残差为零，恢复了生成数据的变换。
+\end{example}
+
+\paragraph{正交对齐与旋转对齐}
+
+两种约束用于不同的场合。比较第~\ref{sec:smap-distance-reconstruction}节的两组重构坐标时，距离本来就辨认不了反射，应在$\mathrm O(d)$中对齐，否则会把一个反射误算成误差。估计物体的刚体位姿时，反射不是物理上可实现的运动，应在$\mathrm{SO}(d)$中对齐。数据含反射时，两者的结果截然不同。
+
+\begin{example}[镜像数据的两种对齐]
+\label{ex:smap-mirror}
+沿用上例的$\bm x_i$，令$\bm y_i$为$\bm x_i$关于横轴的镜像：$(1,0)^\top$、$(0,-2)^\top$、$(-1,0)^\top$、$(0,2)^\top$。交叉矩阵为$\bm M=\operatorname{diag}(2,-8)$，奇异值为$8$与$2$，$\det\bm M<0$。在$\mathrm O(2)$中，最优解是反射$\operatorname{diag}(1,-1)$，残差为零。
+
+在$\mathrm{SO}(2)$中，$s=-1$，最大迹为$8-2=6$。直接验证：旋转$\bm R(\theta)$给出$\operatorname{tr}(\bm R^\top\bm M)=2\cos\theta-8\cos\theta=-6\cos\theta$，在$\theta=\pi$处取最大值$6$，即$\bm R^\star=-\bm I$。最小残差为$10+10-2\cdot6=8$。一个不允许反射的模型无法解释镜像数据，残差如实反映了这一点。
+\end{example}
+
+\subsubsection{退化配置}
+\label{sec:smap-degenerate}
+
+刚体估计总能算出一个$\bm R^\star$，但它未必是唯一的。先看三维中的两种极端配置。
+
+若全部源点重合，中心化后$\bm x_i'=\bm0$，$\bm M=\bm0$，每个旋转都使迹为零，都是最优解；平移$\bm t^\star=\overline{\bm y}-\bm R\overline{\bm x}$随所选的$\bm R$而变。数据只确定了那一个点被送到哪里，绕它的任何转动都无法辨认。
+
+若源点共线，写$\bm x_i'=a_i\bm u$，$\bm u$为单位向量，则$\bm M=\bm w\bm u^\top$，$\bm w=\sum_ia_i\bm y_i'$，秩至多为$1$。这时$\operatorname{tr}(\bm R^\top\bm M)=(\bm R\bm u)^\top\bm w$只依赖$\bm R\bm u$；$\bm w\neq\bm0$时，最优解是全部满足$\bm R\bm u=\bm w/\lVert\bm w\rVert_2$的旋转，它们还可以绕$\bm w$方向任意转动，构成一个单参数族。几何上这很直观：绕点所在直线的转动不移动任何一个点。
+
+\begin{theorem}[旋转估计的唯一性]
+\label{thm:smap-rotation-uniqueness}
+设$\bm M=\bm U\bm\Sigma\bm V^\top$，$\sigma_1\geq\cdots\geq\sigma_d\geq0$，$s=\det(\bm U\bm V^\top)$。
+\begin{enumerate}
+ \item 若$\operatorname{rank}\bm M\leq d-2$，则$\mathrm{SO}(d)$中的最优旋转不唯一。
+ \item 若$\bm M$可逆且$s=1$，则最优旋转唯一，为$\bm U\bm V^\top$。
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+(1) 此时$\sigma_{d-1}=\sigma_d=0$，$\bm\Sigma$的最后两行为零。设$\bm R^\star$最优，对任意$\bm Z_0\in\mathrm{SO}(2)$，令$\bm Z=\bm U\operatorname{diag}(\bm I_{d-2},\bm Z_0)\bm U^\top\in\mathrm{SO}(d)$。由于$\operatorname{diag}(\bm I_{d-2},\bm Z_0^\top)\bm\Sigma=\bm\Sigma$，
+\[
+ \operatorname{tr}\bigl((\bm Z\bm R^\star)^\top\bm M\bigr)=\operatorname{tr}\bigl(\bm R^{\star\top}\bm U\operatorname{diag}(\bm I_{d-2},\bm Z_0^\top)\bm\Sigma\bm V^\top\bigr)=\operatorname{tr}(\bm R^{\star\top}\bm M),
+\]
+所以$\bm Z\bm R^\star$也最优；$\bm Z_0\neq\bm I$时$\bm Z\neq\bm I$，这给出无穷多个不同的最优解。
+
+(2) 对任一旋转$\bm R$，令$\bm Z=\bm U^\top\bm R\bm V$，它正交，于是$\operatorname{tr}(\bm R^\top\bm M)=\operatorname{tr}(\bm Z^\top\bm\Sigma)=\sum_i\sigma_iz_{i,i}\leq\sum_i\sigma_i$，因为单位列向量的分量$|z_{i,i}|\leq1$。全部$\sigma_i>0$，等号要求每个$z_{i,i}=1$，单位列向量$\bm Z_{:,i}$只能是$\bm e_i$，所以$\bm Z=\bm I$，$\bm R=\bm U\bm V^\top$；$s=1$保证它是旋转。
+\end{proof}
+
+定理没有覆盖的情形也有明确的答案：一般地，最优旋转唯一当且仅当$\operatorname{rank}\bm M\geq d-1$，并且在$s=-1$时还要求$\sigma_{d-1}>\sigma_d$。这里不给出证明。对精确的刚体数据，$\bm y_i'=\bm R\bm x_i'$，$\bm M=\bm R\sum_i\bm x_i'\bm x_i'^\top$，秩等于中心化源点张成的维数，并且$s=1$。所以在三维中，三个不共线的点已足以唯一确定旋转，共面并不构成退化。
+
+\paragraph{数据退化、残差与参数冗余}
+
+三种现象需要分开。数据退化是指$\bm M$的秩不足，最优解成族，这由点的几何配置决定，与噪声无关。含噪残差是最优值本身不为零，它度量模型与数据的不符，与解是否唯一无关。坐标表示冗余是指同一个旋转有多种参数，例如单位四元数$\bm q$与$-\bm q$表示同一个旋转，变换唯一而参数不唯一。
+
+较小的拟合残差不能解释为变换已被唯一确定。共线的精确数据对整整一族旋转都给出零残差。接近退化时，例如三维中几乎共线的点，$\sigma_{d-1}$很小，最优旋转虽然唯一，却会随数据的微小扰动绕点所在直线大幅转动，这与第~\ref{sec:smap-reconstruction-stability}节中谱隙的作用是同一回事。
+
+\subsection{仿射映射估计}
+\label{sec:smap-affine}
+
+刚体模型只允许转动和平移。若两套坐标之间还有伸缩或剪切，例如两种测绘坐标系的单位不同、坐标轴不垂直，就需要更大的模型族。把对应关系写为
+\[
+ \bm y_i\approx\bm A\bm x_i+\bm b,\qquad\bm A\in\mathbb R^{m\times d},\ \bm b\in\mathbb R^m .
+\]
+$\bm A$没有任何约束，可以伸缩、剪切，也可以降维，例如$m=2<d=3$时的平行投影。只有当$m=d$且明确要求两套坐标之间可逆换算时，才另加$\bm A$可逆的条件。
+
+\subsubsection{增广坐标求解}
+\label{sec:smap-augmented}
+
+仿射映射关于$(\bm A,\bm b)$是线性的，只差一个常数项。在每个源点坐标后补上常数$1$，记$\widetilde{\bm x}_i=(\bm x_i^\top,1)^\top\in\mathbb R^{d+1}$，称为\term{增广坐标}（augmented coordinates），再把参数合并为$\bm W=[\bm A\ \bm b]\in\mathbb R^{m\times(d+1)}$，就有$\bm A\bm x_i+\bm b=\bm W\widetilde{\bm x}_i$。
+
+把$\widetilde{\bm x}_i^\top$按行排成设计矩阵$\widetilde{\bm X}\in\mathbb R^{n\times(d+1)}$，$\bm y_i^\top$按行排成$\bm Y\in\mathbb R^{n\times m}$。欧氏输出残差为
+\[
+ \sum_{i=1}^n\lVert\bm y_i-\bm W\widetilde{\bm x}_i\rVert_2^2=\lVert\bm Y-\widetilde{\bm X}\bm W^\top\rVert_{\mathrm F}^2=\sum_{k=1}^m\lVert\bm Y_{:,k}-\widetilde{\bm X}\bm w_k\rVert_2^2 ,
+\]
+其中$\bm w_k^\top$是$\bm W$的第$k$行。目标分解为$m$个共用同一设计矩阵的普通最小二乘问题，每个目标坐标单独求解，最小二乘解满足正规方程$\widetilde{\bm X}^\top\widetilde{\bm X}\bm W^\top=\widetilde{\bm X}^\top\bm Y$。最小二乘解的构造、正规方程与解的核对可参考\BookChapterRef{chap:linear-solution-selection}{卷二第9章“线性方程与最小二乘的选解”}。
+
+\paragraph{精确可解与含噪拟合}
+
+精确可解要求$\bm Y$的每一列都落在$\widetilde{\bm X}$的列空间中。平面上取三个不共线的点，$\widetilde{\bm X}$是可逆的$3\times3$矩阵，任意给定的三个目标点都能被唯一的仿射映射精确满足。点数多于参数所需的最少数量时，任意给定的目标坐标一般不再能被同一个仿射映射精确满足，因为仿射映射保持点之间的仿射关系。
+
+\begin{example}[正方形四顶点的仿射拟合]
+\label{ex:smap-affine-square}
+取源点$(0,0)$、$(1,0)$、$(0,1)$、$(1,1)$，它们满足$\bm x_1+\bm x_4=\bm x_2+\bm x_3$。任何仿射映射都保持这一关系，要求$\bm y_1+\bm y_4=\bm y_2+\bm y_3$。取目标点$(0,0)$、$(1,0)$、$(0,1)$、$(2,2)$，左右相差$(1,1)$，所以不可精确满足。
+
+记$\bm c=(1,-1,-1,1)^\top$，它与$\widetilde{\bm X}$的三列都正交，而$\widetilde{\bm X}$的列空间是三维的，所以$\bm c$张成列空间的正交补。最小二乘残差是$\bm Y$在$\bm c$上的投影，$\bm c^\top\bm Y=(1,1)$，残差矩阵为$\frac14\bm c\,(1,1)$，每个点的残差为$\pm(1/4,1/4)$，残差平方和为$1/2$。
+
+拟合值为$(-1/4,-1/4)$、$(5/4,1/4)$、$(1/4,5/4)$、$(7/4,7/4)$，由此读出$\bm b=(-1/4,-1/4)^\top$，$\bm A$的两列分别为$(3/2,1/2)^\top$与$(1/2,3/2)^\top$。代回检查$\bm b+\bm A(1,1)^\top=(7/4,7/4)^\top$，与第四个拟合值一致。不相容的量被平均地摊给四个点，而不是全部归到第四个点上。
+\end{example}
+
+\subsubsection{唯一性与可逆性}
+\label{sec:smap-affine-uniqueness}
+
+最小二乘参数唯一，当且仅当设计矩阵$\widetilde{\bm X}$满列秩。下面的定理把这个代数条件翻译成源点的几何配置。
+
+\begin{theorem}[增广设计矩阵的满列秩]
+\label{thm:smap-affine-span}
+$\widetilde{\bm X}$满列秩，当且仅当差向量$\bm x_2-\bm x_1,\ldots,\bm x_n-\bm x_1$张成$\mathbb R^d$，即源点仿射张成整个定义域。
+\end{theorem}
+\begin{proof}
+$\widetilde{\bm X}(\bm a;\beta)=\bm0$的意思是$\bm a^\top\bm x_i+\beta=0$对所有$i$成立，相减得$\bm a^\top(\bm x_i-\bm x_1)=0$。若差向量张成$\mathbb R^d$，则$\bm a=\bm0$，进而$\beta=0$，核为零。反之，若差向量不张成$\mathbb R^d$，取与它们都正交的非零$\bm a$，令$\beta=-\bm a^\top\bm x_1$，就得到核中的非零向量。
+\end{proof}
+
+于是平面上至少需要三个不共线的点，空间中至少需要四个不共面的点。条件满足时参数唯一，但未必稳定：$\widetilde{\bm X}$的最小奇异值很小时，数据的微小误差会被大幅放大。例如取源点$(0,0)$、$(1,0)$、$(0,\varepsilon)$，精确拟合给出$\bm A$的第二列$(\bm y_3-\bm y_1)/\varepsilon$，第三个目标点的误差$\eta$使这一列改变$\eta/\varepsilon$。源点几乎共线时，垂直于那条直线方向上的伸缩几乎无法测定。
+
+\paragraph{映射的可逆性另需核验}
+
+即使参数唯一，所得的映射也未必可逆。取源点$(0,0)$、$(1,0)$、$(0,1)$，目标点$(0,0)$、$(1,0)$、$(2,0)$，精确解为$\bm b=\bm0$、$\bm A=\left[\begin{smallmatrix}1&2\\0&0\end{smallmatrix}\right]$，它由数据唯一确定，却把整个平面压到横轴上，$\det\bm A=0$。
+
+所以“观测足以确定映射”与“所确定的映射保留维数”是两个问题。前者看源点的配置，即$\widetilde{\bm X}$的秩与条件数；后者看估计出的$\bm A$本身，例如它的行列式或最小奇异值。应用要求同维可逆换算时，必须在估计之后单独核验$\bm A$，必要时报告它接近奇异的程度。
+
+\subsection{射影变换估计}
+\label{sec:smap-projective}
+
+从两个不同位置拍摄同一张平面海报，两张照片中对应点之间的关系既不是刚体的，也不是仿射的：海报上的平行线在照片中可能汇聚，等距的点在照片中可能疏密不均。这种关系由射影变换描述。改用第~\ref{chap:lie-groups}章的齐次坐标，平面点$(u,v)$记为$\widetilde{\bm x}=(u,v,1)^\top$，凡与它成非零倍数的向量都代表同一个射影点。
+
+射影变换由可逆矩阵$\bm H\in\mathbb R^{3\times3}$诱导，把射影点$[\widetilde{\bm x}]$送到$[\bm H\widetilde{\bm x}]$。$\bm H$与$c\bm H$（$c\neq0$）给出同一个变换，所以九个元素中只有八个自由度。这类变换只保持共线关系，不保持距离、比例和平行，刚体模型的正交约束无从谈起，必须另建约束。还要区分两种误差：齐次方程上的代数残差，以及还原成平面坐标后的重投影误差。
+
+\subsubsection{齐次约束与可辨识性}
+\label{sec:smap-homogeneous-constraints}
+
+对应点要求$\bm H\widetilde{\bm x}_i$与$\widetilde{\bm y}_i=(u_i',v_i',1)^\top$成比例。记$\bm H$的三行为$\bm h_1^\top,\bm h_2^\top,\bm h_3^\top$，比例关系等价于两个方程
+\begin{equation}
+ \bm h_1^\top\widetilde{\bm x}_i-u_i'\,\bm h_3^\top\widetilde{\bm x}_i=0,\qquad
+ \bm h_2^\top\widetilde{\bm x}_i-v_i'\,\bm h_3^\top\widetilde{\bm x}_i=0 .
+ \label{eq:smap-dlt-rows}
+\end{equation}
+确实，若$\bm h_3^\top\widetilde{\bm x}_i=c\neq0$，两式说明$\bm H\widetilde{\bm x}_i=c\,\widetilde{\bm y}_i$；若$c=0$，两式迫使$\bm H\widetilde{\bm x}_i=\bm0$，可逆的$\bm H$不会如此。
+
+式~\eqref{eq:smap-dlt-rows}关于$\bm h=(\bm h_1;\bm h_2;\bm h_3)\in\mathbb R^9$是线性齐次的。每对点给出两行，$n$对点叠成$\bm A\bm h=\bm0$，$\bm A\in\mathbb R^{2n\times9}$。这种由对应点直接建立线性方程的做法称为\term{直接线性变换}（direct linear transformation）。齐次方程总有零解，有意义的问题是：$\bm A$的核是否恰好是一维的，并且核中的方向是否对应可逆矩阵。四对点给出八个方程，是核为一维所需的最少数量。
+
+\begin{theorem}[四对点确定射影变换]
+\label{thm:smap-four-points}
+设平面上的源点$\bm x_1,\ldots,\bm x_4$中任意三点不共线，目标点$\bm y_1,\ldots,\bm y_4$中任意三点也不共线。则式~\eqref{eq:smap-dlt-rows}构成的$8\times9$矩阵$\bm A$的核是一维的，核中的非零向量对应可逆矩阵$\bm H$，并且$\bm H$是唯一（差一个非零倍数）把$[\widetilde{\bm x}_i]$送到$[\widetilde{\bm y}_i]$的射影变换。
+\end{theorem}
+\begin{proof}
+三点不共线等价于它们的齐次坐标线性无关，所以$\widetilde{\bm x}_1,\widetilde{\bm x}_2,\widetilde{\bm x}_3$构成$\mathbb R^3$的基。写$\widetilde{\bm x}_4=\sum_{j\leq3}\alpha_j\widetilde{\bm x}_j$，每个$\alpha_j\neq0$：例如$\alpha_3=0$意味着$\widetilde{\bm x}_4$在$\widetilde{\bm x}_1,\widetilde{\bm x}_2$的张成中，即$\bm x_1,\bm x_2,\bm x_4$共线。令$\bm P=[\alpha_1\widetilde{\bm x}_1,\alpha_2\widetilde{\bm x}_2,\alpha_3\widetilde{\bm x}_3]$，它可逆，把$\bm e_j$送到$\alpha_j\widetilde{\bm x}_j$，把$(1,1,1)^\top$送到$\widetilde{\bm x}_4$。对目标点同样构造$\bm Q$，系数记为$\beta_j$。
+
+设$\bm h$在$\bm A$的核中，对应矩阵$\bm H$。由式~\eqref{eq:smap-dlt-rows}后的说明，$\bm H\widetilde{\bm x}_i=\mu_i\widetilde{\bm y}_i$，$\mu_i$可以为零。令$\bm K=\bm Q^{-1}\bm H\bm P$，则$\bm K\bm e_j=\alpha_j\mu_j\bm Q^{-1}\widetilde{\bm y}_j=(\alpha_j\mu_j/\beta_j)\bm e_j$，所以$\bm K$是对角矩阵；又$\bm K(1,1,1)^\top=\mu_4\bm Q^{-1}\widetilde{\bm y}_4=\mu_4(1,1,1)^\top$，三个对角元都等于$\mu_4$。于是$\bm H=\mu_4\bm Q\bm P^{-1}$，核由$\bm Q\bm P^{-1}$张成，是一维的，非零元对应的矩阵可逆。任何满足对应的射影变换的矩阵都在核中，唯一性随之成立。
+\end{proof}
+
+\begin{example}[正方形到一般四边形]
+\label{ex:smap-homography-square}
+把单位正方形的顶点$(0,0)$、$(1,0)$、$(0,1)$、$(1,1)$送到$(0,0)$、$(1,0)$、$(0,1)$、$(2,2)$，两组点中都没有三点共线。可以验证
+\[
+ \bm H=\begin{bmatrix}2&0&0\\0&2&0\\-1&-1&3\end{bmatrix}
+\]
+满足要求：它把$(1,0,1)^\top$送到$(2,0,2)^\top$，即$(1,0)$；把$(1,1,1)^\top$送到$(2,2,1)^\top$，即$(2,2)$；另两点同样可查。$\det\bm H=12\neq0$。由定理~\ref{thm:smap-four-points}，它在差一个倍数的意义下是唯一解。上一小节的仿射模型无法拟合这组数据，射影模型却能精确满足。
+\end{example}
+
+\paragraph{退化配置与不合法的解}
+
+点的配置违反定理条件时，核仍然非零，却可能不含合法的射影变换。设源点$\bm x_1,\bm x_2,\bm x_3$共线，目标点中却没有三点共线。可逆的$\bm H$把共线点送到共线点，所以不存在可逆解；但八个方程、九个未知量的齐次方程总有非零解，这些解对应的$\bm H$都是奇异的，会把某些点送到零向量，或把平面压到一条直线上。
+
+所以求得齐次解以后，必须核验$\bm H$是否可逆，不能把任意非零齐次解都当作合法的射影变换。点数多于四对时，也要检查是否大多数点落在同一条直线附近，这时虽然方程很多，独立的约束却不够。
+
+\subsubsection{归一化代数求解}
+\label{sec:smap-normalized-dlt}
+
+点数多于四对且含噪时，$\bm A\bm h=\bm0$一般只有零解，需要改为拟合。直接最小化$\lVert\bm A\bm h\rVert_2$总得到$\bm h=\bm0$，必须先固定尺度。固定$h_{3,3}=1$会排除真实变换恰好有$h_{3,3}=0$的情形，即源点原点被送到无穷远；固定$\lVert\bm h\rVert_2=1$则对各分量一视同仁。
+
+后一种选择就是齐次最小二乘：在单位向量中最小化$\lVert\bm A\bm h\rVert_2^2$，最优解是$\bm A^\top\bm A$最小特征值的特征方向，也就是$\bm A$的最小奇异值对应的右奇异向量；最小特征值为单重时，解只差一个符号。这一结论在前面引用的卷二线性方程一章中已经证明。
+
+\paragraph{坐标归一化}
+
+直接用原始坐标建立$\bm A$，数值上往往很差。设像素坐标的量级为$10^3$，则$\bm A$的一行中既有常数$1$，又有$u'u$这样量级为$10^6$的项，各列尺度相差悬殊，最小奇异值方向对误差极为敏感。因此先对两组点分别作相似变换$\bm T$与$\bm T'$：平移使质心到原点，再伸缩使各点到原点的平均距离为$\sqrt2$。
+
+完整的步骤是：计算$\widehat{\bm x}_i=\bm T\widetilde{\bm x}_i$、$\widehat{\bm y}_i=\bm T'\widetilde{\bm y}_i$；用它们建立$\widehat{\bm A}$并求单位范数的齐次最小二乘解$\widehat{\bm H}$；还原$\bm H=\bm T'^{-1}\widehat{\bm H}\bm T$；最后检查$\bm H$是否可逆，例如比较它的最小奇异值与最大奇异值。
+
+\paragraph{归一化改变了代数目标}
+
+归一化不只是数值技巧，它改变了所求的问题。精确数据下二者给出同一个变换：若$\bm H\widetilde{\bm x}_i\propto\widetilde{\bm y}_i$，则$(\bm T'\bm H\bm T^{-1})\widehat{\bm x}_i\propto\widehat{\bm y}_i$，核与坐标系的选择无关。含噪数据下，$\lVert\widehat{\bm A}\widehat{\bm h}\rVert_2$一般不是$\lVert\bm A\bm h\rVert_2$的常数倍，两个目标的最优解也就不同。
+
+代数残差的大小依赖于坐标的表示方式，而不是一个几何上固定的量。归一化选择了一种数值条件较好、对平移和伸缩不敏感的表示，但“代数最优”始终是相对于这一表示而言的。要得到不依赖表示的评价，需要下一小节的几何误差。
+
+\subsubsection{重投影误差}
+\label{sec:smap-reprojection}
+
+射影点要还原成平面坐标，需要选定仿射图：把$\bm z=(z_1,z_2,z_3)^\top$送到$\pi(\bm z)=(z_1/z_3,z_2/z_3)$，只在$z_3\neq0$时有定义。源点$\bm x_i$的映射点为$\widehat{\bm y}_i=\pi(\bm H\widetilde{\bm x}_i)$，先要核验分母$c_i=\bm h_3^\top\widetilde{\bm x}_i\neq0$。在例~\ref{ex:smap-homography-square}中，$c=-u-v+3$，直线$u+v=3$上的点被送到无穷远，例如$(3/2,3/2)$没有平面上的像。
+
+分母非零时，定义\term{重投影误差}（reprojection error）
+\[
+ E(\bm H)=\sum_{i=1}^n\lVert\bm y_i-\pi(\bm H\widetilde{\bm x}_i)\rVert_2^2 ,
+\]
+它是目标平面上的欧氏距离之和，与$\bm H$乘以非零常数无关，也与齐次坐标的书写方式无关。
+
+\paragraph{代数残差与几何误差的关系}
+
+两种误差之间有精确的关系。式~\eqref{eq:smap-dlt-rows}第一式的左端为$\bm h_1^\top\widetilde{\bm x}_i-u_i'c_i=c_i\bigl(\pi_1(\bm H\widetilde{\bm x}_i)-u_i'\bigr)$，第二式同理，所以第$i$对点的两行代数残差恰为$c_i(\widehat{\bm y}_i-\bm y_i)$，从而
+\[
+ \lVert\bm A\bm h\rVert_2^2=\sum_{i=1}^nc_i^2\,\lVert\widehat{\bm y}_i-\bm y_i\rVert_2^2 .
+\]
+\term{代数残差}（algebraic residual）是以$c_i^2$加权的重投影误差。权重随点和$\bm H$而变：接近被送到无穷远的点，$c_i$小，几何误差再大，在代数目标中也几乎不被计较。
+
+所以代数最优解一般不使重投影误差最小，二者只在精确数据下同时为零。实际的做法是先用归一化的直接线性变换得到初值，再以重投影误差为目标迭代改进；这是一个非线性最小二乘问题，其方法与收敛分析可参考\BookChapterRef{chap:smooth-optimization}{卷五第3章“光滑优化”}。两组点都含噪时，还可以同时考虑正向与反向的重投影误差，选择哪种几何误差取决于噪声出现在哪一端。

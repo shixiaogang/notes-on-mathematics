@@ -1,0 +1,84 @@
+\section{从离散观测恢复函数}
+\label{sec:rkhs-recovery}
+
+设在位置$x_1,\ldots,x_n$处读到数值$y_1,\ldots,y_n$，我们想找一个函数$f$，使$f(x_i)$与$y_i$相符。先看一个最小的例子：在$[0,1]$上取$x=0,\tfrac12,1$，读数为$y=(0,1,0)$。抛物线$q(x)=4x(1-x)$与正弦曲线$s(x)=\sin(\pi x)$都恰好通过这三个点，把$q$加上任意倍数的$x(x-\tfrac12)(x-1)$也是如此。
+
+这些函数在测点上完全一致，在测点之间却各不相同。例如在$x=\tfrac14$处，$q(\tfrac14)=0.75$，$s(\tfrac14)=\tfrac{\sqrt2}{2}\approx0.707$，而$x(x-\tfrac12)(x-1)$在该点等于$\tfrac{3}{64}$，乘上不同的系数可以得到任意的取值。所以有限个点值通常不能唯一确定整条函数，必须先说明在哪一类函数中寻找。
+
+即使限定了候选函数的范围，仍有三个不同的问题。第一是\emph{精确插值}：是否存在候选函数在每个测点上都等于读数，若存在，怎样在众多可行函数中选出一个。第二是\emph{带残差的拟合}：读数含有误差时，强求精确通过反而会把误差写进函数，这时允许$f(x_i)$与$y_i$有偏差，再权衡偏差与函数本身的复杂程度。第三是\emph{域外误差}：所选函数与真实函数在测点之外相差多少，这已经不是读数本身能回答的问题。
+
+本章主要处理第一个问题及第三个问题中只依赖空间结构的部分。第二个问题需要选择损失与正则项，归卷五的函数拟合。当测点由随机抽样产生时，域外误差还涉及样本量与置信水平，即统计意义上的泛化保证，可参考\BookChapterRef{chap:finite-sample-error-bounds}{卷八第4章“有限样本的误差上界”}；本章不讨论随机性。
+
+\subsection{有限特征空间}
+\label{sec:rkhs-finite-feature-space}
+
+最直接的做法是预先固定有限个函数$\phi_1,\ldots,\phi_d$，只在它们的线性组合中寻找候选函数：
+\[
+f_{\bm\theta}(x)=\sum_{k=1}^d\theta_k\phi_k(x),\qquad \bm\theta\in\mathbb R^d .
+\]
+这些$\phi_k$称为特征或基函数。这样，寻找函数就变成寻找有限个系数，观测条件也随之变成线性方程。
+
+把第$i$个测点处各特征的取值排成一行，得到$n\times d$的\term{设计矩阵}（design matrix）$\bm A$，其元素为$\bm A_{i,k}=\phi_k(x_i)$。于是$f_{\bm\theta}$在全部测点上的取值向量就是$\bm A\bm\theta$，精确插值的条件是
+\begin{equation}
+\bm A\bm\theta=\bm y .
+\label{eq:rkhs-design-equation}
+\end{equation}
+这是卷二讨论过的线性方程：方程相容当且仅当$\bm y$属于$\bm A$的列空间；相容时，解唯一当且仅当$\bm A$的列线性无关，即$\operatorname{rank}\bm A=d$；不相容时，可以改求使$\lVert\bm A\bm\theta-\bm y\rVert_2$最小的最小二乘解，解不唯一时再从中选出欧氏长度最小的一个。这些判据与选解方法可参考\BookChapterRef{chap:linear-solution-selection}{卷二第9章“线性方程与最小二乘的选解”}。
+
+\begin{example}[多项式特征下的三种情形]
+\label{ex:rkhs-polynomial-features}
+仍取测点$0,\tfrac12,1$与读数$\bm y=(0,1,0)^{\top}$，依次增加多项式特征的个数。
+\begin{enumerate}
+\item 取$\phi_1=1,\phi_2=x$。设计矩阵的三行是$(1,0)$、$(1,\tfrac12)$、$(1,1)$，秩为$2$。三个点不共线，$\bm y$不在列空间中，方程无解；最小二乘给出常数$\tfrac13$，残差不为零。
+\item 再加入$\phi_3=x^2$。设计矩阵是$3\times3$的Vandermonde矩阵，测点互异，矩阵可逆，唯一解对应$q(x)=4x-4x^2$。
+\item 再加入$\phi_4=x^3$。矩阵为$3\times4$，秩仍为$3$，零空间是一维的。$x(x-\tfrac12)(x-1)=x^3-\tfrac32x^2+\tfrac12x$在三个测点上为零，所以$q+t\,x(x-\tfrac12)(x-1)$对任意实数$t$都是精确插值。
+\end{enumerate}
+\end{example}
+
+这个例子说明，表示维数改变的不只是方程的形状，还有候选函数本身。维数太低时数据可能无法实现；维数恰好时插值唯一；维数再增加，测点就不足以区分全部候选函数。可见“解是否存在、是否唯一”是候选空间与测点共同决定的性质，不是读数单独决定的。
+
+更重要的是，观测残差为零并不保证整个定义域上的误差为零。若真实函数是$s(x)=\sin(\pi x)$，第2种情形得到的$q$在三个测点上与$s$完全一致，在$x=\tfrac14$处却相差约$0.043$。在第3种情形中，误差还会随$t$的选择任意变化。要谈论测点之外的误差，必须对候选函数加上读数之外的约束。
+
+\subsection{点值观测的稳定性}
+\label{sec:rkhs-point-stability}
+
+有限特征空间的做法依赖于事先选好的维数。另一种思路是让候选函数在一个无限维Hilbert空间$H$中变化，再用范数$\lVert f\rVert_H$衡量函数的大小，从可行函数中选范数最小者。这样做之前，需要先检查点值读数与这个范数是否相容。
+
+我们希望的是：两个候选函数在范数下接近时，它们在每个测点上的读数也接近。写成不等式，就是对每个$x$存在常数$C_x$，使
+\begin{equation}
+\lvert f(x)-g(x)\rvert\leq C_x\lVert f-g\rVert_H\qquad(f,g\in H).
+\label{eq:rkhs-stability-requirement}
+\end{equation}
+若这一点不成立，范数很小的函数仍可能在测点上有很大的读数，“选范数最小的可行函数”就失去了控制读数的意义。
+
+\paragraph{$L^2$空间中点值的两个缺陷}
+
+$L^2(0,1)$是最熟悉的函数Hilbert空间，但它不满足这个要求，而且失败的方式有两种。第一，$L^2$的元素是几乎处处相等的函数类。零函数与只在$x=\tfrac12$处取$1$的函数属于同一个元素，却给出不同的点值，所以“取$\tfrac12$处的值”在$L^2$上根本没有确定意义。
+
+第二，即使只看连续函数，点值也不受$L^2$范数控制。尖峰函数$f_k(t)=\max(1-kt,0)$满足$f_k(0)=1$，而
+\[
+\lVert f_k\rVert_{L^2}^2=\int_0^{1/k}(1-kt)^2\,\mathrm dt=\frac{1}{3k},
+\]
+比值$f_k(0)/\lVert f_k\rVert_{L^2}=\sqrt{3k}$随$k$无界。也就是说，在$L^2$范数下任意小的扰动，可以把原点的读数改变$1$。
+
+\paragraph{Sobolev空间中的点值}
+
+把导数也计入范数，情况就不同了。第~\ref{chap:sobolev-spaces}章说明，一维Sobolev空间$H^1(0,1)$中的每个元素都有唯一的绝对连续代表，其几乎处处导数就是弱导数$f'\in L^2(0,1)$。以下总取这个代表，于是$f(x)$有确定的值，第一个缺陷消失。
+
+对第二个缺陷，取任意$x,y\in[0,1]$，由绝对连续性有$f(x)=f(y)+\int_y^xf'(t)\,\mathrm dt$。对$y$在$[0,1]$上积分，得到
+\[
+f(x)=\int_0^1f(y)\,\mathrm dy+\int_0^1\!\!\int_y^xf'(t)\,\mathrm dt\,\mathrm dy ,
+\]
+第二项的绝对值不超过$\int_0^1\lvert f'\rvert$。再用Cauchy--Schwarz不等式把两个$L^1$范数换成$L^2$范数，得
+\begin{equation}
+\lvert f(x)\rvert\leq\lVert f\rVert_{L^2}+\lVert f'\rVert_{L^2}\leq\sqrt2\,\lVert f\rVert_{H^1},\qquad
+\lVert f\rVert_{H^1}^2=\lVert f\rVert_{L^2}^2+\lVert f'\rVert_{L^2}^2 .
+\label{eq:rkhs-h1-point-bound}
+\end{equation}
+这正是要求~\eqref{eq:rkhs-stability-requirement}，而且常数$\sqrt2$对所有$x$通用。尖峰$f_k$在这里不再是反例：它的导数在$[0,1/k]$上等于$-k$，$\lVert f_k'\rVert_{L^2}^2=k$，$H^1$范数随$k$增大。
+
+\paragraph{候选空间与真实函数}
+
+所以候选空间必须同时满足两项要求：元素是在每一点都有确定取值的函数，并且每个点的读取都受范数控制。前者由空间的选取保证，后者取决于空间所带的范数；$L^2$两项都不满足，$H^1(0,1)$两项都满足。
+
+需要注意的是，这两项要求只针对候选函数，并不断言真实函数属于该空间。若真实的量在$x=\tfrac12$处有跳跃，它就不属于$H^1(0,1)$，在$H^1$中寻找插值函数仍然可行，但得到的只是一个连续的替代品，跳跃附近的误差不会因为读数增多而自动消失。候选空间是否贴合真实函数，要结合问题本身判断，不由点值的稳定性推出。下一节把满足这两项要求的空间抽象出来。

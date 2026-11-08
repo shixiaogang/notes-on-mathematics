@@ -1,0 +1,111 @@
+\section{采样模型}
+\label{sec:mrec-sampling}
+
+要讨论“由样本恢复流形”，先要说清样本与流形是什么关系，以及用什么尺度衡量“足够密”“足够近”“足够平”。本章始终固定一个紧致、无边界的光滑嵌入子流形$M\subseteq\mathbb R^D$，维数为$m$，它可以有有限个连通分支。先讨论样本恰好落在$M$上的情形，再单独加入离开流形的扰动。
+
+这里有三种不同的距离。环境距离$\lVert\bm x-\bm y\rVert_2$是$\mathbb R^D$中的直线距离，任意两点都可以计算。内在距离$d_M(\bm p,\bm q)$是第~\ref{chap:riemannian-geometry}章在嵌入诱导度量下定义的距离，只对$M$上的点有意义，并且只在同一连通分支内有限，不同分支之间约定为$+\infty$。样本间距则描述样本彼此相隔多远，是样本自身的属性。
+
+本节引入的覆盖精度和可达半径都是对$M$与样本关系的假设，用来陈述“在什么条件下恢复成立”。它们不是从有限样本中准确读出的量：只看样本，无法知道流形在两个样本之间是否藏着一个小褶皱。
+
+\subsection{样本覆盖}
+\label{sec:mrec-coverage}
+
+样本是否足以代表流形，首先要看流形上有没有远离所有样本的地方。设$P=\{\bm p_1,\ldots,\bm p_n\}\subseteq M$是有限样本。
+
+\begin{definition}[稠密样本]
+\label{def:mrec-dense-sample}
+设$\delta>0$。若对每个$\bm x\in M$都存在$\bm p\in P$使$\lVert\bm x-\bm p\rVert_2<\delta$，则称$P$是$M$的$\delta$\term{稠密样本}（dense sample）。
+\end{definition}
+
+函数$\bm x\mapsto\min_{\bm p\in P}\lVert\bm x-\bm p\rVert_2$在紧集$M$上连续，所以有最大值，记为$\delta_P$，称为$P$的覆盖精度。$P$是$\delta$稠密样本当且仅当$\delta_P<\delta$。由于$P\subseteq M$，$\delta_P$就是$P$与$M$之间的Hausdorff距离。定义用的是环境距离而不是内在距离；对同一对点，环境距离不超过内在距离，所以内在意义下稠密蕴含环境意义下稠密。
+
+\paragraph{局部邻域}
+
+后面的局部计算都在某个观测位置附近进行。对选定的中心$\bm c\in\mathbb R^D$和半径$r>0$，记邻域样本为$N_r(\bm c)=\{\bm p\in P:\lVert\bm p-\bm c\rVert_2\leq r\}$。中心可以是一个样本，也可以是需要估计的任意位置。邻域的选取有半径和点数两种方式，本章采用固定半径，因为它对应一个明确的几何尺度；按点数选取时，各处的半径随采样疏密而变。
+
+\paragraph{全域稠密与方向分布}
+
+全域覆盖精度只说明流形上每一点附近都有样本，并不说明在某个邻域内，样本沿流形的各个方向都铺开了。设$M$的某块区域是平的，用局部坐标$(u,v)$表示，例如平环面上的一块。在这块区域上只沿水平线$v=k/N$（$k$为整数）、以间距$1/N$取样，每一点到最近样本的坐标距离不超过$\sqrt2/(2N)$，样本是稠密的。
+
+但半径$r<1/(2N)$、以某个样本为中心的邻域内，所有样本都在同一条水平线上。在这个邻域里，样本只沿$u$方向展开，完全不提供$v$方向的信息，后面的局部线性拟合会得到秩不足的矩阵。所以全域稠密不能单独保证局部拟合的秩和条件数；邻域内的方向分布要另作要求，第~\ref{sec:mrec-tangent-error}节会把它写成局部矩阵的特征值条件。
+
+\subsection{观测扰动}
+\label{sec:mrec-noise}
+
+实际观测很少恰好落在流形上。把第$i$个观测写成
+\[
+ \bm x_i=\bm p_i+\bm e_i,\qquad\bm p_i\in M,\ \lVert\bm e_i\rVert_2\leq\sigma ,
+\]
+其中$\bm p_i$是看不到的真实采样位置，$\bm e_i$是环境空间中的有界扰动，方向任意。这一模型把两种误差分开记录：真实采样点$\{\bm p_i\}$的覆盖精度$\delta_P$描述流形上有没有空缺，扰动界$\sigma$描述观测离开流形多远。由三角不等式，每个观测到$M$的距离不超过$\sigma$，$M$上每一点到最近观测的距离小于$\delta_P+\sigma$。
+
+扰动改变了能够谈论的对象。$\bm x_i\notin M$时，$\bm x_i$处的切空间没有定义，$d_M(\bm x_i,\bm x_j)$也没有定义；能估计的只是附近真实位置处的量。所以无噪声情形的结论不能直接搬过来，每个结论都要重新说明误差$\sigma$进入哪里。
+
+不同的任务对$\sigma$的要求也不同。邻域选择只受环境距离影响，每个距离至多变化$2\sigma$；局部拟合要求$\sigma$相对邻域半径小，才能把法向噪声与沿流形的展开区分开；拓扑恢复则要求$\sigma$相对可达半径小，否则噪声可能填掉细小的孔洞。后面各节分别处理。
+
+本章把扰动看成确定的有界量，只问“给定这些界，结论是否成立”。若样本按某个分布随机抽取、噪声是随机变量，则覆盖精度与扰动界都变成随机量，需要估计它们以多大概率不超过给定值；这类有限样本的置信保证可参考\BookChapterRef{chap:finite-sample-error-bounds}{卷八第4章“有限样本的误差上界”}。
+
+\subsection{可达半径}
+\label{sec:mrec-reach}
+
+覆盖精度只说明样本多密，还需要一个描述流形自身形状的尺度：样本要密到什么程度，才算“相对于流形足够密”？直观上，流形弯得越厉害，或者它的不同部分靠得越近，所需的样本就越密。这两种情况可以用同一个量来刻画。
+
+对$\bm x\in\mathbb R^D$，记$\operatorname{dist}(\bm x,M)=\min_{\bm p\in M}\lVert\bm x-\bm p\rVert_2$，由$M$紧致，最小值可以取到，取到最小值的点称为$\bm x$在$M$上的最近点。$M$上的点的最近点就是它自己；离开$M$以后，最近点可能不唯一，例如平面上单位圆的圆心到圆上每一点的距离都是$1$。
+
+\begin{definition}[可达半径]
+\label{def:mrec-reach}
+$M$的\term{可达半径}（reach）定义为
+\begin{equation*}
+\begin{aligned}
+ \tau=\sup\{r\geq0:{}&\text{每个满足}\operatorname{dist}(\bm x,M)<r\text{的}\bm x\in\mathbb R^D\\
+ &\text{在}M\text{上都有唯一最近点}\}.
+\end{aligned}
+\end{equation*}
+\end{definition}
+
+在$\operatorname{dist}(\bm x,M)<\tau$的区域内，可以定义最近点投影$\pi(\bm x)$，即$\bm x$在$M$上唯一的最近点。可以证明这一投影是连续的，并且对紧致无边界的$C^2$嵌入子流形总有$\tau>0$；这是Federer的经典结果，这里不给出证明。半径为$R$的圆的可达半径为$R$：圆心以外的每一点都有唯一最近点，即沿径向的那一点，而圆心离圆的距离恰为$R$。
+
+\paragraph{限制可达半径的三种情形}
+
+可达半径同时受三种因素限制。第一种是局部弯曲。以平面曲线为例，从曲线上一点沿法向朝弯曲的一侧走，越过该点的曲率中心以后，曲线上邻近的点会比出发点更近，同时附近会出现最近点不唯一的位置，所以曲率为$\kappa$的点使$\tau\leq1/\kappa$；圆的情形正是$\tau=R=1/\kappa$。一般维数中，这一限制作用于$M$的测地线：每条测地线作为$\mathbb R^D$中的曲线，曲率都不超过$1/\tau$。注意平面本身含有曲率任意大的曲线，却不弯曲，可达半径为无穷，所以限制的是流形在环境中的弯曲，而不是流形上随意画的曲线。
+
+第二种是同一分支的不同部分相互接近。设一条闭曲线在某处折成发卡形，两股平行地相距$2b$，曲率并不大，但两股中间的点到两股的距离相等，最近点不唯一，所以$\tau\leq b$。第三种是不同分支相互接近，下面的引理说明，这时分支之间的距离直接控制可达半径。
+
+\begin{lemma}[不同分支的间隔]
+\label{lem:mrec-component-gap}
+$M$的任意两个不同连通分支之间的环境距离不小于$2\tau$。
+\end{lemma}
+\begin{proof}
+紧致流形只有有限个分支，每个分支紧致，所以在所有不同分支的点对中，环境距离的最小值$s$可以由某对$\bm p\in M_1$、$\bm q\in M_2$取到。设$s<2\tau$，取中点$\bm z$，则$\operatorname{dist}(\bm z,M)\leq s/2<\tau$，$\bm z$有唯一最近点$\bm w$。若$\lVert\bm z-\bm w\rVert_2=s/2$，则$\bm p,\bm q$都是最近点，与唯一性矛盾，所以$\lVert\bm z-\bm w\rVert_2<s/2$。
+
+于是$\lVert\bm p-\bm w\rVert_2\leq\lVert\bm p-\bm z\rVert_2+\lVert\bm z-\bm w\rVert_2<s$，同样$\lVert\bm q-\bm w\rVert_2<s$。$\bm w$所在的分支至少与$M_1$、$M_2$之一不同，这就找到了一对距离小于$s$的不同分支的点，与$s$的最小性矛盾。故$s\geq2\tau$。
+\end{proof}
+
+\paragraph{可达半径控制的局部几何}
+
+可达半径为局部几何和拓扑恢复提供同一个尺度。后面要用到它的两条局部推论，都是已知的结果，这里只陈述并在圆上核对。
+
+\begin{theorem}[可达半径的局部推论]
+\label{thm:mrec-reach-consequences}
+设$M$的可达半径为$\tau>0$，$\bm p,\bm q\in M$。
+\begin{enumerate}
+ \item $\bm q-\bm p$到切空间$T_{\bm p}M$的距离不超过$\lVert\bm q-\bm p\rVert_2^2/(2\tau)$。
+ \item 若$\lVert\bm p-\bm q\rVert_2<2\tau$，则$\bm p,\bm q$属于同一分支，并且$d_M(\bm p,\bm q)\leq2\tau\arcsin\bigl(\lVert\bm p-\bm q\rVert_2/(2\tau)\bigr)$。
+\end{enumerate}
+\end{theorem}
+
+第一条由Federer给出，第二条中关于同一分支的部分就是引理~\ref{lem:mrec-component-gap}，距离的估计是近年关于可达半径与度量畸变的研究结果，这里都不给出证明。在半径为$R$的圆上，取$\bm p$处的切线为水平方向，$\bm q$对应圆心角$\theta$，则$\bm q-\bm p$的法向分量为$R(1-\cos\theta)$，而$\lVert\bm q-\bm p\rVert_2^2=2R^2(1-\cos\theta)$，第一条取等号；弦长$s$对应的弧长为$2R\arcsin(s/(2R))$，第二条也取等号。所以两条估计在圆上是最好的。
+
+第一条说，在半径为$r$的邻域内，流形偏离切平面至多$r^2/(2\tau)$，相对偏离为$r/(2\tau)$。第二条说，环境距离小于$2\tau$的两点，沿流形的距离不会比直线距离长太多：$\lVert\bm p-\bm q\rVert_2\leq\tau$时，比值至多为$2\arcsin(1/2)=\pi/3\approx1.047$倍。
+
+\subsection{邻域尺度}
+\label{sec:mrec-neighborhood-scale}
+
+局部计算的成败几乎全在邻域半径$r$的选取。$r$过小时，邻域内的样本太少，甚至只有中心自己；即使样本不少，若$r$与扰动界$\sigma$同量级，邻域内样本的散布主要来自噪声，看不出流形的方向。至少需要$r$明显大于覆盖精度$\delta_P$和$\sigma$。
+
+$r$过大时出现另外两类问题。由定理~\ref{thm:mrec-reach-consequences}，流形在邻域内偏离切平面可达$r^2/(2\tau)$，$r$与$\tau$可比时这一偏离与邻域本身一样大，局部已不能看成平的。另外，$r$超过发卡两股的间隔时，邻域会同时包含两股的样本，它们在环境中靠近，沿流形却相距很远。由引理~\ref{lem:mrec-component-gap}与上一小节的讨论，$r<2\tau$可以排除这种混入，$r$远小于$\tau$才能使局部线性近似可靠。所以分析的范围大致是$\delta_P,\sigma\ll r\ll\tau$。
+
+\paragraph{嵌入弯曲决定局部线性误差}
+
+第~\ref{chap:riemannian-geometry}章区分了内在曲率与嵌入弯曲。半径为$\rho$的圆柱面内在地是平的，截面曲率处处为零，可以展开成平面而不改变任何长度；但它在$\mathbb R^3$中弯曲，可达半径为$\rho$。在圆柱面上取半径为$r$的邻域，切平面近似的法向误差确实是$r^2/(2\rho)$量级，并不因为内在曲率为零而消失。
+
+所以局部线性误差首先由环境中的嵌入形状决定，可达半径正好度量这一形状，而内在曲率是另一回事。反过来，即使嵌入弯曲很小，邻域内样本的方向覆盖仍需单独核验，第~\ref{sec:mrec-coverage}节的水平线采样就是例子。选定$r$以后，邻域应同时满足三条：足够小，使弯曲可以忽略；足够大，使样本数和散布压过噪声；样本在各个切向上都有展开。
