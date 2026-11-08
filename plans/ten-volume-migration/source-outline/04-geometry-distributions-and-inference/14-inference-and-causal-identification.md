@@ -50,7 +50,7 @@
 | 一般概率依赖结构怎样学习 | 提供一般估计、检验和模型比较基础 | 集中Chow–Liu树、高斯无向图、离散Markov网络及潜变量结构；因果解释须另核条件 |
 | 给定结构后能识别哪些机制 | 第十章区分局部条件核、结构函数与跨行动背景配对；统计估计工具回用第二章 | 集中图固定后的参数学习、隐变量计算与模型特定求解 |
 
-后续材料保留在原机器学习仓库的[概率图模型结构学习章](https://github.com/shixiaogang/notes-on-machine-learning/blob/ff88d50e0edf94a815bc6e16e76ded414f406dc2/tex/09-probabilistic-graphical-models/03-learning/02-structure-learning.tex)及其[正文大纲](https://github.com/shixiaogang/notes-on-machine-learning/blob/ff88d50e0edf94a815bc6e16e76ded414f406dc2/plans/09-probabilistic-graphical-models/03-learning.md)，链接固定于本次抽离的基线提交。其中已经包含因果发现，现正文仍有基础概念和方法的重叠。上述表格是目标分工：后续整理该卷时将共享定义、识别结论改为简述条件并回引；本轮仅更新第十四部分目标大纲，不改后续正文或其现状大纲。
+结构学习的具体算法不在本计划中展开。上述表格是目标分工：后续整理该卷时，共享定义与识别结论改为简述条件并回引；本轮仅更新第十四部分目标大纲，不改后续正文或其现状大纲。
 
 ## 现有材料的归属与拟补充范围
 
