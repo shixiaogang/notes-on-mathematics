@@ -104,7 +104,7 @@ for key, label, col, mk in METHODS:
                mfc="white" if key == "jacobi" else col, mew=.9, label=label)
 c.set(xlim=(0, K), ylim=(1e-11, 2), xticks=range(0, K + 1, 2), yticks=[1, 1e-3, 1e-6, 1e-9],
       xlabel="迭代轮数 $k$", ylabel="$\\Vert\\mathbf{x}_k-\\mathbf{x}_\\star\\Vert_2$", title="(b) 误差")
-c.grid(True, which="major")
+c.grid(False, which="both")
 c.legend(loc="lower left", fontsize=7.5, handlelength=1.6, handletextpad=.4, borderaxespad=.2)
 
 prepare_figure(fig)

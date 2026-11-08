@@ -277,6 +277,9 @@
 
 #### 6.3.4 谱投影
 
+图解：`fig:v2-spectral-projectors`。取$\bm S=\operatorname{diag}(3,1)$、$\bm x=(1,2)^\top$。$\bm P_1$与$\bm P_2$分别投影到两坐标轴，故$\bm S\bm x=3\bm P_1\bm x+\bm P_2\bm x$。两幅图采用相同长度比例，颜色表示相同特征分量。
+
+
 1. 从重特征值时$\bm Q$不唯一进入，把分解展开为秩一和并说明每项是到$\bm q_i$方向的正交投影（式`eq:linear-algebra-orthogonal-projector`），写出二阶例子的两项分解，指出单项会随选择改变、应合并同一特征值的项。
 
 2. 引入记号：不同特征值$\mu_j$、特征空间$E_j$、$\bm Q_j$与$\bm P_j=\bm Q_j\bm Q_j^\top$。
@@ -421,7 +424,7 @@
 
 8. 给出奇异值分解、奇异值与左右奇异向量的定义`def:matrix-analysis-svd`（式`eq:matrix-analysis-svd`）。
 
-9. 用图`fig:ls-svd-construction`以$\left[\begin{smallmatrix}2&0.5\\0.5&1\end{smallmatrix}\right]$复述三步构造。
+9. 用图`fig:ls-svd-construction`以$\left[\begin{smallmatrix}2&0.5\\0.5&1\end{smallmatrix}\right]$复述三步构造：紧凑等高三栏依次显示二次型等值线、正交特征方向、单位圆像与$\sigma_i\bm u_i$；矩阵数表和计算公式集中在图注，各面板分别取适合的显示尺度。
 
 10. 补出输出端的对称关系（式`eq:ls-svd-transpose-relation`）：$\bm A^\top\bm u_i=\sigma_i\bm v_i$，$i>r$时$\bm A^\top\bm u_i=\bm0$，$\bm u_i$构成$\bm A\bm A^\top$的标准正交特征基，两个Gram矩阵有相同的正特征值。
 
@@ -543,6 +546,9 @@
 
 ### 8.1 伸缩与正交转向的分离
 
+图解：`fig:v2-polar-stretch-turn`。贯穿例$\bm A=\left[\begin{smallmatrix}0&-1\\3&0\end{smallmatrix}\right]$的右极分解。$\bm H=\operatorname{diag}(3,1)$把圆拉成椭圆，$\bm W$再旋转$90^\circ$；绿点与红点分别追踪$\bm e_1$、$\bm e_2$，三幅使用同一尺度。
+
+
 1. 说明本节先消去正交因子得开方方程，再沿谱构造唯一的半正定伸缩因子，最后定义极分解并说明正交因子的求法要按情形讨论。
 
 #### 8.1.1 开方方程
@@ -660,6 +666,9 @@
 3. 证明$\bm W_0\bm H=\bm A$，且满足$\bm Z\bm H=\bm A$、在核上为零的$\bm Z$只能是$\bm W_0$，故$\bm W_0$与所选SVD无关，称为规范部分等距因子。
 
 #### 8.3.3 全部正交因子
+
+图解：`fig:v2-polar-null-direction`。取$\bm A=\bm H=\operatorname{diag}(2,0)$。两种正交补全都保持$\bm e_1$，却把$\bm e_2$送向相反方向；由于$\bm H\bm e_2=\bm0$，二者与$\bm H$的乘积完全相同。图画的是正交因子对基方向的作用。
+
 
 1. 引入$\bm V_0$、$\bm U_0$（核与值域正交补的标准正交基），说明全部正交因子由$\bm W_0$补全得到。
 
@@ -829,7 +838,7 @@
 
 7. 说明条件数不小于$1$，几何上是像椭球最长与最短半轴之比。
 
-8. 定义良态与病态，图`fig:ls-condition-number-amplification`对比$\kappa_2=1.5$与$\kappa_2\approx12.3$两个矩阵。
+8. 定义良态与病态，图`fig:ls-condition-number-amplification`对比$\kappa_2=1.5$与$\kappa_2\approx12.3$两个矩阵：上排为单位圆的前向像，下排为半径$0.1$误差圆经逆矩阵作用后的像，最长半轴分别$0.125$与约$0.67$。每排左右共用尺度，下排另放大。
 
 9. 强调条件数看方向差异而非大小：$\operatorname{diag}(1,s)$与$s\bm I$对比，奇异值同比例缩放不改变条件数。
 
@@ -939,7 +948,7 @@
 
 10. 续例：$\kappa_2(\bm S)$接近$1$而$t=\delta/2$时转角达$22.5^\circ$，子空间敏感性不能由条件数判断；最大特征值增量符合Weyl界。
 
-11. 把精确转角与界比较，$t\ll\delta$时两端约为$t/\delta$；图`fig:matrix-analysis-gap-direction`画出增量与转角随谱隙的变化。
+11. 把精确转角与界比较，$t\ll\delta$时两端约为$t/\delta$；图`fig:matrix-analysis-gap-direction`画出增量与转角随谱隙的变化，按112毫米栏宽原生排版以保持标注字号。
 
 #### 9.3.3 重特征值与子空间内部的基
 
@@ -1034,6 +1043,9 @@
 3. 区分精确秩与有效秩：$\operatorname{diag}(1,0)+t\bm e_2\bm e_2^\top$说明精确秩对任意小扰动跳变，可靠的是大于$\varepsilon$的奇异值个数；按阈值确定数值秩留到第~`sec:ls-pseudoinverse-rank-change`节。
 
 #### 9.6.3 到奇异矩阵的距离
+
+图解：`fig:v2-distance-to-singular`。$\bm A=\operatorname{diag}(1,s)$，图中$s=0.4$。扰动$\bm E_*=-s\bm e_2\bm e_2^\top$只消去第二方向，范数为$s=\sigma_{\min}(\bm A)$。左图为单位圆在$\bm A$下的像，右图为同一单位圆在$\bm A+\bm E_*$下的像。
+
 
 1. 提出使可逆矩阵奇异的最小扰动问题，陈述定理`thm:ls-distance-to-singularity`。
 
@@ -1206,6 +1218,9 @@
 15. 给出缩小十倍的参考步数，并以贯穿例说明实际要$8$步；停止准则留给第14章。
 
 ### 10.5 误差传播与累积
+
+图解：`fig:v2-recurrence-error-age`。标量递推$e_{k+1}=q e_k+1$，$e_0=0$。左图固定$k=8$，柱高$q^{7-j}$为第$j$步单位误差对$e_8$的贡献；右图为总和$e_k=(1-q^k)/(1-q)$。蓝、绿分别取$q=0.5,0.8$，虚线为各自极限$1/(1-q)$。这是确定性的误差累积示例，不代表随机独立噪声。
+
 
 1. 写出带附加误差的序列与误差递推$\bm e_{k+1}=\bm T\bm e_k+\bm\delta_k$。
 

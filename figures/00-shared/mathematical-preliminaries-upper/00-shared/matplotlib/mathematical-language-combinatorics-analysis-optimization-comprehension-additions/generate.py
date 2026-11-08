@@ -3,6 +3,7 @@
 from pathlib import Path
 import importlib.util
 import json
+import sys
 import numpy as np
 
 ROOT=next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
@@ -10,13 +11,20 @@ spec=importlib.util.spec_from_file_location('support',ROOT/'figures/00-shared/ma
 s=importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
 OUT=Path(__file__).resolve().parent
 records=[]
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+import plot_style as drawing_style
+s.configure = drawing_style.configure
 
 def finish(fig,name,facts):
-    records.append(s.save(fig,OUT,name,facts))
+    drawing_style.prepare_figure(fig)
+    record=s.save(fig,OUT,name,facts)
+    record.update(source='generate.py', visual_style=drawing_style.style_record(), background_grid=False)
+    (OUT/(name+'.json')).write_text(json.dumps(record,ensure_ascii=False,indent=2)+'\n')
+    records.append(record)
 
 def clean(ax,xlabel,ylabel):
     ax.set_xlabel(xlabel); ax.set_ylabel(ylabel)
-    ax.grid(axis='y'); ax.set_axisbelow(True)
+    ax.grid(False); ax.set_axisbelow(True)
 
 # Big O compares bounded ratios; little o requires the ratio to vanish.
 n=np.arange(1,201)
@@ -118,7 +126,7 @@ rho=np.linspace(0,50,600)
 res=16/(16+17*rho);lmax=(17+2*rho+np.sqrt(225+4*rho*rho))/2
 axs[0].plot(rho,res,color=s.BLUE);axs[0].set(xlabel='ρ',ylabel='等式残差绝对值',ylim=(0,1.03))
 axs[1].plot(rho,lmax,color=s.GREEN);axs[1].set(xlabel='ρ',ylabel='Hessian 最大特征值')
-for ax in axs: ax.grid(axis='y');ax.set_axisbelow(True)
+for ax in axs: ax.grid(False);ax.set_axisbelow(True)
 finish(fig,'penalty-feasibility-curvature',{'objective':'(w1^2+16w2^2)/2 +rho(w1+w2-1)^2/2','domain':'rho>=0; display [0,50]','exact_solution':'(16rho,rho)/(16+17rho)','absolute_residual':'16/(16+17rho)','maximum_eigenvalue':'(17+2rho+sqrt(225+4rho^2))/2','scope':'larger penalty reduces residual but eventually adds arbitrarily large curvature; no claim that condition number increases monotonically'})
 
 fig,axs=s.figure(height_mm=49,ncols=2)
@@ -135,5 +143,5 @@ axs[1].semilogy(np.arange(steps+1),np.sum(u*u,axis=1),color=s.GREEN,linestyle='-
 axs[1].set(xlabel='t',ylabel='x²+z²');axs[1].legend(loc='upper left')
 finish(fig,'minimax-rotation',{'objective':'phi(x,z)=xz','eta':eta,'initial':[.5,0],'steps':steps,'simultaneous_matrix':A.tolist(),'extragradient_matrix':B.tolist(),'norm_square_multipliers':[1+eta**2,1-eta**2+eta**4],'simultaneous_scope':'unprojected iterates; after leaving [-1,1]^2 not feasible constrained candidates','extragradient_scope':'all trial and corrected iterates stay in box, so projections are inactive','saddle':[0,0]})
 
-(OUT/'generated-records.json').write_text(json.dumps(records,ensure_ascii=False,indent=2)+r'\n')
+(OUT/'generated-records.json').write_text(json.dumps(records,ensure_ascii=False,indent=2)+'\n')
 print('Generated',len(records),'analytic figures')

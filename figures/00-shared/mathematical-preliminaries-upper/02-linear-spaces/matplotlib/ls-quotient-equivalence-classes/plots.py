@@ -41,6 +41,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -79,14 +84,14 @@ ax.text(2.35, .10, "$0+N=N$", fontsize=8, color=BLUE)
 ax.text(2.35, 1.10, "$p_1+N$", fontsize=8, color=GREEN)
 ax.text(2.35, 2.10, "$p_2+N$", fontsize=8, color=YELLOW)
 ax.text(2.35, -0.90, "$p_3+N$", fontsize=8, color=RED)
-ax.text(-3.3, -1.75, "商空间 $V/N=\\{x+N:x\\in V\\}$：把整条平行线当成一个点", fontsize=8)
-ax.set_title("同一平行线上的点彼此等价", fontsize=8)
+pass
+ax.set_title('', fontsize=8)
 ax.set(xlim=(-3.6, 4.1), ylim=(-2.0, 2.7), xticks=[-3, -2, -1, 0, 1, 2, 3],
        yticks=[-1, 0, 1, 2])
 ax.set_aspect("equal")
-ax.grid(True)
+ax.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

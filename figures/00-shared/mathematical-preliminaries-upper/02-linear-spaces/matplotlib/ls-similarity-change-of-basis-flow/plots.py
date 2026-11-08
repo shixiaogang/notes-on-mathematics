@@ -45,6 +45,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -100,8 +105,7 @@ ax.text(TR[0] + BW / 2 + 3.2, (TR[1] + BR[1] + BH) / 2,
         r"$\mathbf{P}$", ha="center", va="center",
         fontsize=9, rotation=90, color=MUTED)
 
-ax.text(50, 44.5, "同一自映射：旧基（蓝）与新基（绿）的两套记录，闭环合拢",
-        ha="center", fontsize=8.5, color=INK)
+pass
 
 ax.set(xlim=(0, 100), ylim=(0, 48))
 ax.set_aspect("equal")
@@ -116,7 +120,7 @@ def finalize(fig):
         t.set_fontweight("normal")
 
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

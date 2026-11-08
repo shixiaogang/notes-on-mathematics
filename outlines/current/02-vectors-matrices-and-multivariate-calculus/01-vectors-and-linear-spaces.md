@@ -134,7 +134,7 @@
 
 2. 给出$p$范数与$\infty$范数的公式并解释$p=1,2,\infty$的含义；示例`ex:ls-p-norms`在$(3,-4)^\top$上得到$7,5,4$。
 
-3. 用图`fig:ls-norm-unit-balls`比较三种单位球的形状，并指出这些范数的共同性质在下一小节证明。
+3. 用图`fig:ls-norm-unit-balls`比较$\ell_1,\ell_2,\ell_\infty$的单位球，并补充范数$\sqrt{x_1^2/4+x_2^2/0.64}$的椭圆形单位球。黄点沿同一射线落在不同边界，说明单位向量依赖范数；前三种范数的共同性质在下一小节证明。
 
 ##### 1.1.4.2 范数的性质
 
@@ -299,6 +299,9 @@
 2. 把块分到最细，得到按列、按行与“列乘行之和”（式`eq:ls-product-outer-sum`）三种特例，说明后者是第~`chap:matrix-approximation`章低秩近似的出发点；示例`ex:ls-product-as-outer-sum`把一个二阶乘积写成两个“列乘行”矩阵之和，与逐项计算的结果核对。
 
 ###### paragraph：交换律不成立
+
+图解：`fig:v2-multiplication-order`。对$\bm u=(1,2)^\top$，$\bm S$交换两个坐标，$\bm P=\operatorname{diag}(1,0)$投影到第一坐标轴。上排先交换再投影得到$(2,0)^\top$；下排先投影再交换得到$(0,1)^\top$。六个局部坐标系采用同一长度比例。
+
 
 1. 说明形状不同时两种次序未必都有定义，同阶方阵的两种乘积也可能不同；示例`ex:ls-noncommuting-pair`用“只保留第一个坐标”与“交换两个坐标”说明两种作用次序结果不同，并约定作用顺序从右向左。
 
@@ -508,7 +511,7 @@
 
 1. 指出展开只用到对每个向量线性与交换变号两条规则，得到式`eq:ls-det-volume`：满足两条规则的函数$D$等于$D(\bm e_1,\ldots,\bm e_d)$乘以行列式；反过来验证排列公式满足两条规则，故行列式是满足规则且在单位矩阵处取$1$的那个函数。
 
-2. 取$D$为$d$维有向体积、代入$\bm a_j=\bm A\bm e_j$，说明$\det\bm A$是$\bm A$作用下有向体积的放大倍数：绝对值是体积比，符号表示定向；图`fig:ls-determinant-oriented-volume`展示平面上保定向与反定向两种情形。
+2. 取$D$为$d$维有向体积、代入$\bm a_j=\bm A\bm e_j$，说明$\det\bm A$是$\bm A$作用下有向体积的放大倍数：绝对值是体积比，符号表示定向；图`fig:ls-determinant-oriented-volume`以同一比例对照单位正方形、$\det\bm A=3$的像及第一列反向后的$\det\bm A_-=-3$的像。
 
 ##### 1.3.1.3 行列式的性质
 
@@ -638,7 +641,7 @@
 
 ##### 1.4.2.2 形状重整与向量化
 
-1. 定义形状重整为“按遍历顺序读出、再按同序装入”，只要求元素总数不变；示例`ex:ls-reshape-vs-transpose`比较按行重整与转置，图`fig:vol1-add-linear-transpose-reshape`并排展示，说明重整须给出遍历顺序。
+1. 定义形状重整为“按遍历顺序读出、再按同序装入”，只要求元素总数不变；示例`ex:ls-reshape-vs-transpose`比较按行重整与转置，图`fig:vol1-add-linear-transpose-reshape`用无内格线的矩阵括号并排展示，以蓝绿追踪原数组两行，说明重整须给出遍历顺序。
 
 2. 定义按列堆叠的向量化及元素$a_{i,j}$的位置$i+(j-1)m$，以示例矩阵核对。
 
@@ -664,7 +667,7 @@
 
 1. 转入第二类运算，定义两个向量的张量积$(\bm x\otimes\bm y)_{i,j}=x_iy_j=\bm x\bm y^\top$，联系“列乘行”（式`eq:ls-product-outer-sum`），引入槽位并推广到多个因子；示例`ex:ls-tensor-product-two-vectors`计算二维例，说明各行、各列分别成比例。
 
-2. 图`fig:ls-tensor-product-slots`用长度不同的两个因子展示行轴与列轴的槽位。
+2. 图`fig:ls-tensor-product-slots`用长度不同的两个因子展示行轴与列轴的槽位；图内只保留对象名与数值，蓝色横带、绿色竖框分别对应第2行和第3列的倍数关系。
 
 3. 给出任意数组的张量积定义，说明输出有$k+\ell$条轴、不求和，交换输入会交换两组轴的次序。
 
@@ -700,7 +703,7 @@
 
 #### 1.4.4 Kronecker积
 
-1. 由两个矩阵分别作用在两条轴上的联合作用引出Kronecker积（式`eq:linear-algebra-kronecker-product`），说明把每个元素替换为块；示例`ex:ls-kronecker-two-by-two`计算二阶例，图`fig:ls-kronecker-block-structure`展示分块结构。
+1. 由两个矩阵分别作用在两条轴上的联合作用引出Kronecker积（式`eq:linear-algebra-kronecker-product`），说明把每个元素替换为块；示例`ex:ls-kronecker-two-by-two`计算二阶例，图`fig:ls-kronecker-block-structure`沿用该例展示四个块$\bm B,2\bm B,3\bm B,4\bm B$与$\bm A$中元素的位置对应。
 
 2. 说明Kronecker积与张量积共用记号$\otimes$、记录同一组数而排法不同：两个列向量的Kronecker积是$\bm x\otimes\bm y$按行读出的结果，以$(3,-1,6,-2)^\top$核对；一般矩阵时张量积保留四条轴而Kronecker积排成两条，须按上下文和输出形状区分。
 
@@ -740,7 +743,7 @@
 
 2. 给出计算规则：选定长度相同的轴对、共用求和索引、逐项相乘后求和，被求和的轴消失、其余轴按原次序保留，写出索引即可检查；示例`ex:ls-contraction-shapes`给出消去两对轴得$m\times n$矩阵、消去一对轴得$b\times\ell\times h$数组两种情形。
 
-3. 图`fig:ls-tensor-contraction`展示沿列轴求和，并说明这也是与全$1$向量的缩约。
+3. 图`fig:ls-tensor-contraction`将$3\times2$矩阵与长度为$2$的全$1$向量缩约，得到三行的行和$(3,7,11)^\top$；列索引$j$消去，行索引$i$保留，并用第二行与输出$7$的对应说明这一点。
 
 4. 逐项说明内积、矩阵乘法、迹与Frobenius内积都是缩约，指出各自消去哪些轴。
 
@@ -843,6 +846,9 @@
 2. 说明并集虽是包含二者的最小集合，但一般对加法不封闭；示例`ex:ls-union-not-subspace`以两条坐标轴之并不含$\bm e_1+\bm e_2$为例，结论是和空间补入了必需的线性组合。
 
 ###### paragraph：直和与补空间
+
+图解：`fig:v2-oblique-direct-sum`。平面中的斜直和$\mathbb R^2=U\oplus W$。虚线完成平行四边形，$\bm v=\bm u+\bm w$的分解唯一；直和的条件是交只有零向量，并不要求两条直线垂直。
+
 
 1. 从平面上两条不平行直线给出唯一分解的直观，指出唯一与否由两个子空间的交决定。
 
@@ -1114,7 +1120,7 @@
 
 1. 定义秩与零度，取核的基扩充为全空间的基，证明秩零度定理`thm:ls-rank-nullity`（式`eq:ls-rank-nullity`）。
 
-2. 写出矩阵形式$d=\dim\operatorname{null}(\bm A)+\operatorname{rank}\bm A$，用示例`ex:ls-kernel-indistinguishable`核对；图`fig:ls-kernel-image-rank-nullity`给出两个几何算例。
+2. 写出矩阵形式$d=\dim\operatorname{null}(\bm A)+\operatorname{rank}\bm A$，用示例`ex:ls-kernel-indistinguishable`核对；图`fig:ls-kernel-image-rank-nullity`给出两个几何算例，两幅共用图面基线，以明确斜投影表示第二幅的三维输入、核轴与二维像。
 
 3. 证明$\operatorname{rank}\bm A\leq\min(m,d)$，定义满列秩、满行秩与满秩。
 
@@ -1613,7 +1619,7 @@
 
 1. 写出最大绝对列和、最大绝对行和两个公式（推导在3.5.1.3），说明谱范数是欧氏诱导范数、等于最大奇异值（第~`chap:singular-value-decomposition`章）。
 
-2. 示例`ex:ls-matrix-norms-shear`在$\left[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right]$上算出$\lVert\bm A\rVert_1=\lVert\bm A\rVert_\infty=2$、$\lVert\bm A\rVert_{\mathrm F}=\sqrt3$；图`fig:ls-induced-norm-action`把单位圆像的最长半轴读作谱范数。
+2. 示例`ex:ls-matrix-norms-shear`在$\left[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right]$上算出$\lVert\bm A\rVert_1=\lVert\bm A\rVert_\infty=2$、$\lVert\bm A\rVert_{\mathrm F}=\sqrt3$；图`fig:ls-induced-norm-action`沿用同一个剪切矩阵，并以相同坐标尺度比较单位球与像椭圆，把最长半轴读作谱范数$(1+\sqrt5)/2$。
 
 ##### 3.5.1.3 矩阵范数的性质
 
@@ -1648,6 +1654,9 @@
 2. 验证三角不等式（取任意接近两侧下确界的代表元）与齐次性，正定性由$d(\bm x,U)=0\iff\bm x\in U$得到；指出子空间不闭的更一般空间中公式可能只给出半范数。
 
 ###### paragraph：一般范数下的最近点
+
+图解：`fig:v2-nearest-point-norm`。$\bm y=(0,1)^\top$到横轴$U$的距离在两种范数下都为$1$。欧氏闭球只在$(0,0)$处接触$U$；$\ell_\infty$闭球的下边$[-1,1]\times\{0\}$全部是最近点。浅色区域为半径$1$的闭球，不表示额外约束。
+
 
 1. 陈述定理`thm:multivariable-nearest-point-existence`：取距离逼近下确界的子空间点列，由$\lVert\bm u_k\rVert\leq\lVert\bm x\rVert+\lVert\bm x-\bm u_k\rVert$知有界，取收敛子列，由子空间闭性与范数连续性得最近点存在。
 
@@ -1765,7 +1774,7 @@
 
 1. 从一组向量有$r^2$个内积值、需要一次记录进入，定义Gram矩阵`def:linear-algebra-gram-matrix`及其在欧氏、加权内积下的矩阵形式，说明对称性。
 
-2. 说明正交性写在非对角元里：对角对应两两正交，单位矩阵对应标准正交。图`fig:ls-gram-matrix-coefficients`把两个向量的内积排成数表。
+2. 说明正交性写在非对角元里：对角对应两两正交，单位矩阵对应标准正交。图`fig:ls-gram-matrix-coefficients`将左侧$\bm b_1=(2,0)^\top$、$\bm b_2=(1,1.5)^\top$与投影几何对应到右侧Gram数表$\left[\begin{smallmatrix}4&2\\2&3.25\end{smallmatrix}\right]$。
 
 #### 4.4.3 Gram矩阵的半正定性
 
@@ -1850,6 +1859,9 @@
 3. 由包含且同维证明$(U^\perp)^\perp=U$。
 
 ###### paragraph：四个基本子空间的正交关系
+
+图解：`fig:v2-four-subspaces`。矩阵的四个基本子空间。左侧为输入空间，右侧为输出空间；蓝色部分分别表示行空间与列空间，绿色部分分别表示零空间与左零空间。$\bm A$把零空间压到零，把行空间一一映到列空间；两侧直线仅示意子空间，维数不必都是$1$，两端空间的维数也可不同。
+
 
 1. 由$\langle\bm A\bm x,\bm y\rangle=\langle\bm x,\bm A^\top\bm y\rangle$证明定理`thm:ls-four-subspaces-orthogonality`（式`eq:ls-four-subspaces-orthogonality`、`eq:ls-four-subspaces-decomposition`）。
 
@@ -2027,6 +2039,9 @@
 
 ### 5.3 对偶映射
 
+图解：`fig:v2-dual-pullback`。对偶映射由复合定义。蓝箭头为对象的线性变换，绿色箭头为标量读取；$f$在输出端读取，$T^{\prime}f$在输入端读取。图中没有从$W$到$V$的逆变换，$T$即使不可逆也能定义$T^{\prime}$。
+
+
 1. 由“先作用再读取”定义对偶映射$T'f=f\circ T$（式`eq:ls-dual-map-def`），证明它线性、方向与$T$相反且$(S\circ T)'=T'\circ S'$，强调它不是求逆。
 
 ###### paragraph：对偶映射的矩阵是转置
@@ -2051,7 +2066,7 @@
 
 2. 指出它是输出取$\mathbb R$时的诱导范数，所以上确界有限并可取到。
 
-3. 逐条验证对偶范数满足范数要求：正定性（取$\bm e_j/\lVert\bm e_j\rVert$）、三角不等式与齐次性；图`fig:ls-dual-norm-unit-ball`把最大值画成支撑线最后接触单位球的位置。
+3. 逐条验证对偶范数满足范数要求：正定性（取$\bm e_j/\lVert\bm e_j\rVert$）、三角不等式与齐次性；图`fig:ls-dual-norm-unit-ball`固定$\bm z=(2,-1)^\top$，将平行等值线推到$\ell_1$单位球的最后接触点$(1,0)^\top$，读取最大值$2$。
 
 4. 对$\ell_p$由Hölder不等式得上界并逐类构造达到上界的$\bm r$，得到单行写出的式`eq:linear-algebra-lp-duality`与按预算缩放的式`eq:linear-algebra-linear-perturbation-duality`。
 

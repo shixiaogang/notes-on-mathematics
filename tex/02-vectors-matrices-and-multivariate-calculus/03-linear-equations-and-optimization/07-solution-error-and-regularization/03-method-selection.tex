@@ -106,15 +106,46 @@
 
 目标确定以后再看矩阵。每种方法的正确性与收敛性都建立在一组矩阵条件之上：形状是方阵还是长方，是否对称、正定，秩是否完全。除此之外，方法还规定了它怎样读取矩阵：有的要把矩阵存下来做分解，有的只要计算矩阵乘向量，有的还要转置乘向量，有的每次只读一行。实际问题能提供哪种访问方式，常常与矩阵的数学性质一样限制方法的选择。
 
-下面按章分组说明，最后用表~\ref{tab:ls-method-applicability}汇总。表中的迭代法都按第~\ref{chap:stationary-iterations}—\ref{chap:row-projection-methods}章建立的基本版本比较，某一行的限制不能推广到同名算法的所有扩展。
+下面按章分组说明，各组的条件分别列在相应段落之后的表~\ref{tab:ls-method-applicability}—\ref{tab:ls-row-method-applicability}中。表中的迭代法都按第~\ref{chap:stationary-iterations}—\ref{chap:row-projection-methods}章建立的基本版本比较，某一行的限制不能推广到同名算法的所有扩展。
 
 \paragraph{方阵的直接分解}
 第~\ref{chap:direct-linear-solvers}章的方法都要求矩阵非奇异，并且要能存下矩阵和因子。带部分选主元的LU分解对任何非奇异方阵都能进行。Cholesky分解要求对称正定，这一条件既是充分的也是必要的，运算量是LU的一半。分块$\mathrm{LDL}^\top$分解只要求对称非奇异，允许不定，负主元与二阶块保留在$\bm D$中。低秩更新不是独立的分解，它要求修改前的矩阵已经分解、修改的秩很低，并且辅助矩阵可逆；它节省的是重新分解的工作。
 
 这些方法都以方阵方程为对象，用于不相容最小二乘时须先转换：Cholesky用于满列秩的正规方程，分块$\mathrm{LDL}^\top$用于增广方程。普通LU直接作用于长方矩阵时并不保留最小二乘的目标。
 
+\begin{BookInlineTable}
+\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
+\toprule
+方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
+\midrule
+LU（\ref{sec:ls-lu}） & 非奇异方阵 & 存储并分解 & 需转换\\
+Cholesky（\ref{sec:ls-cholesky}） & 对称正定 & 存储并分解 & 经正规方程，须满列秩\\
+分块$\mathrm{LDL}^\top$（\ref{sec:ls-ldlt}） & 对称非奇异，可不定 & 存储并分解 & 经增广方程，须满列秩\\
+低秩更新（\ref{sec:ls-woodbury}） & 原矩阵已分解，修改秩低，辅助矩阵可逆 & 旧因子与低秩因子 & 不直接适用\\
+\bottomrule
+\end{tabular}
+\caption{方阵直接分解的矩阵条件与适用方式。括号内为对应小节。}
+\label{tab:ls-method-applicability}
+\end{BookInlineTable}
+
 \paragraph{最小二乘的直接求解}
 第~\ref{chap:direct-least-squares-solvers}章的三条路线直接以最小二乘为目标，区别在于对秩的要求。正规方程法要求满列秩，并承受条件数平方。QR求解在满列秩时回代得到唯一最小二乘解，在满行秩时对$\bm A^\top$分解得到最小范数解；秩亏时$\bm R$出现零对角元，基本QR不能直接给出最小范数解。SVD求解对任意形状和秩都给出$\bm A^\dagger\bm b$，代价是分解更贵，小奇异值处的误差放大也要另行处理。三条路线都需要显式存储$\bm A$；正规方程法还可以按行累计Gram矩阵，适合观测逐批到达的情形。
+
+\begin{BookInlineTable}
+\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
+\toprule
+方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
+\midrule
+正规方程法（\ref{sec:ls-normal-equations-method}） & 满列秩 & 存储，可按行累计 & 直接适用，条件数平方\\
+QR（\ref{sec:ls-qr-method}） & 满列秩或满行秩 & 存储并分解 & 直接适用\\
+SVD（\ref{sec:ls-svd-solve}） & 任意形状与秩 & 存储并分解 & 直接适用，给出$\bm A^\dagger\bm b$\\
+\bottomrule
+\end{tabular}
+\caption{最小二乘直接方法的矩阵条件与适用方式。括号内为对应小节。}
+\label{tab:ls-least-squares-method-applicability}
+\end{BookInlineTable}
 
 \paragraph{定常迭代}
 第~\ref{chap:stationary-iterations}章的方法求解可逆方阵方程，收敛当且仅当迭代矩阵的谱半径小于一：
@@ -125,6 +156,22 @@
 
 定常迭代用于最小二乘时须经正规方程转换。满列秩时$\bm A^\top\bm A$对称正定，Gauss--Seidel、SOR与SSOR的收敛保证随之成立，Jacobi仍须另行检查。在贯穿例~\ref{ex:ls-stationary-running-example}的$\bm A=\left[\begin{smallmatrix}4&1\\1&3\end{smallmatrix}\right]$上，五种方法都收敛，但谱半径各不相同，这在下一小节比较。
 
+\begin{BookInlineTable}
+\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
+\toprule
+方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
+\midrule
+Richardson（\ref{sec:ls-richardson}） & $\rho(\bm I-\alpha\bm A)<1$ & $\bm A\bm v$ & 需转换\\
+Jacobi（\ref{sec:ls-jacobi}） & 对角元非零，谱半径小于一 & 按行读取 & 需转换，须另查收敛\\
+Gauss--Seidel、SOR（\ref{sec:ls-gauss-seidel}、\ref{sec:ls-sor}） & 对角元非零，谱半径小于一 & 按行顺序读取 & 经正规方程\\
+SSOR（\ref{sec:ls-ssor}） & 对称正定，$0<\omega<2$ & 前后两次扫掠 & 经正规方程\\
+\bottomrule
+\end{tabular}
+\caption{定常迭代的矩阵条件与适用方式（基本版本）。括号内为对应小节。}
+\label{tab:ls-stationary-method-applicability}
+\end{BookInlineTable}
+
 \paragraph{Krylov子空间法}
 第~\ref{chap:krylov-methods}章的求解器按矩阵类型分工。CG要求对称正定。MINRES要求对称非奇异，允许不定；用于奇异对称矩阵时，判断是否到达最小二乘解要看$\lVert\bm A\bm r_k\rVert_2$，所得的解一般也不是最小范数解。GMRES、BiCG与BiCGSTAB适用于一般非奇异方阵，不要求对称。
 
@@ -132,40 +179,12 @@
 
 LSQR与LSMR是第~\ref{chap:krylov-methods}章中直接处理长方矩阵的两种迭代法。它们允许长方、秩亏和不相容，每轮需要$\bm A\bm v$与$\bm A^\top\bm u$各一次，零初值时选出最小范数解。两者也能求解相容方程。
 
-\paragraph{行列投影法}
-第~\ref{chap:row-projection-methods}章的方法每次只读一行或一列。标准Kaczmarz求解相容方程，零初值时收敛到最小范数解；方程不相容时，它在各行的解之间往返，不论循环还是随机选行，都不会停在最小二乘解上。扩展Kaczmarz用列投影逐步分离出右端中不可拟合的部分，再对校正后的相容方程作行投影，因此能求最小范数最小二乘解，代价是还要能按列访问矩阵。
-
-\paragraph{汇总}
-表~\ref{tab:ls-method-applicability}汇总了上面的条件。表中“需转换”时，要对转换后的系统重新检查结构、条件数、零空间与误差度量；标为“直接适用”也不意味着可以省去预条件、停止检验与退化处理。
-
-\begin{BookLongTable}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
+\begin{BookInlineTable}
+\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
 \toprule
 方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
 \midrule
-\endfirsthead
-\multicolumn{4}{@{}l}{\small 表~\thetable（续）}\\
-\toprule
-方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
-\midrule
-\endhead
-\midrule
-\multicolumn{4}{r@{}}{\small 续下页}\\
-\endfoot
-\bottomrule
-\caption{各方法的矩阵条件与适用方式（基本版本）。方法名后括号内为所在节。}
-\label{tab:ls-method-applicability}\\
-\endlastfoot
-LU（\ref{sec:ls-lu}） & 非奇异方阵 & 存储并分解 & 需转换\\
-Cholesky（\ref{sec:ls-cholesky}） & 对称正定 & 存储并分解 & 经正规方程，须满列秩\\
-分块$\mathrm{LDL}^\top$（\ref{sec:ls-ldlt}） & 对称非奇异，可不定 & 存储并分解 & 经增广方程，须满列秩\\
-低秩更新（\ref{sec:ls-woodbury}） & 原矩阵已分解，修改秩低，辅助矩阵可逆 & 旧因子与低秩因子 & 不直接适用\\
-正规方程法（\ref{sec:ls-normal-equations-method}） & 满列秩 & 存储，可按行累计 & 直接适用，条件数平方\\
-QR（\ref{sec:ls-qr-method}） & 满列秩或满行秩 & 存储并分解 & 直接适用\\
-SVD（\ref{sec:ls-svd-solve}） & 任意形状与秩 & 存储并分解 & 直接适用，给出$\bm A^\dagger\bm b$\\
-Richardson（\ref{sec:ls-richardson}） & $\rho(\bm I-\alpha\bm A)<1$ & $\bm A\bm v$ & 需转换\\
-Jacobi（\ref{sec:ls-jacobi}） & 对角元非零，谱半径小于一 & 按行读取 & 需转换，须另查收敛\\
-Gauss--Seidel、SOR（\ref{sec:ls-gauss-seidel}、\ref{sec:ls-sor}） & 对角元非零，谱半径小于一 & 按行顺序读取 & 经正规方程\\
-SSOR（\ref{sec:ls-ssor}） & 对称正定，$0<\omega<2$ & 前后两次扫掠 & 经正规方程\\
 CG（\ref{sec:ls-conjugate-gradient}） & 对称正定 & $\bm A\bm v$ & 经正规方程\\
 MINRES（\ref{sec:ls-minres}） & 对称非奇异，可不定 & $\bm A\bm v$ & 经增广方程\\
 GMRES（\ref{sec:ls-gmres}） & 非奇异方阵 & $\bm A\bm v$ & 需转换\\
@@ -173,9 +192,33 @@ BiCG（\ref{sec:ls-bicg}） & 非奇异方阵 & $\bm A\bm v$与$\bm A^\top\bm u$
 BiCGSTAB（\ref{sec:ls-bicgstab}） & 非奇异方阵 & $\bm A\bm v$ & 需转换\\
 LSQR（\ref{sec:ls-lsqr}） & 任意形状与秩 & $\bm A\bm v$与$\bm A^\top\bm u$ & 直接适用\\
 LSMR（\ref{sec:ls-lsmr}） & 任意形状与秩 & $\bm A\bm v$与$\bm A^\top\bm u$ & 直接适用\\
+\bottomrule
+\end{tabular}
+\caption{Krylov方法的矩阵条件与适用方式（基本版本）。括号内为对应小节。}
+\label{tab:ls-krylov-method-applicability}
+\end{BookInlineTable}
+
+\paragraph{行列投影法}
+第~\ref{chap:row-projection-methods}章的方法每次只读一行或一列。标准Kaczmarz求解相容方程，零初值时收敛到最小范数解；方程不相容时，它在各行的解之间往返，不论循环还是随机选行，都不会停在最小二乘解上。扩展Kaczmarz用列投影逐步分离出右端中不可拟合的部分，再对校正后的相容方程作行投影，因此能求最小范数最小二乘解，代价是还要能按列访问矩阵。
+
+\begin{BookInlineTable}
+\small
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{22mm}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*2/5\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}>{\RaggedRight\arraybackslash}p{\dimexpr(\linewidth-22mm-6\tabcolsep)*3/10\relax}@{}}
+\toprule
+方法 & 对矩阵的要求 & 对矩阵的访问 & 不相容最小二乘\\
+\midrule
 标准Kaczmarz（\ref{sec:ls-kaczmarz}） & 相容方程 & 逐行 & 不收敛到最小二乘解\\
 扩展Kaczmarz（\ref{sec:ls-extended-kaczmarz}） & 任意形状与秩 & 逐行与逐列 & 需扩展版本，即本方法\\
-\end{BookLongTable}
+\bottomrule
+\end{tabular}
+\caption{行列投影方法的矩阵条件与适用方式。括号内为对应小节。}
+\label{tab:ls-row-method-applicability}
+\end{BookInlineTable}
+
+\paragraph{汇总}
+表~\ref{tab:ls-method-applicability}—\ref{tab:ls-row-method-applicability}分别汇总了五组方法的条件。表中“需转换”时，要对转换后的系统重新检查结构、条件数、零空间与误差度量；标为“直接适用”也不意味着可以省去预条件、停止检验与退化处理。
+
+
 
 \subsection{计算开销与收敛速度}
 \label{sec:ls-method-selection-cost}

@@ -62,6 +62,15 @@ m_{1\to2}(x_2)=\min_{x_1}\phi_{1,2}(x_1,x_2)=(2,\,1,\,2),
 
 左端事先无法知道右端偏好哪个$x_2$，所以要对接口的每个取值都给出条件最小成本，把选择$x_2$的决定留到两侧的成本都已知之后。
 
+图~\ref{fig:graph-dp-interface-options}将左右两侧的条件最小值按$x_2$对齐。左侧最便宜的是中列，合并后最便宜的却是左列；保留整张表，才能把这一选择留给整体成本。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=83.608mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/dp-interface-options/figure.pdf}
+  \caption{接口表保留选择余地。沿用三档链的两张成本表，上排是对$x_1$取最小得到的$(2,1,2)$，中排是对$x_3$取最小得到的$(1,3,2)$，下排按同一$x_2$逐列相加。黄色边框标出整体最优值$3$所在的$x_2=0$，它并不对应上排的最小值。}
+  \label{fig:graph-dp-interface-options}
+\end{figure}
+
 \paragraph{最小值的三条规则}
 这样分步的依据是有限集合上最小值的三条规则。设$y,z$分别在有限集合中取值，$h$、$g$取值于$\mathbb R\cup\{+\infty\}$，$c$与$y$无关，则
 \begin{equation}
@@ -154,8 +163,6 @@ x_3=p_4(1)=1,\qquad x_2=p_3(1)=1,\qquad x_1=p_2(1)=0,
 
 \begin{table}[!htb]
   \centering
-  \caption{四变量二值链上的逐轮计算。“候选”一栏是式~\eqref{eq:graph-dp-chain-recursion}方括号中对$x_{k-1}=0,1$的两个值；$D_k$等于一元项加上候选中的较小者，$p_k$是达到较小者的$x_{k-1}$。}
-  \label{tab:graph-dp-chain-trace}
   \small
   \begin{tabular}{@{}cccccccc@{}}
     \toprule
@@ -169,6 +176,8 @@ x_3=p_4(1)=1,\qquad x_2=p_3(1)=1,\qquad x_1=p_2(1)=0,
     $4$ & $(1,2)$ & $5,\ 4$ & $5$ & $1$ & $7,\ 2$ & $4$ & $1$\\
     \bottomrule
   \end{tabular}
+  \caption{四变量二值链上的逐轮计算。“候选”一栏是式~\eqref{eq:graph-dp-chain-recursion}方括号中对$x_{k-1}=0,1$的两个值；$D_k$等于一元项加上候选中的较小者，$p_k$是达到较小者的$x_{k-1}$。}
+  \label{tab:graph-dp-chain-trace}
 \end{table}
 
 \begin{figure}[!htb]
@@ -295,8 +304,6 @@ g_\rho(x_\rho)=\phi_\rho(x_\rho)+\sum_{r\in N(\rho)}m_{r\to\rho}(x_\rho),
 
 \begin{table}[!htb]
   \centering
-  \caption{分叉树上按后序计算的消息。“候选”一栏是式~\eqref{eq:graph-dp-tree-message}方括号中对$x_u=0,1$的两个值，每个值依次由一元项、边上成对项和子点消息相加；消息值取较小者，回溯表记录达到较小者的$x_u$。}
-  \label{tab:graph-dp-tree-trace}
   \small
   \begin{tabular}{@{}ccccccc@{}}
     \toprule
@@ -310,6 +317,8 @@ g_\rho(x_\rho)=\phi_\rho(x_\rho)+\sum_{r\in N(\rho)}m_{r\to\rho}(x_\rho),
     $m_{4\to3}$ & $0+0+1,\ 1+2+0$ & $1$ & $0$ & $0+2+1,\ 1+0+0$ & $1$ & $1$\\
     \bottomrule
   \end{tabular}
+  \caption{分叉树上按后序计算的消息。“候选”一栏是式~\eqref{eq:graph-dp-tree-message}方括号中对$x_u=0,1$的两个值，每个值依次由一元项、边上成对项和子点消息相加；消息值取较小者，回溯表记录达到较小者的$x_u$。}
+  \label{tab:graph-dp-tree-trace}
 \end{table}
 
 \begin{figure}[!htb]
@@ -375,6 +384,15 @@ O\Bigl(\sum_u|N(u)|\,q+nq^2\Bigr)=O(nq^2)
 有时需要的不只是一个最优配置，而是每个顶点$v$取各状态$s$时整体能达到的最小成本$\min_{\bm x:\,x_v=s}F(\bm x)$，例如要知道某个变量换一个状态会多付多少。对根而言，这正是合并值$g_\rho$；对其他顶点，向上一遍只收集了来自子树一侧的消息，还缺父点一侧的报价。
 
 所以再按前序从根向叶发送一遍消息，同样使用式~\eqref{eq:graph-dp-tree-message}：父点$v$向子点$u$发出的$m_{v\to u}$，汇总的是$v$的一元项、$v$的父点发来的消息和$v$的其他子点发来的消息。到达$u$时，$u$的全部邻居都已向它发过消息，把一元项与全部入消息相加，由定理~\ref{thm:graph-dp-tree-message}（以$u$为根）就得到$u$的最小成本表。两遍共发送$2(n-1)$条消息，开销仍为$O(nq^2)$。
+
+图~\ref{fig:graph-tree-two-pass}只保留两遍发送的方向。第二遍仍然传递整张条件成本表；它与前面的回溯不同，回溯是在父点取值已经确定后读取一个达到者。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=107.500mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/tree-two-pass/figure.pdf}
+  \caption{两遍消息为每个顶点收齐各侧的信息。(a)以$3$为根，从叶向根传递蓝色消息；(b)按前序从根向外传递绿色消息，$3\to4$先于$4\to5$。两遍结束后每条无向边的两个方向都各发送一条表，共$2(n-1)$条；消息的索引是接收端的取值。}
+  \label{fig:graph-tree-two-pass}
+\end{figure}
 
 在上例中，
 \[

@@ -44,6 +44,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -86,14 +91,12 @@ ax.annotate("", xy=(1 / np.sqrt(LAM) if False else 0.707 * V1[0], 0.707 * V1[1])
             xytext=(0, 0), arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=.9))
 ax.annotate("", xy=(1.414 * V2[0], 1.414 * V2[1]), xytext=(0, 0),
             arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=.9))
-ax.text(-2.05, -1.75,
-        "实线 $A$，虚线 $A+E$\n$|\\Delta\\lambda|\\leq\\|E\\|_2=%.3f$\n谱隙 $\\gamma=\\lambda_1-\\lambda_2=%.1f$：\n隙越大，轴方向越不易被微扰转动"
-        % (ENORM, GAMMA), fontsize=7.5)
-ax.set_title("对称矩阵微扰：椭圆轴微旋、半轴微变", fontsize=8)
+pass
+ax.set_title('', fontsize=8)
 ax.set(xlim=(-2.1, 1.9), ylim=(-1.9, 2.0), xticks=range(-2, 2), yticks=range(-1, 3))
-ax.set_aspect("equal"); ax.grid(True)
+ax.set_aspect("equal"); ax.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

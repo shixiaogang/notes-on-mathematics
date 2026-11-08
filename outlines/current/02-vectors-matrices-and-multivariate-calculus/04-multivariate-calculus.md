@@ -438,13 +438,11 @@
 
 1. 说明各非零方向二次型严格为正时函数沿所有方向向上弯，高阶余项不改变充分小扰动下增量的符号；强调需要正定而不只是半正定。
 
-2. 定理`thm:multivariable-hessian-classification`及证明：正定时在单位球面上由极值定理（定理`thm:multivariable-extreme-value`）取得共同正下界$\lambda$，并按实对称谱分解展开说明它就是最小特征值，再由Hessian连续性选小球使中间点Hessian与基点之差不超过$\lambda/2$，得增量不小于$\tfrac\lambda4\lVert\bm h\rVert_2^2$；负定对$-f$同理；不定时沿使二次型为正、为负的两个方向用小量形式比较符号。
+2. 定理`thm:multivariable-hessian-classification`及证明：正定时在单位球面上由极值定理（定理`thm:multivariable-extreme-value`）取得共同正下界$\lambda$，并按实对称谱分解展开说明它就是最小特征值，再由Hessian连续性选小球使中间点Hessian与基点之差不超过$\lambda/2$，得增量不小于$\tfrac\lambda4\lVert\bm h\rVert_2^2$；负定对$-f$同理；不定时沿使二次型为正、为负的两个方向用小量形式比较符号。 图`fig:analysis-process-hessian-local-shapes`对照$x^2+2y^2$、$x^2-y^2$、$x^4+y^4$三种形状：前两者由正定与不定判定，第三者Hessian为零却严格极小，零Hessian也可能无极值（如$x^3$），说明退化不是一种确定分类。图接在判别定理之后、证明之前。
 
 3. 定义鞍点并以$x^2-y^2$的Hessian$\operatorname{diag}(2,-2)$为例；指出半定且有零方向时二阶判据可能无结论，边界点（如$x$在$[0,1]$上的最小点$0$）梯度可不为零，受约束问题需可行方向与乘子条件（交叉引用卷五约束优化与对偶章）。
 
 4. 归纳判别两步：先解$\nabla f=\bm0$找驻点，再检查Hessian定性；示例`ex:multivariable-stationary-point-classification`：$x^3-3x+y^2$的驻点$(1,0)$为严格局部极小点、$(-1,0)$为鞍点，并由沿负$x$轴$f\to-\infty$说明局部极小不等于全局最小。
-
-5. 图`fig:analysis-process-hessian-local-shapes`对照$x^2+2y^2$、$x^2-y^2$、$x^4+y^4$三种形状：前两者由正定与不定判定，第三者Hessian为零却严格极小，零Hessian也可能无极值（如$x^3$），说明退化不是一种确定分类。
 
 ### 20.5 本章小结
 
@@ -494,6 +492,9 @@
 
 ###### paragraph：结构化变量的梯度
 
+图解：`fig:v2-matrix-gradient-projection`。受限梯度是环境梯度$\bm G$到允许子空间$\mathcal S$的Frobenius正交投影。平面表示矩阵子空间，而非矩阵的二维数组；$\bm H\in\mathcal S$，故$\langle\bm G,\bm H\rangle_F=\langle P_{\mathcal S}\bm G,\bm H\rangle_F$。
+
+
 1. 说明变量限于线性子空间$\mathcal S$（如对称矩阵空间）时只允许$\mathcal S$中的扰动，在$\mathcal S$上用Riesz表示得受限梯度；由$\bm G-P_{\mathcal S}\bm G$与$\mathcal S$正交（`sec:ls-orthogonal-projection`），受限梯度是环境梯度的正交投影；由对称与反对称矩阵Frobenius正交得对称投影$(\bm G+\bm G^\top)/2$，并指出在$\mathcal S$中沿用环境梯度时表示矩阵不唯一。
 
 2. 由第~`chap:condition-and-spectral-perturbation`章的Weyl界说明对称正定矩阵组成对称子空间中的开集，讨论正定变量时邻域与扰动方向都在对称子空间内理解；矩阵输出时没有单个梯度矩阵，只能保留微分本身。
@@ -509,6 +510,9 @@
 2. 由线性迹函数无余项读出式`eq:analysis-trace-linear-gradient`即$\nabla_{\bm X}\operatorname{tr}(\bm A^\top\bm X)=\bm A$，与向量情形$\nabla(\bm a^\top\bm x)=\bm a$对应。
 
 ###### paragraph：乘积的精确增量
+
+图解：`fig:v2-matrix-product-increment`。乘积增量的标量面积示意，取$A,B,E,H>0$。两条绿色边带各含一个扰动因子，黄色角块含两个扰动因子；去掉原来的蓝色面积后，留下$AH+EB+EH$。矩阵公式保留同样的项，但矩阵本身不解释为这些面积。
+
 
 1. 由分配律写出对任意大小扰动成立的式`eq:multivariable-product-increment`；说明前两项对$(\bm E,\bm H)$线性并受乘积不等式控制，取联合范数后由Frobenius次乘性得交叉项$\bm E\bm H$为二次量，从而得到联合微分$\bm A\bm H+\bm E\bm B$，$\bm E\bm H$是精确余项；只固定一个因子时交叉项不出现。
 
@@ -632,6 +636,9 @@
 
 ###### paragraph：局部可逆与整体单射
 
+图解：`fig:v2-local-inverse-covering`。映射$g(u,v)=(e^u\cos v,e^u\sin v)$的重复覆盖。左侧蓝、绿矩形具有相同的$u$范围，$v$范围相差$2\pi$；右侧表示它们共同的扇环像。位置与宽度为示意，不按两边的坐标比例绘制。处处非奇异的Jacobian保证局部可逆，却不消除周期造成的整体多对一。
+
+
 1. 说明局部反函数定理是局部结论；示例`ex:multivariable-local-not-global-inverse`：$g(u,v)=(e^u\cos v,e^u\sin v)^\top$的Jacobian行列式$e^{2u}>0$处处可逆，但$(u,v)$与$(u,v+2\pi)$输出相同，不是单射；解释它是半径取$e^u$的极坐标映射，沿$v$方向每隔$2\pi$重复覆盖。
 
 2. 反方向用$x^3$说明全局单射且逆连续也不保证逆可微，对应导数为零、定理条件不满足；提醒邻域、可微性与Jacobian可逆性都要逐项检查，24.3用坐标变换计算区域积分时还须检查区域上的一一对应、光滑性与边界处理，不能仅凭一点处Jacobian非零换元。
@@ -683,6 +690,9 @@
 3. 区分三个易混的量：矩阵条件数$\kappa(\bm A)$是对全部输入的统一上界，固定输入处的相对条件数只涉及这一点，矩阵函数（如求逆）以矩阵为输入的条件数留给第21章计算；指出它们都描述问题本身的敏感性，与算法稳定性的分工见`sec:ls-numerical-stability`。
 
 ###### paragraph：有限条件数而不可微
+
+图解：`fig:v2-ordered-eigenvalue-kink`。$\bm S(t)=\operatorname{diag}(t,-t)$。左图为未排序分支$t$与$-t$，右图为最大特征值$|t|$。两侧斜率在零点不同，但函数仍为$1$-Lipschitz，零点的局部绝对条件数仍为$1$。
+
 
 1. 反例：$\bm S(t)=\operatorname{diag}(t,-t)$排序后的最大特征值为$|t|$，由Weyl界（定理`thm:ls-weyl-eigenvalue`）有限变化受控，在$0$处局部条件数为$1$，却没有双侧导数；解释失去可微性的是“排序取最大”这一步，未排序的分支$t,-t$光滑并在$0$处相交，23.3将在特征值简单时证明所选局部分支可微。
 
@@ -842,6 +852,9 @@
 
 #### 23.3.4 一阶近似的适用条件
 
+图解：`fig:v2-spectral-linear-range`。对$\left[\begin{smallmatrix}1+\gamma&t\\t&1\end{smallmatrix}\right]$且$\gamma>0$，较大特征值方向的转角为$\theta=\tfrac12\arctan(2t/\gamma)$，一阶预测为$t/\gamma$。横轴将扰动与谱隙同时纳入尺度；转角用弧度表示。
+
+
 1. 说明前两小节的公式只在简单特征值附近、步长趋零时成立，用于有限扰动需要扰动相对谱隙足够小，并以上例的第二个基点精确计算。
 
 2. 对$\begin{bmatrix}1+\gamma&t\\t&1\end{bmatrix}$算出特征向量夹角满足$\tan2\theta=2t/\gamma$，而一阶预测为$t/\gamma$：$|t|\ll\gamma$时一致，$t=\gamma/2$时实际为$\pi/8\approx0.39$而预测为$0.5$，固定$t$令$\gamma\to0$时实际趋于$\pi/4$而预测趋于无穷。
@@ -933,6 +946,9 @@
 3. 指出连续是便于核对的充分条件：一般Riemann可积函数的某些截面积分可能不存在，不能省去对内层积分的检查。
 
 #### 24.2.2 简单区域上的累次积分
+
+图解：`fig:v2-integration-slices`。区域$D=\{0\leq y\leq x\leq1\}$的两种切片。左图固定$x$，绿色线段从$y=0$到$y=x$；右图固定$y$，绿色线段从$x=y$到$x=1$。两种积分次序覆盖同一片区域。
+
 
 1. 对由连续边界函数$\alpha\leq\beta$描述的区域和闭包上的连续函数，给出先$y$后$x$的累次积分公式；用零延拓的网格分组说明边界附近格子可忽略，边界函数一致连续保证截面端点与内层积分随$x$连续，有限个这样的区域逐块相加。
 

@@ -42,6 +42,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -79,10 +84,10 @@ a.text(E1[0] + .08, E1[1] - .16, "$e_1$", fontsize=8, color=MUTED)
 a.text(E2[0] - .10, E2[1] + .10, "$e_2$", fontsize=8, color=MUTED)
 a.text(X[0] + .08, X[1] + .05, "$x$", fontsize=8, color=BLUE)
 a.text(.06, -0.42, "$x = 1\\,e_1 + 2\\,e_2$，读数 $(1,2)$", fontsize=8)
-a.set_title("(a) 标准基 $e_1,e_2$：坐标 $(1,2)$", fontsize=8)
+a.set_title('(a)', fontsize=8)
 a.set(xlim=(-.4, 1.9), ylim=(-.7, 2.7), xticks=[0, 1], yticks=[1, 2])
 a.set_aspect("equal")
-a.grid(True)
+a.grid(False)
 
 # ---- 右：斜基 ----
 for t in (-1, 0, 1):  # 平行于 b2 的斜线
@@ -100,11 +105,11 @@ b.text(B1[0] + .10, B1[1] - .20, "$b_1$", fontsize=8, color=BLUE)
 b.text(B2[0] - .34, B2[1] + .06, "$b_2$", fontsize=8, color=GREEN)
 b.text(X[0] + .10, X[1] + .04, "$x$", fontsize=8, color=INK)
 b.text(-2.55, -0.78, "$x = 1\\,b_1 + 1\\,b_2$，读数 $(1,1)$", fontsize=8)
-b.set_title("(b) 斜基 $b_1,b_2$：坐标 $(1,1)$", fontsize=8)
+b.set_title('(b)', fontsize=8)
 b.set(xlim=(-2.9, 3.3), ylim=(-.9, 2.8), xticks=[-2, 0, 2], yticks=[-1, 1, 2])
 b.set_aspect("equal")
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:
@@ -127,7 +132,7 @@ record = {
         "check_oblique": "b1+b2=(1,2)=x",
     },
     "processing": "直接求值；无平滑、无随机采样。",
-    "width_mm": 169, "height_mm": 66, "png_dpi": 300,
+    "width_mm": 169, "height_mm": fig.get_figheight()*25.4, "png_dpi": 300,
     "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
 }
 (HERE / "sources.json").write_text(

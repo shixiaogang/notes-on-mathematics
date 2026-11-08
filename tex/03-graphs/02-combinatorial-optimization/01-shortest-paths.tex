@@ -210,8 +210,6 @@
 
 \begin{table}[!htb]
   \centering
-  \caption{$\bm a=(A,B)$改写为$\bm b=(A,C,B)$的编辑距离表。第$i$行第$j$列为$E(i,j)$，按式~\eqref{eq:graph-opt-edit-distance}逐行计算；右下角$E(2,3)=1$。}
-  \label{tab:graph-opt-edit-distance}
   \begin{tabular}{@{}ccccc@{}}
     \toprule
     & $j=0$ & $j=1$（$A$） & $j=2$（$C$） & $j=3$（$B$） \\
@@ -221,6 +219,8 @@
     $i=2$（$B$） & $2$ & $1$ & $1$ & $1$ \\
     \bottomrule
   \end{tabular}
+  \caption{$\bm a=(A,B)$改写为$\bm b=(A,C,B)$的编辑距离表。第$i$行第$j$列为$E(i,j)$，按式~\eqref{eq:graph-opt-edit-distance}逐行计算；右下角$E(2,3)=1$。}
+  \label{tab:graph-opt-edit-distance}
 \end{table}
 
 \section{Bellman--Ford算法}
@@ -277,27 +277,46 @@
   \end{gathered}
 \]
 其中$b\to c\to a\to t\to b$构成一个环，成本为$3-4+2+1=2$，不是负环。按式~\eqref{eq:graph-opt-bellman-ford}逐轮计算，各轮标签见表~\ref{tab:graph-opt-bellman-ford-rounds}。
-\begin{itemize}
-  \item 第$1$轮只能用一条弧：$t$由$s$得到$6$，$b$由$s$得到$2$，其余仍为$+\infty$。
-  \item 第$2$轮：$c$经$b$得到$2+3=5$。$a\to t$与$c\to a$的起点在上一轮还是$+\infty$，不产生候选。
-  \item 第$3$轮：$a$经$c$得到$5-4=1$，对应三弧路线$s\to b\to c\to a$。
-  \item 第$4$轮：$t$经$a$降到$1+2=3$，前驱由$s$改为$a$，对应四弧路线$s\to b\to c\to a\to t$，比直达的$s\to t$便宜。
-\end{itemize}
+
+第$1$轮只能用一条弧：$t$由$s$得到$6$，$b$由$s$得到$2$，其余仍为$+\infty$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=40.771mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-1.pdf}
+  \caption{Bellman--Ford第$1$轮结束。本轮只能沿从$s$出发的单条弧产生有限候选。弧旁数字是弧长，顶点旁是标签；绿色弧与数字表示本轮改善，蓝色弧表示此前保留的前驱。}
+  \label{fig:graph-opt-bellman-ford-rounds}
+\end{BookInlineFigure}
+
+第$2$轮：$c$经$b$得到$2+3=5$。$a\to t$与$c\to a$的起点在上一轮还是$+\infty$，不产生候选。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=42.774mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-2.pdf}
+  \caption{第$2$轮：改善从$b$传到$c$，得到$d(c)=5$。本轮仍读取上一轮的标签，因此不能立刻沿$c\to a$继续传递。}
+  \label{fig:graph-opt-bellman-ford-rounds-2}
+\end{BookInlineFigure}
+
+第$3$轮：$a$经$c$得到$5-4=1$，对应三弧路线$s\to b\to c\to a$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=42.774mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-3.pdf}
+  \caption{第$3$轮：沿$c\to a$得到$d(a)=1$。此前$t$的标签仍为直达路线的成本$6$。}
+  \label{fig:graph-opt-bellman-ford-rounds-3}
+\end{BookInlineFigure}
+
+第$4$轮：$t$经$a$降到$1+2=3$，前驱由$s$改为$a$，对应四弧路线$s\to b\to c\to a\to t$，比直达的$s\to t$便宜。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=40.771mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-4.pdf}
+  \caption{第$4$轮：沿$a\to t$把$d(t)$由$6$降为$3$，并改写$t$的前驱。蓝绿弧组成最终最短路径树。}
+  \label{fig:graph-opt-bellman-ford-rounds-4}
+\end{BookInlineFigure}
+
 此时$k=4=n-1$，递推停止。再检查全部弧，没有一条还能改善，因而没有种子，最终距离为$(s,a,b,c,t)=(0,1,2,5,3)$。
 
 这个例子恰好用满了$n-1$轮，因为$t$的最短路含$4$条弧；每一行都是“至多$k$条弧”的最优值，例如$d^{(3)}(t)=6$只计入了单弧路线$s\to t$。改善沿环$b\to c\to a\to t$传递了一圈，但回到$b$时，候选$3+1=4$不小于$2$，传递就此停止：环的成本非负，绕圈不会更便宜。
 
-\begin{figure*}[!htb]
-  \centering
-  \includegraphics[width=148.629mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-bellman-ford-rounds/figure.pdf}
-  \caption{同步Bellman--Ford在含环图上的逐轮执行。弧为$s\to t$长$6$、$s\to b$长$2$、$b\to c$长$3$、$c\to a$长$-4$、$a\to t$长$2$、$t\to b$长$1$，环$b\to c\to a\to t\to b$的成本为$2$。顶点旁为该轮结束时的标签，绿色数字是本轮改变的标签，绿色弧是提供改善的弧，蓝色弧是其余的当前前驱弧。改善每轮沿弧前进一步，第$4$轮$t$经$a$由$6$降到$3$。}
-  \label{fig:graph-opt-bellman-ford-rounds}
-\end{figure*}
 
 \begin{table}[!htb]
   \centering
-  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-bellman-ford-rounds}的含环图上的逐轮标签。第$k$行是至多$k$条弧的最小成本，括号内为该轮改变标签时的前驱。}
-  \label{tab:graph-opt-bellman-ford-rounds}
   \begin{tabular}{cccccc}
     \toprule
     轮次$k$ & $d^{(k)}(s)$ & $d^{(k)}(a)$ & $d^{(k)}(b)$ & $d^{(k)}(c)$ & $d^{(k)}(t)$ \\
@@ -309,6 +328,8 @@
     $4$ & $0$ & $1$ & $2$ & $5$ & $3$（$a$） \\
     \bottomrule
   \end{tabular}
+  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-bellman-ford-rounds}的含环图上的逐轮标签。第$k$行是至多$k$条弧的最小成本，括号内为该轮改变标签时的前驱。}
+  \label{tab:graph-opt-bellman-ford-rounds}
 \end{table}
 
 负环存在时，标签不会停下来。回到图~\ref{fig:graph-opt-distance-outcomes}。该图有$7$个顶点，同步计算$6$轮，各轮标签见表~\ref{tab:graph-opt-bellman-ford-negative}。$u$在第$1$轮得到$4$后不再变化，$x,y$始终为$+\infty$；而$a,b,t$的标签每隔一两轮就再降一次，第$6$轮停在$-3,-2,2$。这些值只是绕圈到第$6$轮时恰好停留的数，本身没有意义。
@@ -321,8 +342,6 @@
 
 \begin{table}[!htb]
   \centering
-  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-distance-outcomes}上的逐轮标签（$x,y$各轮均为$+\infty$，未列出）。$u$在第$1$轮后稳定；可达负环$a\to b\to a$使$a,b,t$的标签持续下降。}
-  \label{tab:graph-opt-bellman-ford-negative}
   \begin{tabular}{cccccc}
     \toprule
     轮次$k$ & $d^{(k)}(s)$ & $d^{(k)}(u)$ & $d^{(k)}(a)$ & $d^{(k)}(b)$ & $d^{(k)}(t)$ \\
@@ -336,6 +355,8 @@
     $6$ & $0$ & $4$ & $-3$ & $-2$ & $2$ \\
     \bottomrule
   \end{tabular}
+  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-distance-outcomes}上的逐轮标签（$x,y$各轮均为$+\infty$，未列出）。$u$在第$1$轮后稳定；可达负环$a\to b\to a$使$a,b,t$的标签持续下降。}
+  \label{tab:graph-opt-bellman-ford-negative}
 \end{table}
 
 \paragraph{就地更新}
@@ -444,21 +465,47 @@ Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再�
 把四点图中$a\to b$的长度由$-1$改为$1$，全部弧长非负，Dijkstra算法适用。表~\ref{tab:graph-opt-dijkstra-trace}列出每次出队后的状态。
 
 第$1$步取出$s$，松弛得$d(a)=2$、$d(b)=5$，前驱都是$s$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-1.pdf}
+  \caption{Dijkstra第$1$步：取出$s$并松弛两条出弧。黄色是本次出队顶点，蓝底是已确定顶点；绿色标签和弧表示本次改善及新前驱。弧旁数字为长度，顶点旁为距离标签。}
+  \label{fig:graph-opt-dijkstra-trace}
+\end{BookInlineFigure}
+
 
 第$2$步取出标签最小的$a$，候选$2+1=3<5$使$d(b)=3$、$p(b)=a$，候选$2+5=7$使$d(t)=7$、$p(t)=a$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-2.pdf}
+  \caption{第$2$步：确定$a$，经$a$把$b$的标签从$5$降为$3$，并首次到达$t$。已确定的$s,a$不再改写。}
+  \label{fig:graph-opt-dijkstra-trace-2}
+\end{BookInlineFigure}
+
 
 第$3$步取出$b$，候选$3+2=5<7$使$d(t)=5$、$p(t)=b$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=38.347mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-3.pdf}
+  \caption{第$3$步：确定$b$，经$b$把$t$的标签从$7$降为$5$。绿色弧$b\to t$替换此前的前驱弧$a\to t$。}
+  \label{fig:graph-opt-dijkstra-trace-3}
+\end{BookInlineFigure}
+
 
 第$4$步取出$t$，它没有出弧，队列为空，停止。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-4.pdf}
+  \caption{第$4$步：确定$t$。最终前驱弧组成$s\to a\to b\to t$，各顶点标签均已等于最短距离。}
+  \label{fig:graph-opt-dijkstra-trace-4}
+\end{BookInlineFigure}
+
 
 最终$\delta(a)=2$、$\delta(b)=3$、$\delta(t)=5$，从$t$沿前驱回溯得到$s\to a\to b\to t$。
 
-图~\ref{fig:graph-opt-dijkstra-trace}画出同样的四个状态：已确定集合$R$逐个向外扩张，每个顶点在出队时的标签都不再改变。
+图~\ref{fig:graph-opt-dijkstra-trace}至图~\ref{fig:graph-opt-dijkstra-trace-4}分别对应这四步：已确定集合$R$逐个向外扩张，每个顶点在出队时的标签都不再改变。
 
 \begin{table}[!htb]
   \centering
-  \caption{Dijkstra算法在非负四点图（$a\to b$长$1$，其余弧长同前）上的状态。每行是一次出队并松弛之后的标签与已确定集合，括号内为本步改变标签时的新前驱。}
-  \label{tab:graph-opt-dijkstra-trace}
   \begin{tabular}{@{}ccccccc@{}}
     \toprule
     步 & 出队 & $d(s)$ & $d(a)$ & $d(b)$ & $d(t)$ & $R$ \\
@@ -470,14 +517,10 @@ Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再�
     $4$ & $t$ & $0$ & $2$ & $3$ & $5$ & $\{s,a,b,t\}$ \\
     \bottomrule
   \end{tabular}
+  \caption{Dijkstra算法在非负四点图（$a\to b$长$1$，其余弧长同前）上的状态。每行是一次出队并松弛之后的标签与已确定集合，括号内为本步改变标签时的新前驱。}
+  \label{tab:graph-opt-dijkstra-trace}
 \end{table}
 
-\begin{figure*}[!htb]
-  \centering
-  \includegraphics[width=147.687mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-dijkstra-trace/figure.pdf}
-  \caption{Dijkstra算法在非负四点图上的出队过程（$a\to b$长$1$，其余同前）。每个面板对应一次出队：蓝色为已确定顶点，黄色为本次出队的顶点，绿色标签与绿色弧表示本次松弛改善的标签及新前驱。四次出队依次确定$s=0$、$a=2$、$b=3$、$t=5$，最终前驱弧组成路线$s\to a\to b\to t$。}
-  \label{fig:graph-opt-dijkstra-trace}
-\end{figure*}
 
 \subsection{算法分析}
 
@@ -535,8 +578,6 @@ $P$从$y$到$u$的后半段由可达部分的弧组成，长度非负，因而$\
 
 \begin{table}[!htb]
   \centering
-  \caption{三种单源最短路算法的比较（$n$为顶点数，$a$为弧数，邻接表存储）。}
-  \label{tab:graph-opt-shortest-path-methods}
   \begin{tabular}{llll}
     \toprule
     & 有向无环图递推 & Bellman--Ford & Dijkstra \\
@@ -549,6 +590,8 @@ $P$从$y$到$u$的后半段由可达部分的弧组成，长度非负，因而$\
     正确性依据 & 拓扑序归纳 & 至多$k$弧递推 & 首个未定顶点 \\
     \bottomrule
   \end{tabular}
+  \caption{三种单源最短路算法的比较（$n$为顶点数，$a$为弧数，邻接表存储）。}
+  \label{tab:graph-opt-shortest-path-methods}
 \end{table}
 
 “允许负边”与“存在负环”是两件不同的事。有向无环图递推与Bellman--Ford算法都允许负边；前者因为无环而不会遇到负环，后者则能在负环存在时正确报告受影响的顶点。Dijkstra算法连负边都不允许，哪怕负边并不构成负环，图~\ref{fig:graph-opt-dijkstra-counterexample}就是这样的例子。一种算法在某组数据上跑得更快、甚至答案碰巧正确，都不能替代对其条件的检查。

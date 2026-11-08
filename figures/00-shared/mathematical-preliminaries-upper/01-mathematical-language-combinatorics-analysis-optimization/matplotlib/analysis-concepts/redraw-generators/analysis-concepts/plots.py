@@ -24,6 +24,10 @@ from plot_style import BLUE, GREEN, YELLOW, RED, PURPLE, BLUE_FILL, GREEN_FILL, 
 configure()
 
 records = {}
+CURRENT_OUTPUTS = {
+    'language-minimum-infimum': ROOT/'figures/00-shared/mathematical-preliminaries-upper/01-mathematical-language-combinatorics-analysis-optimization/matplotlib/prelim-minimum-infimum/figure',
+    'analysis-continuity-counterexamples': ROOT/'figures/01-basic-mathematics/02-real-numbers-and-univariate-functions/matplotlib/analysis-continuity-counterexamples/figure',
+}
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", choices=["language-minimum-infimum", "analysis-metric-convergence",
                                      "analysis-continuity-counterexamples", "analysis-derivative-orders"],
@@ -36,7 +40,7 @@ def panels(number, width=169, height=74):
                              layout="constrained")
     for ax in np.atleast_1d(axes):
         ax.set_axisbelow(True)
-        ax.grid(axis="y", color=GRID, lw=.5)
+        ax.grid(False)
     return fig, np.atleast_1d(axes)
 
 
@@ -44,26 +48,31 @@ def save(fig, name, brief, formula, parameters, data, source, width, height):
     prepare_figure(fig)
     outputs = []
     for ext in ["pdf", "svg", "png"]:
-        output = HERE / f"{name}.{ext}"
+        stem = CURRENT_OUTPUTS.get(name, HERE/name)
+        stem.parent.mkdir(parents=True,exist_ok=True)
+        output = stem.with_suffix('.'+ext)
         if selection is None or name == selection:
             fig.savefig(output, dpi=300)
         outputs.append(output.name)
     plt.close(fig)
     records[name] = {
+        "source_generator": str(Path(__file__).relative_to(ROOT)), "visual_style": style_record(), "background_grid": False,
         "kind": "analytical teaching construction, not observed experimental data",
         "reader_question": brief, "chapter_source": source, "formula": formula,
         "parameters": parameters, "evaluated_data": data,
         "processing": "Direct evaluation; no smoothing or random sampling. Discontinuous pieces are drawn separately.",
-        "width_mm": width, "height_mm": height, "png_dpi": 300,
+        "width_mm": width, "height_mm": fig.get_figheight()*25.4, "png_dpi": 300,
         "outputs": outputs,
     }
+    if selection is None or name == selection:
+        stem.with_suffix('.json').write_text(json.dumps(records[name], ensure_ascii=False, indent=2)+'\n')
 
 
 # The endpoint membership changes attainment, although the infimum is fixed.
 x = np.linspace(0, 1, 401)
 fig, axes = panels(2, width=112, height=67)
 for ax, color, closed, title in zip(axes, [BLUE, GREEN], [False, True],
-                                    ["(a) 开区间 $X=(0,1)$", "(b) 闭区间 $X=[0,1]$"]):
+                                    ["(a)", "(b)"]):
     ax.plot(x, x, color=color)
     ax.plot([0, 1], [0, 1], "o", ms=6, mec=color, mew=1,
             mfc=color if closed else "white", zorder=5)
@@ -71,9 +80,7 @@ for ax, color, closed, title in zip(axes, [BLUE, GREEN], [False, True],
     ax.set(title=title, xlabel="$x$", xlim=(-.12, 1.12), ylim=(-.10, 1.13))
     ax.set_xticks([0, .5, 1])
     ax.set_yticks([0, .5, 1])
-    ax.text(.035, .96, "下确界 $0$\n" + ("在 $x=0$ 达到" if closed else "没有最小点"),
-            transform=ax.transAxes, ha="left", va="top", fontsize=8)
-axes[0].set_ylabel("函数值 $f(x)=x$")
+axes[0].set_ylabel("$f(x)=x$")
 save(fig, "language-minimum-infimum",
      "The same infimum need not be attained: endpoint membership is visible through hollow/filled markers.",
      "f(x)=x; X_open=(0,1), X_closed=[0,1]; both inf=0; closed argmin={0}, open argmin is empty.",
@@ -136,22 +143,16 @@ a.plot([0], [0], "o", color=GRAY, ms=3, zorder=5)
 a.text(-.99, .09, r"$\varepsilon=1/4$", fontsize=8)
 a.text(0, .62, r"$\delta=1/2$", ha="center", fontsize=8)
 a.text(-.99, 1.11, "$f(x)=x^2$", fontsize=8)
-a.set(title="(a) 连续与邻域控制", ylabel="函数值")
+a.set(title="(a)", ylabel="$y$")
 b.plot([-1, 0], [0, 0], color=BLUE)
 b.plot([0, 1], [1, 1], color=BLUE)
 b.plot([0], [0], "o", mfc="white", mec=BLUE, ms=6, mew=1, zorder=5)
 b.plot([0], [1], "o", color=BLUE, ms=6, zorder=5)
-b.text(-.95, .72, r"$x\uparrow0$" + " 时\n函数值仍为 $0$", fontsize=8)
-b.annotate("$j(0)=1$", (0, 1), xytext=(.17, .47), fontsize=8,
-           arrowprops={"arrowstyle":"-", "color":GRAY, "lw":.6})
-b.text(-.98, 1.11, r"$j(x)=\mathbb{I}\{x\geq0\}$", fontsize=8)
-b.set(title="(b) 跳跃处不连续")
+b.set(title="(b)")
 c.plot(x, np.abs(x), color=BLUE)
 c.plot([0], [0], "o", color=BLUE, ms=4, zorder=5)
-c.text(-.99, .10, "$f'_-(0)=-1$", fontsize=8)
-c.text(.27, .10, "$f'_+(0)=1$", fontsize=8)
 c.text(-.98, 1.11, "$f(x)=|x|$", fontsize=8)
-c.set(title="(c) 连续却不可导")
+c.set(title="(c)")
 save(fig, "analysis-continuity-counterexamples",
      "Continuity preserves nearby outputs, a jump breaks this property, and continuity does not guarantee a common two-sided slope.",
      "f1(x)=x^2: at x0=0, epsilon=1/4 and delta=1/2 imply |x|<delta -> |f1(x)|<epsilon. j(x)=0 for x<0, 1 for x>=0. f3(x)=|x|: continuous at 0; left/right derivatives=-1/+1.",

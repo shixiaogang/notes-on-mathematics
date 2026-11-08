@@ -43,6 +43,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -87,14 +92,12 @@ ax.text(B2[0] - .38, B2[1] + .08, "$b_2$", fontsize=8, color=GREEN)
 ax.text(B1D[0] + .10, B1D[1] - .16, "$b^1$", fontsize=8, color=RED)
 ax.text(B2D[0] - .30, B2D[1] + .04, "$b^2$", fontsize=8, color=RED)
 ax.text(A[0] + .08, A[1] - .20, "$a$", fontsize=8, color=YELLOW)
-ax.text(-2.15, -0.62, "等值线 $\\ell(x)=x\\cdot a$；$\\ell(b_1)=2$，$\\ell(b_2)=-1$", fontsize=8)
-ax.text(-2.15, -0.95, "$a=\\ell(b_1)\\,b^1+\\ell(b_2)\\,b^2=2\\,b^1-b^2$", fontsize=8)
-ax.set_title("对偶基：把对 $b_1,b_2$ 的读数分别装进 $b^1,b^2$", fontsize=8)
+ax.set_title('', fontsize=8)
 ax.set(xlim=(-2.4, 2.9), ylim=(-1.25, 2.75), xticks=[-2, -1, 0, 1, 2], yticks=[-1, 0, 1, 2])
 ax.set_aspect("equal")
-ax.grid(True)
+ax.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

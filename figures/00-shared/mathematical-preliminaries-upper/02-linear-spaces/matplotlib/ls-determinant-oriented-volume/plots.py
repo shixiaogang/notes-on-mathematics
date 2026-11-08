@@ -1,141 +1,86 @@
-"""教学图：二维行列式的有向体积。
+"""Unit square and two determinant scalings using the current book example.
 
-固定构造：单位正方形经 A=[[1.5,0.5],[0.3,1.2]] 映射为平行四边形，
-det A=1.65>0（取向不变）；交换两列得 A⁻=[[0.5,1.5],[1.2,0.3]]，
-det A⁻=-1.65（取向翻转）。两个 panel 面积都是 |det|=1.65。
-无随机数，不调用 LaTeX。从任意目录运行：python3 plots.py [--only ls-determinant-oriented-volume]
+A=[[2,.5],[0,1.5]], A_minus=A@diag(-1,1). All panels use the same scale.
+The arc follows the first column to the second column.
 """
 from pathlib import Path
 import argparse
 import json
-
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
-from matplotlib.patches import Polygon, Rectangle
-from matplotlib.text import Text
+from matplotlib.patches import FancyArrowPatch, Polygon, Rectangle
 
 HERE = Path(__file__).resolve().parent
 NAME = HERE.name
-ROOT = next(p for p in Path(__file__).resolve().parents
-            if (p / "build.sh").is_file() and (p / "tex/book.tex").is_file())
-
-for fname in ["SourceHanSansSC-Normal.otf", "LXGWWenKai-Regular.ttf", "FiraMath-Regular.otf"]:
-    font_manager.fontManager.addfont(ROOT / "fonts" / fname)
-
-BLUE, GREEN, YELLOW, RED = "#7188A3", "#829C8B", "#B4A16F", "#A7787D"
-INK, MUTED, GRID, STROKE = "#3B4252", "#6B7280", "#D8DCE2", "#4C4D4F"
-BLUE_FILL = "#E5EAF0"
-CN_MAIN, CN_AUX, EN = "Source Han Sans SC", "LXGW WenKai", "Fira Math"
-
-matplotlib.rcParams.update({
-    "font.family": [EN, CN_MAIN], "font.size": 8,
-    "mathtext.fontset": "custom", "mathtext.rm": EN, "mathtext.it": EN,
-    "mathtext.bf": EN, "mathtext.sf": EN,
-    "axes.unicode_minus": False, "text.color": INK, "axes.labelcolor": INK,
-    "axes.edgecolor": STROKE, "axes.linewidth": .75,
-    "axes.spines.top": False, "axes.spines.right": False,
-    "xtick.color": STROKE, "ytick.color": STROKE,
-    "xtick.labelsize": 7.5, "ytick.labelsize": 7.5,
-    "grid.color": GRID, "grid.linewidth": .4,
-    "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white",
-    "pdf.fonttype": 3, "svg.fonttype": "path",
-})
-
+ROOT = next(p for p in HERE.parents if (p / "build.sh").is_file())
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure, style_record
+from plot_style import BLUE, GREEN, BLUE_FILL, GREEN_FILL, STROKE, INK
+configure()
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--only", default=NAME, choices=[NAME],
-                    help="本目录仅一幅图；保留参数以统一调用方式。")
-selection = parser.parse_args().only
+parser.add_argument("--only", default=NAME, choices=[NAME])
+parser.parse_args()
 
-A_POS = np.array([[1.5, 0.5], [0.3, 1.2]])   # det = 1.65
-A_NEG = np.array([[0.5, 1.5], [1.2, 0.3]])  # det = -1.65
+A = np.array([[2., .5], [0., 1.5]])
+A_MINUS = A @ np.diag([-1., 1.])
+MATRICES = [np.eye(2), A, A_MINUS]
+assert np.allclose([np.linalg.det(m) for m in MATRICES], [1., 3., -3.])
 
+def arrow(ax, start, end, color, width=1.4, size=8):
+    ax.add_patch(FancyArrowPatch(start, end, arrowstyle="-|>", mutation_scale=size,
+                               color=color, linewidth=width, shrinkA=0, shrinkB=0))
 
-def arrow(ax, p, q, color, lw=1.1, ls="-"):
-    ax.annotate("", xy=q, xytext=p,
-                arrowprops=dict(arrowstyle="-|>", color=color, lw=lw, ls=ls,
-                                shrinkA=0, shrinkB=0))
-
-
-def finalize(fig):
-    for t in fig.findobj(Text):
-        s = t.get_text()
-        has_cjk = any(("⺀" <= ch <= "鿿") or ("＀" <= ch <= "￯") for ch in s)
-        t.set_fontfamily([CN_MAIN, EN] if has_cjk else [EN, CN_MAIN])
-        t.set_fontweight("normal")
-
-
-def draw_panel(ax, A, title, det_text, orient_text, orient_xy, flip):
-    e1, e2 = A[:, 0], A[:, 1]
-    ax.add_patch(Rectangle((0, 0), 1, 1, facecolor="none", edgecolor=MUTED,
-                          lw=.6, ls=":"))
-    ax.add_patch(Polygon([(0, 0), e1, e1 + e2, e2], closed=True,
-                        facecolor=BLUE_FILL, edgecolor=BLUE, lw=1.1))
-    arrow(ax, (0, 0), e1, BLUE)
-    arrow(ax, (0, 0), e2, GREEN)
-    ax.text(e1[0] + .05, e1[1] - .05, "$a_1$", fontsize=8, color=BLUE)
-    ax.text(e2[0] - .28, e2[1] + .10, "$a_2$", fontsize=8, color=GREEN)
-    # 有向角弧：正 panel 从 a1 方向扫到 a2 方向（逆时针），负 panel 反向
-    u1, u2 = e1 / np.linalg.norm(e1) * .55, e2 / np.linalg.norm(e2) * .55
-    ax.annotate("", xy=tuple(u2 if not flip else u1),
-                xytext=tuple(u1 if not flip else u2),
-                arrowprops=dict(arrowstyle="-|>", color=RED, lw=.9,
-                                connectionstyle="arc3,rad=0.25" if not flip
-                                else "arc3,rad=-0.25"))
-    ax.text(orient_xy[0], orient_xy[1], orient_text, fontsize=7.5, color=RED)
-    ax.text(.15, 1.55, det_text, fontsize=7.5, color=INK)
-    ax.set_title(title, fontsize=8)
-    ax.set(xlim=(-.35, 2.6), ylim=(-.3, 1.85), xticks=[0, 1, 2], yticks=[0, 1])
+def panel(ax, matrix, labels, title):
+    u, v = matrix[:, 0], matrix[:, 1]
+    vertices = np.array([[0., 0.], u, u + v, v])
+    ax.add_patch(Polygon(vertices, closed=True, facecolor=BLUE_FILL,
+                         edgecolor=BLUE, linewidth=1.05))
+    arrow(ax, (0., 0.), u, BLUE)
+    arrow(ax, (0., 0.), v, GREEN)
+    ax.text(u[0], u[1] - .15, labels[0], ha="center", va="top", color=BLUE)
+    ax.text(v[0], v[1] + .12, labels[1], ha="center", va="bottom", color=GREEN)
+    # Signed shortest angle from column 1 to column 2.
+    t0 = np.arctan2(u[1], u[0])
+    delta = np.arctan2(np.linalg.det(matrix), np.dot(u, v))
+    theta = np.linspace(t0 + .14 * delta, t0 + .86 * delta, 60)
+    points = .38 * np.column_stack([np.cos(theta), np.sin(theta)])
+    ax.plot(points[:, 0], points[:, 1], color=STROKE, linewidth=.85)
+    arrow(ax, points[-5], points[-1], STROKE, width=.85, size=6)
+    ax.plot(0., 0., marker="o", markersize=2, color=INK, linewidth=0)
+    center_x = (vertices[:, 0].min() + vertices[:, 0].max()) / 2
+    ax.set(xlim=(center_x - 1.8, center_x + 1.8), ylim=(-.45, 2.05))
     ax.set_aspect("equal")
-    ax.grid(True)
+    ax.axis("off")
+    ax.text(.5, -.07, title, transform=ax.transAxes, ha="center", va="top")
 
-
-fig, (a, b) = plt.subplots(1, 2, figsize=(169 / 25.4, 70 / 25.4))
-
-draw_panel(a, A_POS,
-           "(a) det A = 1.65 > 0：保取向",
-           "平行四边形面积 = det A = 1.65",
-           "$a_1\\to a_2$ 为逆时针",
-           (.75, .62), False)
-draw_panel(b, A_NEG,
-           "(b) det A = −1.65 < 0：翻转取向",
-           "面积大小 = |det A| = 1.65",
-           "$a_1\\to a_2$ 翻为顺时针",
-           (1.0, .62), True)
-
-finalize(fig)
-fig.tight_layout()
-for ext in ("pdf", "svg", "png"):
-    if selection == NAME:
-        fig.savefig(HERE / f"{NAME}.{ext}", dpi=300)
-plt.close(fig)
-
+fig, axes = plt.subplots(1, 3, figsize=(169 / 25.4, 59 / 25.4))
+fig.subplots_adjust(left=.025, right=.975, bottom=.19, top=.98, wspace=.13)
+panel(axes[0], MATRICES[0], [r"$e_1$", r"$e_2$"], r"$\det I=1$")
+panel(axes[1], MATRICES[1], [r"$a_1$", r"$a_2$"], r"$\det A=3$")
+panel(axes[2], MATRICES[2], [r"$-a_1$", r"$a_2$"], r"$\det A_{-}=-3$")
 record = {
-    "kind": "analytical teaching construction, not observed experimental data",
-    "reader_question": "行列式的正负号在图上到底标记了面积的什么信息？",
-    "formula": "A+=[[1.5,0.5],[0.3,1.2]], det=1.65; A-=[[0.5,1.5],[1.2,0.3]], det=-1.65; "
-               "both map unit square to parallelogram of area 1.65, opposite orientation.",
-    "parameters": {
-        "unit_square": "[0,1]x[0,1]",
-        "A_positive": A_POS.tolist(),
-        "A_negative": A_NEG.tolist(),
-    },
-    "evaluated_data": {
-        "det_positive": float(np.linalg.det(A_POS)),
-        "det_negative": float(np.linalg.det(A_NEG)),
-        "columns_positive": {"a1": list(A_POS[:, 0]), "a2": list(A_POS[:, 1])},
-        "columns_negative": {"a1": list(A_NEG[:, 0]), "a2": list(A_NEG[:, 1])},
-    },
-    "processing": "解析式与 numpy.linalg.det 核对；无随机采样。",
-    "width_mm": 169, "height_mm": 70, "png_dpi": 300,
-    "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
+    "kind": "analytical teaching construction",
+    "reader_question": "How do determinant magnitude and sign describe area and orientation?",
+    "formula": "A=[[2,0.5],[0,1.5]], A_minus=A@diag(-1,1); determinants 1,3,-3",
+    "parameters": {"matrices": [m.tolist() for m in MATRICES], "common_panel_span": [3.6, 2.5]},
+    "evaluated_data": {"determinants": [float(np.linalg.det(m)) for m in MATRICES]},
+    "visual_encoding": "Common scale; blue first column, green second column; dark arc follows first to second; no background axes/grid.",
+    "width_mm": 169, "height_mm": 59,
+    "processing": "Exact analytic matrices, determinants checked with numpy; no random data.",
 }
-(HERE / "sources.json").write_text(
-    json.dumps({"style": "figures.md 统一色板：蓝#7188A3 绿#829C8B 黄#B4A16F 红#A7787D",
-                "fonts": {"Chinese": "fonts/SourceHanSansSC-Normal.otf",
-                          "Chinese_aux": "fonts/LXGWWenKai-Regular.ttf",
-                          "math": "fonts/FiraMath-Regular.otf"},
-                "figures": {NAME: record}}, ensure_ascii=False, indent=2) + "\n")
+prepare_figure(fig)
+for ext in ("pdf", "svg", "png"):
+    fig.savefig(HERE / f"{NAME}.{ext}", dpi=300)
+plt.close(fig)
+record.update({
+    "source": str(Path(__file__).relative_to(ROOT)),
+    "reference_width_mm": record["width_mm"], "reference_scale": 1,
+    "label_size_pt_at_reference": 8, "png_dpi": 300,
+    "outputs": [f"{NAME}.{ext}" for ext in ("pdf", "svg", "png")],
+})
+(HERE / "sources.json").write_text(json.dumps(
+    {"style": style_record(), "figures": {NAME: record}}, ensure_ascii=False, indent=2) + "\n")
 print("generated", NAME)

@@ -44,6 +44,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -86,14 +91,12 @@ ax.text(1.30 * V[0] + .04, 1.30 * V[1] + .02, "$V$", fontsize=8, color=GREEN)
 ax.text(V[0] - .22, V[1] + .10, "$v$", fontsize=8, color=GREEN)
 ax.text(P[0] - .12, P[1] - .09, "$p=(v\\cdot\\hat u)\\hat u$", fontsize=7.5, color=YELLOW)
 ax.text(V[0] + .03, (V[1]) / 2, "$\\|v\\|\\sin\\theta$", fontsize=7.5, color=MUTED)
-ax.text(-.32, .95,
-        "$\\cos\\theta=\\frac{|\\langle u,v\\rangle|}{\\|u\\|\\|v\\|}$\n$\\theta$ 越小，两子空间越接近重合",
-        fontsize=7.5)
-ax.set_title("两直线子空间的主夹角与正交投影残差", fontsize=8)
+pass
+ax.set_title('', fontsize=8)
 ax.set(xlim=(-.45, 1.55), ylim=(-.2, 1.1), xticks=range(0, 2), yticks=range(0, 2))
-ax.set_aspect("equal"); ax.grid(True)
+ax.set_aspect("equal"); ax.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:
