@@ -43,6 +43,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -74,12 +79,12 @@ fig, ax = plt.subplots(figsize=(112 / 25.4, 80 / 25.4))
 # 子空间 U：过原点、方向 d=(2,1) 的直线
 t = np.array([-1.25, 2.75])
 ax.plot(t * D[0], t * D[1], color=BLUE, lw=1.4, zorder=2)
-ax.text(5.05, 2.62, "$U$（子空间）", fontsize=8, color=BLUE)
+ax.text(5.05, 2.62, "$U$", fontsize=8, color=BLUE)
 
 # 投影点 P_U y 与误差向量
 ax.plot(*P, "o", ms=5, mfc=GREEN, mec=INK, mew=.5, zorder=5)
 arrow(ax, P, Y, GREEN, lw=1.2)
-ax.text(0.05, 1.95, "$y-P_Uy$（误差，垂直于 $U$）", fontsize=7.5, color=GREEN)
+ax.text(0.05, 1.95, "$y-P_Uy$", fontsize=7.5, color=GREEN)
 
 # 直角标记
 u = D / np.linalg.norm(D)
@@ -99,18 +104,15 @@ ax.text(2.12, 0.72, "$P_Uy$", fontsize=8, color=GREEN)
 # 非正交候选 Q 及其更长距离
 ax.plot(*Q, "o", ms=5, mfc=YELLOW, mec=INK, mew=.5, zorder=5)
 ax.plot([Y[0], Q[0]], [Y[1], Q[1]], color=YELLOW, lw=.9, ls="--", zorder=3)
-ax.text(3.05, 2.85, "非正交候选 $Q=(4,2)$", fontsize=7.5, color=YELLOW)
 
-ax.text(-2.05, 3.62, "正交投影是 $U$ 上离 $y$ 最近的点", fontsize=8)
-ax.text(-2.05, -1.42,
-        "$\\|y-P_Uy\\|=\\sqrt{5}\\approx2.24$ 最短；$\\|y-Q\\|=\\sqrt{10}\\approx3.16$",
-        fontsize=7.5, color=MUTED)
-ax.set_title("子空间最近点：误差垂直于子空间", fontsize=8)
+
+
+ax.set_title("")
 ax.set(xlim=(-2.2, 5.9), ylim=(-1.7, 4.0), xticks=range(-2, 6, 2), yticks=range(-1, 4))
 ax.set_aspect("equal")
-ax.grid(True)
+ax.grid(False, which="both")
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 if selection == NAME:
     for ext in ("pdf", "svg", "png"):

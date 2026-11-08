@@ -33,7 +33,7 @@ for lam, col, ls in LAMS:
     a.plot(s, s**2 / (s**2 + lam), color=col, ls=ls, label=f"岭回归 $\\lambda=10^{{{int(np.log10(lam))}}}$")
 a.plot([s[0], TAU, TAU, s[-1]], [0, 0, 1, 1], color=RED, ls="--", lw=1.1, label=f"截断 $\\tau={TAU:g}$")
 a.set(xscale="log", xlim=(s[0], s[-1]), ylim=(-0.04, 1.08), yticks=[0, 0.5, 1],
-      xlabel="奇异值 $\\sigma$", ylabel="滤波因子 $f$", title="(a) 滤波因子")
+      xlabel="奇异值 $\\sigma$", ylabel="滤波因子 $f$", title="(a)")
 
 b.plot(s, 1 / s, color=MUTED, lw=.8, label="最小二乘 $1/\\sigma$")
 for lam, col, ls in LAMS:
@@ -43,17 +43,17 @@ st = s[s > TAU]
 b.plot(st, 1 / st, color=RED, ls="--", lw=1.1)
 b.plot([TAU, TAU], [1e-1, 1 / TAU], color=RED, ls="--", lw=1.1)
 b.set(xscale="log", yscale="log", xlim=(s[0], s[-1]), ylim=(1e-1, 1.2e3),
-      xlabel="奇异值 $\\sigma$", ylabel="方向增益", title="(b) 方向增益")
+      xlabel="奇异值 $\\sigma$", ylabel="方向增益", title="(b)")
 
 for ax in (a, b):
     for v in SIG:
         ax.axvline(v, color=STROKE, lw=.6, ls=":")
-    ax.grid(True, which="major")
+    ax.grid(False, which="both")
 a.text(SIG[1] * 1.15, 0.92, "$\\sigma_2$", fontsize=7.5, color=STROKE)
 a.text(SIG[0] * 1.15, 0.5, "$\\sigma_1$", fontsize=7.5, color=STROKE)
 h, l = a.get_legend_handles_labels()
 h2, l2 = b.get_legend_handles_labels()
-fig.legend(h2 + h, l2 + l, loc="outside lower center", ncol=4, fontsize=7.5,
+fig.legend(h2 + h, l2 + l, loc="outside lower center", ncol=2, fontsize=7.5,
            handlelength=1.6, columnspacing=1.0, handletextpad=0.4)
 
 prepare_figure(fig)

@@ -5,7 +5,7 @@
 \label{chap:shortest-paths}
 \label{chap:graph-optimization}
 
-第~\ref{sec:graph-bfs}节的广度优先遍历给出从起点出发的最少边数。可是在道路网络中，每段路的长度不同；在任务调度中，从一个状态转到另一个状态的代价也各不相同。这时要比较的是路线上各段数值之和，经过的边数少不等于总成本低。本章回答：给每条弧一个长度以后，怎样求出从源点到每个顶点的最低成本，以及一条达到它的路线。
+第~\ref{sec:graph-bfs}节的广度优先遍历给出从起点出发的最少边数。当每条弧带有不同的长度时，要比较的是路线上各段长度之和，经过的边数少不等于总成本低。本章回答：给每条弧一个长度以后，怎样求出从源点到每个顶点的最低成本，以及一条达到它的路线。
 
 长度允许为负时，问题本身就变得微妙：绕一个总长为负的环，成本可以一直下降，“最短”可能根本不存在。所以第~\ref{sec:graph-opt-path-cost}节先说清在哪些路线中比较，并把每个顶点的距离分成不可达、有限值和负无穷三类。第~\ref{sec:graph-opt-relaxation}节建立三种算法共用的计算机制：每个顶点保存一个当前已知的最好成本，即距离标签，再用松弛把已有路线延长一条弧。
 
@@ -17,23 +17,33 @@
 \label{sec:graph-opt-path-cost}
 
 输入是有限有向图$\mathcal G=(V,E)$、一个源点$s\in V$，以及每条弧$u\to v$上的一个实数\emph{长度}$\ell_{u,v}$。长度可以表示距离、时间或转换代价，也允许为负，例如某次转换带来收益。候选对象是从$s$出发的路线，比较的是路线的成本。对一条行走$W=(v_0,v_1,\ldots,v_k)$，规定它的成本为沿途弧长之和：
-\[
+\begin{equation}
   \ell(W)=\sum_{r=1}^{k}\ell_{v_{r-1},v_r}.
-\]
-只含一个顶点的零步行走成本为零。所有长度都等于$1$时，成本就是边数，回到广度优先遍历的情形；一般长度下两者不再一致。例如$s$到$t$有一条长$5$的直达弧，又有经过$u$、两段各长$1$的路线，两步路线反而更短。我们要对每个顶点$v$输出从$s$到$v$的最低成本，以及一条达到这个成本的路线。
+  \label{eq:graph-opt-walk-cost}
+\end{equation}
+只含一个顶点的零步行走成本为零。
+
+所有长度都等于$1$时，成本就是边数，回到广度优先遍历的情形；一般长度下两者不再一致。例如$s$到$t$有一条长$5$的直达弧，又有经过$u$、两段各长$1$的路线，两步路线反而更短。我们要对每个顶点$v$输出从$s$到$v$的最低成本，以及一条达到这个成本的路线。
 
 “最短路线”还要先说清在哪些路线中比较。一种选择只允许简单路径，即不重复经过顶点的路径；另一种允许一般的行走，顶点和弧都可以重复。有限图中简单路径只有有限条，因此只要终点可达，最小值一定存在；行走可以无限地绕圈，候选有无穷多个，只能谈成本的下确界。
 
 \begin{definition}[最短路问题]
 \label{def:graph-opt-shortest-path}
 给定有限有向图$\mathcal G=(V,E)$、弧长$\ell_{u,v}\in\mathbb R$与源点$s\in V$。对每个顶点$v$，记$\mathcal W_{s,v}$为从$s$到$v$的全部有限行走组成的集合，称
-\[
+\begin{equation}
   \delta(v)=\inf_{W\in\mathcal W_{s,v}}\ell(W)
-\]
+  \label{eq:graph-opt-shortest-distance}
+\end{equation}
 为$s$到$v$的\term{最短路}距离，约定空集的下确界为$+\infty$。若某条行走$W\in\mathcal W_{s,v}$满足$\ell(W)=\delta(v)$，就称$W$是一条$s$到$v$的最短路。求出全部$\delta(v)$及相应路线的问题称为单源最短路问题。
 \end{definition}
 
-本章的算法计算的都是行走下确界$\delta(v)$。在多数情形中它与简单路径的最小值一致，原因是行走中的绕圈部分可以删掉。设行走$W$两次经过顶点$x$，两次之间的一段是从$x$回到$x$的闭行走$C$，删去$C$得到更短的行走$W'$，并且$\ell(W')=\ell(W)-\ell(C)$。只要$C$的成本非负，删去它就不会增加成本。反复删除，直到不再有重复顶点，便得到一条成本不超过$\ell(W)$的简单路径。
+本章的算法计算的都是行走下确界$\delta(v)$。在多数情形中它与简单路径的最小值一致，原因是行走中的绕圈部分可以删掉。
+
+设行走$W$两次经过顶点$x$，两次之间的一段是从$x$回到$x$的闭行走$C$，删去$C$得到更短的行走$W'$，并且
+\[
+  \ell(W')=\ell(W)-\ell(C).
+\]
+只要$C$的成本非负，删去它就不会增加成本。反复删除，直到不再有重复顶点，便得到一条成本不超过$\ell(W)$的简单路径。
 
 \paragraph{负环与三类结果}
 删除闭合段的论证只在闭合段成本非负时有效。成本为负的有向环称为\term{负环}（negative cycle）。若能从$s$走到某个负环，绕若干圈后再走到$v$，则每多绕一圈，成本就再降低一次，于是$\delta(v)=-\infty$。这并不表示存在一条“长度为负无穷的路径”，而是说任何有限成本都能被另一条行走打破。
@@ -60,9 +70,10 @@
 
 \paragraph{松弛操作}
 为每个顶点$v$保存一个\term{距离标签}（distance label）$d(v)\in\mathbb R\cup\{+\infty\}$和一个前驱$p(v)$。初始时令$d(s)=0$，其余顶点$d(v)=+\infty$，前驱为空。对一条弧$u\to v$执行\term{松弛}（relaxation），是指比较当前标签$d(v)$与候选值$d(u)+\ell_{u,v}$：若$d(u)<+\infty$且
-\[
+\begin{equation}
   d(u)+\ell_{u,v}<d(v),
-\]
+  \label{eq:graph-opt-relaxation}
+\end{equation}
 就令$d(v)\leftarrow d(u)+\ell_{u,v}$、$p(v)\leftarrow u$；否则什么也不做。只有严格改善时才更新，因而标签只会下降，不会上升。
 
 图~\ref{fig:graph-opt-relaxation}画出一次松弛的两种结果：候选值$5$小于原标签$8$时，标签与前驱一起改写；原标签已是$4$时，两者都不变。距离数组和前驱数组必须同步修改：如果只改距离而不改前驱，回溯得到的路线成本就不再等于标签。
@@ -77,7 +88,13 @@
 \paragraph{上界不变量}
 松弛只从有限标签出发延长路线，由此得到所有算法共用的一个不变量：\emph{每个有限标签$d(v)$都等于某条从$s$到$v$的行走的成本}。初始时只有$d(s)=0$有限，对应零步行走。若松弛把$d(v)$改为$d(u)+\ell_{u,v}$，则把$u$的那条行走接上弧$u\to v$，就得到成本恰为新标签的行走。由此立即得到$d(v)\geq\delta(v)$：标签永远是真实距离的上界。后面每种算法要做的，都是说明在适当的条件下，这个上界最终会降到$\delta(v)$。
 
-能否反过来，直接解一组方程得到距离？若没有可达负环，真实距离满足一组局部等式：$\delta(s)=0$，并且对每个可达的$v\neq s$，有$\delta(v)=\min_{u\to v}\{\delta(u)+\ell_{u,v}\}$。这只是说最短路的最后一条弧总来自某个前驱。但满足这组等式的数组不一定就是距离。设$s\to a$长$5$，$a\to b$与$b\to a$长都为$0$，则对任意$c\leq5$，取$D(s)=0$、$D(a)=D(b)=c$都满足
+能否反过来，直接解一组方程得到距离？若没有可达负环，真实距离满足一组局部等式：$\delta(s)=0$，并且对每个可达的$v\neq s$，有
+\[
+  \delta(v)=\min_{u\to v}\{\delta(u)+\ell_{u,v}\}.
+\]
+这只是说最短路的最后一条弧总来自某个前驱。
+
+但满足这组等式的数组不一定就是距离。设$s\to a$长$5$，$a\to b$与$b\to a$长都为$0$，则对任意$c\leq5$，取$D(s)=0$、$D(a)=D(b)=c$都满足
 \[
   D(a)=\min\{D(s)+5,\ D(b)+0\}=c,\qquad D(b)=D(a)+0=c,
 \]
@@ -96,7 +113,7 @@
 
 \subsection{算法实现}
 
-拓扑序在松弛开始前一次求出，只规定处理次序，运行中不变，不算状态。算法维护三项状态：
+拓扑序在松弛开始前一次求出，它只规定处理次序，运行中不再改变，因此不计入算法状态。算法维护三项状态：
 \begin{itemize}
   \item 距离标签$d(v)$：初值$d(s)=0$，其余为$+\infty$；
   \item 前驱$p(v)$：初值为空；
@@ -115,14 +132,26 @@
 \end{algorithm}
 
 \paragraph{执行过程}
-取弧$s\to a$长$2$、$s\to b$长$5$、$a\to b$长$-1$、$a\to t$长$5$、$b\to t$长$2$，它没有有向环，拓扑序可取$(s,a,b,t)$。初始标签为$(d(s),d(a),d(b),d(t))=(0,+\infty,+\infty,+\infty)$，前驱全为空。按拓扑序逐个处理顶点，松弛它的出弧：
+下面用一张四点图逐步演示，它的五条弧长为：
+\[
+  \ell_{s,a}=2,\quad\ell_{s,b}=5,\quad\ell_{a,b}=-1,\quad\ell_{a,t}=5,\quad\ell_{b,t}=2.
+\]
+这张图没有有向环，拓扑序可取$(s,a,b,t)$。初始标签为
+\[
+  (d(s),d(a),d(b),d(t))=(0,+\infty,+\infty,+\infty),
+\]
+前驱全为空。按拓扑序逐个处理顶点，松弛它的出弧：
 \begin{itemize}
   \item 处理$s$：$a$由$+\infty$改为$0+2=2$，$b$由$+\infty$改为$0+5=5$，前驱都记为$s$，标签变为$(0,2,5,+\infty)$。
   \item 处理$a$：候选$2+(-1)=1<5$，$b$改为$1$、前驱改为$a$；$t$由$+\infty$改为$2+5=7$、前驱记为$a$。标签变为$(0,2,1,7)$。
   \item 处理$b$：候选$1+2=3<7$，$t$改为$3$、前驱改为$b$，标签变为$(0,2,1,3)$。
   \item 处理$t$：没有出弧，标签不变。
 \end{itemize}
-扫描结束时前驱为$p(a)=s$、$p(b)=a$、$p(t)=b$，从$t$回溯得到最短路$s\to a\to b\to t$，成本$2-1+2=3$。图~\ref{fig:graph-opt-dag-labels}记录了各标签的变化次序。
+扫描结束时前驱为$p(a)=s$、$p(b)=a$、$p(t)=b$。从$t$回溯得到最短路$s\to a\to b\to t$，成本为
+\[
+  \ell_{s,a}+\ell_{a,b}+\ell_{b,t}=2-1+2=3.
+\]
+图~\ref{fig:graph-opt-dag-labels}记录了各标签的变化次序。
 
 \begin{figure}[!htb]
   \centering
@@ -144,7 +173,9 @@
 \begin{proof}
 有向无环图中的行走不会重复顶点，因此每条行走都是简单路径，只有有限条，$\delta(v)$只可能是$+\infty$或有限值。松弛只改变弧终点的标签，而指向$v$的弧都从拓扑序中排在$v$之前的顶点出发，所以轮到$v$时它的标签已经不再改变。下面对拓扑序归纳，证明轮到$v$时$d(v)=\delta(v)$。
 
-排在$s$之前的顶点从$s$不可达，它们的标签保持$+\infty$，与距离一致。对$v=s$，不存在回到$s$的非零步行走，故$\delta(s)=0=d(s)$。设$v$排在$s$之后，并且此前的顶点都已满足结论。若$v$不可达，则它的标签不可能变为有限值，因为有限标签总对应一条实际行走。若$v$可达，任取一条$s$到$v$的路径，设其最后一条弧为$u\to v$，则$u$排在$v$之前，路径前缀的成本不小于$\delta(u)$，归纳假设给出$\delta(u)=d(u)$。处理$u$时弧$u\to v$已被松弛，因而
+排在$s$之前的顶点从$s$不可达，它们的标签保持$+\infty$，与距离一致。对$v=s$，不存在回到$s$的非零步行走，故$\delta(s)=0=d(s)$。
+
+设$v$排在$s$之后，并且此前的顶点都已满足结论。若$v$不可达，则它的标签不可能变为有限值，因为有限标签总对应一条实际行走。若$v$可达，任取一条$s$到$v$的路径，设其最后一条弧为$u\to v$，则$u$排在$v$之前，路径前缀的成本不小于$\delta(u)$，归纳假设给出$\delta(u)=d(u)$。处理$u$时弧$u\to v$已被松弛，因而
 \[
   d(v)\leq d(u)+\ell_{u,v}=\delta(u)+\ell_{u,v}\leq\text{该路径的成本}.
 \]
@@ -175,12 +206,10 @@
 
 按$i+j$递增或逐行的顺序计算，正是在按拓扑序松弛。例如$\bm a=(A,B)$、$\bm b=(A,C,B)$时，逐行计算得到表~\ref{tab:graph-opt-edit-distance}，沿“匹配$A$、插入$C$、匹配$B$”得到距离$E(2,3)=1$。
 
-全表连同前驱需要$O(pq)$时间与空间；只要距离值时保留相邻两行即可。给插入、删除和替换配上不同成本的序列对齐，以及动态时间规整一类的递推，也都可以照此写成有向无环图上的最短路，只是弧长和状态转移不同。
+全表连同前驱需要$O(pq)$时间与空间；只要距离值时保留相邻两行即可。若给插入、删除和替换配上不同的成本，只需改变相应状态弧的长度，状态图仍然无环，计算次序不变。
 
 \begin{table}[!htb]
   \centering
-  \caption{$\bm a=(A,B)$改写为$\bm b=(A,C,B)$的编辑距离表。第$i$行第$j$列为$E(i,j)$，按式~\eqref{eq:graph-opt-edit-distance}逐行计算；右下角$E(2,3)=1$。}
-  \label{tab:graph-opt-edit-distance}
   \begin{tabular}{@{}ccccc@{}}
     \toprule
     & $j=0$ & $j=1$（$A$） & $j=2$（$C$） & $j=3$（$B$） \\
@@ -190,6 +219,8 @@
     $i=2$（$B$） & $2$ & $1$ & $1$ & $1$ \\
     \bottomrule
   \end{tabular}
+  \caption{$\bm a=(A,B)$改写为$\bm b=(A,C,B)$的编辑距离表。第$i$行第$j$列为$E(i,j)$，按式~\eqref{eq:graph-opt-edit-distance}逐行计算；右下角$E(2,3)=1$。}
+  \label{tab:graph-opt-edit-distance}
 \end{table}
 
 \section{Bellman--Ford算法}
@@ -238,28 +269,54 @@
 \end{algorithm}
 
 \paragraph{执行过程}
-上一节的四点图没有环，看不出反复扫描的必要。图~\ref{fig:graph-opt-bellman-ford-rounds}换用一个有环的例子：五个顶点，弧为$s\to t$长$6$、$s\to b$长$2$、$b\to c$长$3$、$c\to a$长$-4$、$a\to t$长$2$、$t\to b$长$1$。其中$b\to c\to a\to t\to b$构成一个环，成本为$3-4+2+1=2$，不是负环。按式~\eqref{eq:graph-opt-bellman-ford}逐轮计算，各轮标签见表~\ref{tab:graph-opt-bellman-ford-rounds}。
-\begin{itemize}
-  \item 第$1$轮只能用一条弧：$t$由$s$得到$6$，$b$由$s$得到$2$，其余仍为$+\infty$。
-  \item 第$2$轮：$c$经$b$得到$2+3=5$。$a\to t$与$c\to a$的起点在上一轮还是$+\infty$，不产生候选。
-  \item 第$3$轮：$a$经$c$得到$5-4=1$，对应三弧路线$s\to b\to c\to a$。
-  \item 第$4$轮：$t$经$a$降到$1+2=3$，前驱由$s$改为$a$，对应四弧路线$s\to b\to c\to a\to t$，比直达的$s\to t$便宜。
-\end{itemize}
+上一节的四点图没有环，看不出反复扫描的必要。图~\ref{fig:graph-opt-bellman-ford-rounds}换用一个有环的例子，它有五个顶点和六条弧，弧长为：
+\[
+  \begin{gathered}
+    \ell_{s,t}=6,\quad\ell_{s,b}=2,\quad\ell_{b,c}=3,\\
+    \ell_{c,a}=-4,\quad\ell_{a,t}=2,\quad\ell_{t,b}=1.
+  \end{gathered}
+\]
+其中$b\to c\to a\to t\to b$构成一个环，成本为$3-4+2+1=2$，不是负环。按式~\eqref{eq:graph-opt-bellman-ford}逐轮计算，各轮标签见表~\ref{tab:graph-opt-bellman-ford-rounds}。
+
+第$1$轮只能用一条弧：$t$由$s$得到$6$，$b$由$s$得到$2$，其余仍为$+\infty$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=40.771mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-1.pdf}
+  \caption{Bellman--Ford第$1$轮结束。本轮只能沿从$s$出发的单条弧产生有限候选。弧旁数字是弧长，顶点旁是标签；绿色弧与数字表示本轮改善，蓝色弧表示此前保留的前驱。}
+  \label{fig:graph-opt-bellman-ford-rounds}
+\end{BookInlineFigure}
+
+第$2$轮：$c$经$b$得到$2+3=5$。$a\to t$与$c\to a$的起点在上一轮还是$+\infty$，不产生候选。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=42.774mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-2.pdf}
+  \caption{第$2$轮：改善从$b$传到$c$，得到$d(c)=5$。本轮仍读取上一轮的标签，因此不能立刻沿$c\to a$继续传递。}
+  \label{fig:graph-opt-bellman-ford-rounds-2}
+\end{BookInlineFigure}
+
+第$3$轮：$a$经$c$得到$5-4=1$，对应三弧路线$s\to b\to c\to a$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=42.774mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-3.pdf}
+  \caption{第$3$轮：沿$c\to a$得到$d(a)=1$。此前$t$的标签仍为直达路线的成本$6$。}
+  \label{fig:graph-opt-bellman-ford-rounds-3}
+\end{BookInlineFigure}
+
+第$4$轮：$t$经$a$降到$1+2=3$，前驱由$s$改为$a$，对应四弧路线$s\to b\to c\to a\to t$，比直达的$s\to t$便宜。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=40.771mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/bellman-ford-round-4.pdf}
+  \caption{第$4$轮：沿$a\to t$把$d(t)$由$6$降为$3$，并改写$t$的前驱。蓝绿弧组成最终最短路径树。}
+  \label{fig:graph-opt-bellman-ford-rounds-4}
+\end{BookInlineFigure}
+
 此时$k=4=n-1$，递推停止。再检查全部弧，没有一条还能改善，因而没有种子，最终距离为$(s,a,b,c,t)=(0,1,2,5,3)$。
 
 这个例子恰好用满了$n-1$轮，因为$t$的最短路含$4$条弧；每一行都是“至多$k$条弧”的最优值，例如$d^{(3)}(t)=6$只计入了单弧路线$s\to t$。改善沿环$b\to c\to a\to t$传递了一圈，但回到$b$时，候选$3+1=4$不小于$2$，传递就此停止：环的成本非负，绕圈不会更便宜。
 
-\begin{figure*}[!htb]
-  \centering
-  \includegraphics[width=148.629mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-bellman-ford-rounds/figure.pdf}
-  \caption{同步Bellman--Ford在含环图上的逐轮执行。弧为$s\to t$长$6$、$s\to b$长$2$、$b\to c$长$3$、$c\to a$长$-4$、$a\to t$长$2$、$t\to b$长$1$，环$b\to c\to a\to t\to b$的成本为$2$。顶点旁为该轮结束时的标签，绿色数字是本轮改变的标签，绿色弧是提供改善的弧，蓝色弧是其余的当前前驱弧。改善每轮沿弧前进一步，第$4$轮$t$经$a$由$6$降到$3$。}
-  \label{fig:graph-opt-bellman-ford-rounds}
-\end{figure*}
 
 \begin{table}[!htb]
   \centering
-  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-bellman-ford-rounds}的含环图上的逐轮标签。第$k$行是至多$k$条弧的最小成本，括号内为该轮改变标签时的前驱。}
-  \label{tab:graph-opt-bellman-ford-rounds}
   \begin{tabular}{cccccc}
     \toprule
     轮次$k$ & $d^{(k)}(s)$ & $d^{(k)}(a)$ & $d^{(k)}(b)$ & $d^{(k)}(c)$ & $d^{(k)}(t)$ \\
@@ -271,16 +328,20 @@
     $4$ & $0$ & $1$ & $2$ & $5$ & $3$（$a$） \\
     \bottomrule
   \end{tabular}
+  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-bellman-ford-rounds}的含环图上的逐轮标签。第$k$行是至多$k$条弧的最小成本，括号内为该轮改变标签时的前驱。}
+  \label{tab:graph-opt-bellman-ford-rounds}
 \end{table}
 
-负环存在时，标签不会停下来。回到图~\ref{fig:graph-opt-distance-outcomes}。该图有$7$个顶点，同步计算$6$轮，各轮标签见表~\ref{tab:graph-opt-bellman-ford-negative}。$u$在第$1$轮得到$4$后不再变化，$x,y$始终为$+\infty$；而$a,b,t$的标签每隔一两轮就再降一次，第$6$轮停在$-3,-2,2$。这些值只是绕圈到第$6$轮时恰好停留的数，本身没有意义。
+负环存在时，标签不会停下来。回到图~\ref{fig:graph-opt-distance-outcomes}。该图有$7$个顶点，同步计算$6$轮，各轮标签见表~\ref{tab:graph-opt-bellman-ford-negative}。$u$在第$1$轮得到$4$后不再变化，$x,y$始终为$+\infty$；而$a,b,t$的标签每隔一两轮就再降一次，第$6$轮停在$-3,-2,2$。这几个数只反映绕圈到第$6$轮时标签降到了哪里，并不是任何意义下的距离。
 
-此时检查全部弧：$b\to a$的候选$-2-3=-5<-3$，$b\to t$的候选$-2+2=0<2$，两条弧仍可改善，种子是$a$与$t$；其余弧都不能改善。从种子沿出弧遍历，标记出$\{a,b,t\}$。算法报告$u$的距离为$4$，$a,b,t$为$-\infty$，$x,y$不可达，与前面的分析一致。
+此时检查全部弧，$b\to a$与$b\to t$的候选分别为
+\[
+  -2-3=-5<-3,\qquad -2+2=0<2,
+\]
+两条弧仍可改善，种子是$a$与$t$；其余弧都不能改善。从种子沿出弧遍历，标记出$\{a,b,t\}$。算法报告$u$的距离为$4$，$a,b,t$为$-\infty$，$x,y$不可达，与前面的分析一致。
 
 \begin{table}[!htb]
   \centering
-  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-distance-outcomes}上的逐轮标签（$x,y$各轮均为$+\infty$，未列出）。$u$在第$1$轮后稳定；可达负环$a\to b\to a$使$a,b,t$的标签持续下降。}
-  \label{tab:graph-opt-bellman-ford-negative}
   \begin{tabular}{cccccc}
     \toprule
     轮次$k$ & $d^{(k)}(s)$ & $d^{(k)}(u)$ & $d^{(k)}(a)$ & $d^{(k)}(b)$ & $d^{(k)}(t)$ \\
@@ -294,10 +355,14 @@
     $6$ & $0$ & $4$ & $-3$ & $-2$ & $2$ \\
     \bottomrule
   \end{tabular}
+  \caption{同步Bellman--Ford在图~\ref{fig:graph-opt-distance-outcomes}上的逐轮标签（$x,y$各轮均为$+\infty$，未列出）。$u$在第$1$轮后稳定；可达负环$a\to b\to a$使$a,b,t$的标签持续下降。}
+  \label{tab:graph-opt-bellman-ford-negative}
 \end{table}
 
 \paragraph{就地更新}
-常见的实现不复制数组，而是在同一个数组上逐弧松弛，一轮中刚改善的标签可以立即被同一轮后面的弧使用，称为就地更新。按$s\to t$、$s\to b$、$b\to c$、$c\to a$、$a\to t$、$t\to b$的顺序扫描上例，第一轮就依次得到$t=6$、$b=2$、$c=5$、$a=1$，并把$t$降到$3$，即全部最终标签，第二轮无改善即可停止。若按相反的顺序扫描，每轮只能把改善推进一步，仍要四轮。
+常见的实现不复制数组，而是在同一个数组上逐弧松弛，一轮中刚改善的标签可以立即被同一轮后面的弧使用，称为就地更新。
+
+扫描次序会影响所需轮数。按$s\to t$、$s\to b$、$b\to c$、$c\to a$、$a\to t$、$t\to b$的顺序扫描上例，第一轮就依次得到$t=6$、$b=2$、$c=5$、$a=1$，并把$t$降到$3$，即全部最终标签，第二轮无改善即可停止。若按相反的顺序扫描，每轮只能把改善推进一步，仍要四轮。
 
 它的停止规则与负环检测方式和同步版本相同，只是“第$k$轮”的含义变了。
 
@@ -328,9 +393,15 @@ $n-1$轮之后的种子与遍历恰好找出了全部距离为$-\infty$的顶点
 \end{theorem}
 
 \begin{proof}
-先证每个种子$v$都满足$\delta(v)=-\infty$。由引理~\ref{lem:graph-opt-bellman-ford-k-arcs}，$v$可改善说明$d^{(n)}(v)<d^{(n-1)}(v)$，即存在一条恰含$n$条弧的行走，比所有至多$n-1$条弧的行走都便宜。含$n$条弧的行走经过$n+1$个顶点位置，必有顶点重复，从中可以切出一段闭行走$C$。若$C$的成本非负，删去它会得到弧更少、成本不更高的行走，与上述“更便宜”矛盾；故$C$的成本为负，由第~\ref{sec:graph-opt-path-cost}节的分解，$C$中含有一个负环。这个负环位于一条从$s$出发、到达$v$的行走上，所以$\delta(v)=-\infty$。从种子沿出弧能到达的顶点也能从同一个负环到达，因而被标记的顶点距离都是$-\infty$。
+先证每个种子$v$都满足$\delta(v)=-\infty$。由引理~\ref{lem:graph-opt-bellman-ford-k-arcs}，$v$可改善说明$d^{(n)}(v)<d^{(n-1)}(v)$，即存在一条恰含$n$条弧的行走，比所有至多$n-1$条弧的行走都便宜。
 
-再证每个$\delta(v)=-\infty$的顶点都会被标记。此时存在从$s$可达的负环$C=(c_0,c_1,\ldots,c_k=c_0)$能到达$v$。$C$上的顶点从$s$可达，可达顶点至多经$n-1$条弧到达，所以它们的标签有限。若$C$上没有一条弧可改善，则对每条环弧都有$d(c_{r})\leq d(c_{r-1})+\ell_{c_{r-1},c_r}$，沿环相加，两侧的标签之和恰好相消，得到$0\leq\ell(C)<0$，矛盾。因此$C$上至少有一个种子，而$v$能从$C$到达，必然被遍历标记。
+含$n$条弧的行走经过$n+1$个顶点位置，必有顶点重复，从中可以切出一段闭行走$C$。若$C$的成本非负，删去它会得到弧更少、成本不更高的行走，与上述“更便宜”矛盾；故$C$的成本为负，由第~\ref{sec:graph-opt-path-cost}节的分解，$C$中含有一个负环。这个负环位于一条从$s$出发、到达$v$的行走上，所以$\delta(v)=-\infty$。从种子沿出弧能到达的顶点也能从同一个负环到达，因而被标记的顶点距离都是$-\infty$。
+
+再证每个$\delta(v)=-\infty$的顶点都会被标记。此时存在从$s$可达的负环$C=(c_0,c_1,\ldots,c_k=c_0)$能到达$v$。$C$上的顶点从$s$可达，可达顶点至多经$n-1$条弧到达，所以它们的标签有限。若$C$上没有一条弧可改善，则对每条环弧都有
+\[
+  d(c_{r})\leq d(c_{r-1})+\ell_{c_{r-1},c_r},\qquad r=1,\ldots,k.
+\]
+沿环把这$k$个不等式相加，两侧的标签之和恰好相消，得到$0\leq\ell(C)<0$，矛盾。因此$C$上至少有一个种子，而$v$能从$C$到达，必然被遍历标记。
 
 最后，未被标记且可达的顶点不受任何可达负环影响，前面已说明$d^{(n-1)}(v)=\delta(v)$；不可达顶点的标签始终为$+\infty$。
 \end{proof}
@@ -341,7 +412,10 @@ $n-1$轮之后的种子与遍历恰好找出了全部距离为$-\infty$的顶点
 \paragraph{路线恢复}
 若要按引理~\ref{lem:graph-opt-bellman-ford-k-arcs}的含义回溯“至多$k$条弧”的最优路线，就需要保存每一轮的前驱$p^{(k)}(v)$，记录可达$O(n^2)$条。只保存一份前驱数组时，也可以回溯有限距离的顶点，但要说明这份前驱与递推相容。
 
-设$v$未被标记且标签有限，若$p(v)=u$，则$u\to v$是一条弧，$u$也不会被标记，否则$v$能从负环到达。设置$p(w)=u$时，$d(w)$等于$u$此前某一时刻的标签加上$\ell_{u,w}$；标签只降不升，$d(w)$再下降时前驱又会改写，所以任一时刻每条前驱弧都满足$d(p(w))+\ell_{p(w),w}\leq d(w)$。
+设$v$未被标记且标签有限，若$p(v)=u$，则$u\to v$是一条弧，$u$也不会被标记，否则$v$能从负环到达。设置$p(w)=u$时，$d(w)$等于$u$此前某一时刻的标签加上$\ell_{u,w}$；标签只降不升，$d(w)$再下降时前驱又会改写，所以任一时刻每条前驱弧都满足
+\[
+  d(p(w))+\ell_{p(w),w}\leq d(w).
+\]
 
 前驱指针在未标记顶点之间不会成环：若成环，考察环上最后被设置的那个指针，在它被设置之前，环上其余前驱弧都满足上述不等式，而这条弧满足严格不等式，沿环相加，标签相消，得到环的成本为负；这个负环从$s$可达，又能沿前驱弧到达$v$，与$v$未被标记矛盾。于是从$v$沿前驱必能回到$s$。把沿途的不等式相加，所得路线的成本不超过$d(v)=\delta(v)$，因而恰好是一条最短路。
 
@@ -354,7 +428,7 @@ $n-1$轮之后的种子与遍历恰好找出了全部距离为$-\infty$的顶点
 
 Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再被改小。若边长都非负，情况就不同了：在尚未确定的顶点中，标签最小的那个已经不可能再被改小，因为任何绕道而来的路线都要先经过某个标签不更小的顶点，后半程又不会让成本下降。Dijkstra算法利用这一点，每次把这样一个顶点永久确定下来，只松弛它的出弧，于是每条弧只需松弛一次。
 
-这里所需的条件是从源点可达部分的弧长都非负。全图非负是便于检查的充分条件；从$s$到达不了的区域即使有负边，也不影响本次查询。在这一条件下，从$s$可达的部分不含负环，所有距离都是$+\infty$或有限值，输出只有两类。
+Dijkstra算法所需的条件是从源点可达部分的弧长都非负。全图非负是便于检查的充分条件；从$s$到达不了的区域即使有负边，也不影响本次查询。在这一条件下，从$s$可达的部分不含负环，所有距离都是$+\infty$或有限值，输出只有两类。
 
 \subsection{算法实现}
 
@@ -391,21 +465,47 @@ Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再�
 把四点图中$a\to b$的长度由$-1$改为$1$，全部弧长非负，Dijkstra算法适用。表~\ref{tab:graph-opt-dijkstra-trace}列出每次出队后的状态。
 
 第$1$步取出$s$，松弛得$d(a)=2$、$d(b)=5$，前驱都是$s$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-1.pdf}
+  \caption{Dijkstra第$1$步：取出$s$并松弛两条出弧。黄色是本次出队顶点，蓝底是已确定顶点；绿色标签和弧表示本次改善及新前驱。弧旁数字为长度，顶点旁为距离标签。}
+  \label{fig:graph-opt-dijkstra-trace}
+\end{BookInlineFigure}
+
 
 第$2$步取出标签最小的$a$，候选$2+1=3<5$使$d(b)=3$、$p(b)=a$，候选$2+5=7$使$d(t)=7$、$p(t)=a$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-2.pdf}
+  \caption{第$2$步：确定$a$，经$a$把$b$的标签从$5$降为$3$，并首次到达$t$。已确定的$s,a$不再改写。}
+  \label{fig:graph-opt-dijkstra-trace-2}
+\end{BookInlineFigure}
+
 
 第$3$步取出$b$，候选$3+2=5<7$使$d(t)=5$、$p(t)=b$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=38.347mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-3.pdf}
+  \caption{第$3$步：确定$b$，经$b$把$t$的标签从$7$降为$5$。绿色弧$b\to t$替换此前的前驱弧$a\to t$。}
+  \label{fig:graph-opt-dijkstra-trace-3}
+\end{BookInlineFigure}
+
 
 第$4$步取出$t$，它没有出弧，队列为空，停止。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=36.784mm]{figures/03-graphs/02-combinatorial-optimization/tikz/reading-steps/dijkstra-step-4.pdf}
+  \caption{第$4$步：确定$t$。最终前驱弧组成$s\to a\to b\to t$，各顶点标签均已等于最短距离。}
+  \label{fig:graph-opt-dijkstra-trace-4}
+\end{BookInlineFigure}
+
 
 最终$\delta(a)=2$、$\delta(b)=3$、$\delta(t)=5$，从$t$沿前驱回溯得到$s\to a\to b\to t$。
 
-图~\ref{fig:graph-opt-dijkstra-trace}画出同样的四个状态：已确定集合$R$逐个向外扩张，每个顶点在出队时的标签都不再改变。
+图~\ref{fig:graph-opt-dijkstra-trace}至图~\ref{fig:graph-opt-dijkstra-trace-4}分别对应这四步：已确定集合$R$逐个向外扩张，每个顶点在出队时的标签都不再改变。
 
 \begin{table}[!htb]
   \centering
-  \caption{Dijkstra算法在非负四点图（$a\to b$长$1$，其余弧长同前）上的状态。每行是一次出队并松弛之后的标签与已确定集合，括号内为本步改变标签时的新前驱。}
-  \label{tab:graph-opt-dijkstra-trace}
   \begin{tabular}{@{}ccccccc@{}}
     \toprule
     步 & 出队 & $d(s)$ & $d(a)$ & $d(b)$ & $d(t)$ & $R$ \\
@@ -417,14 +517,10 @@ Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再�
     $4$ & $t$ & $0$ & $2$ & $3$ & $5$ & $\{s,a,b,t\}$ \\
     \bottomrule
   \end{tabular}
+  \caption{Dijkstra算法在非负四点图（$a\to b$长$1$，其余弧长同前）上的状态。每行是一次出队并松弛之后的标签与已确定集合，括号内为本步改变标签时的新前驱。}
+  \label{tab:graph-opt-dijkstra-trace}
 \end{table}
 
-\begin{figure*}[!htb]
-  \centering
-  \includegraphics[width=147.687mm]{figures/01-basic-mathematics/04-graphs/tikz/c3-dijkstra-trace/figure.pdf}
-  \caption{Dijkstra算法在非负四点图上的出队过程（$a\to b$长$1$，其余同前）。每个面板对应一次出队：蓝色为已确定顶点，黄色为本次出队的顶点，绿色标签与绿色弧表示本次松弛改善的标签及新前驱。四次出队依次确定$s=0$、$a=2$、$b=3$、$t=5$，最终前驱弧组成路线$s\to a\to b\to t$。}
-  \label{fig:graph-opt-dijkstra-trace}
-\end{figure*}
 
 \subsection{算法分析}
 
@@ -439,7 +535,11 @@ Bellman--Ford算法要反复扫描全部弧，因为一个标签随时可能再�
 \begin{proof}
 对加入$R$的次序归纳。第一个加入的是$s$，$d(s)=0=\delta(s)$，因为可达部分没有负环。设此前加入$R$的顶点都满足$d=\delta$，现在$u$被选出，且$d(u)<+\infty$。由标签不变量，$d(u)\geq\delta(u)$。假设$d(u)>\delta(u)$，取一条$s$到$u$、成本为$\delta(u)$的简单路径$P$。$P$从$s\in R$出发，到达$u\notin R$，所以沿$P$存在第一个不在$R$中的顶点$y$，记它在$P$上的前一个顶点为$x\in R$。
 
-$x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降，所以$d(y)\leq d(x)+\ell_{x,y}$。归纳假设给出$d(x)=\delta(x)$；而最短路的前缀仍是最短路，故$\delta(x)+\ell_{x,y}=\delta(y)$。于是$d(y)\leq\delta(y)$。$P$从$y$到$u$的后半段由可达部分的弧组成，长度非负，因而$\delta(y)\leq\delta(u)$。合起来得到
+$x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降。归纳假设给出$d(x)=\delta(x)$；而最短路的前缀仍是最短路，故$\delta(x)+\ell_{x,y}=\delta(y)$。于是
+\[
+  d(y)\leq d(x)+\ell_{x,y}=\delta(x)+\ell_{x,y}=\delta(y).
+\]
+$P$从$y$到$u$的后半段由可达部分的弧组成，长度非负，因而$\delta(y)\leq\delta(u)$。合起来得到
 \[
   d(y)\leq\delta(y)\leq\delta(u)<d(u).
 \]
@@ -449,7 +549,13 @@ $x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降，所以$d(y)\
 \end{proof}
 
 \paragraph{适用范围}
-证明中只有一步用到非负性：“后半段长度非负，所以$\delta(y)\leq\delta(u)$”。这一步失效时，算法确实会出错，即使图中没有负环。取弧$s\to a$长$2$、$s\to b$长$5$、$b\to a$长$-4$，如图~\ref{fig:graph-opt-dijkstra-counterexample}。处理$s$后，$a$的标签为$2$、$b$为$5$；算法选出标签较小的$a$并永久确定$d(a)=2$。随后处理$b$时，候选$5+(-4)=1$本可改善$a$，但$a$已在$R$中，不再更新。真实距离是$\delta(a)=1$，由路线$s\to b\to a$达到。
+证明中只有一步用到非负性：“后半段长度非负，所以$\delta(y)\leq\delta(u)$”。这一步失效时，算法确实会出错，即使图中没有负环。
+
+下面的三弧图（图~\ref{fig:graph-opt-dijkstra-counterexample}）说明这一点，它的弧长为：
+\[
+  \ell_{s,a}=2,\quad\ell_{s,b}=5,\quad\ell_{b,a}=-4.
+\]
+处理$s$后，$a$的标签为$2$、$b$为$5$；算法选出标签较小的$a$并永久确定$d(a)=2$。随后处理$b$时，候选$5+(-4)=1$本可改善$a$，但$a$已在$R$中，不再更新。真实距离是$\delta(a)=1$，由路线$s\to b\to a$达到。
 
 对照证明，这里的$y=b$、$u=a$，后半段$b\to a$为负，使$\delta(b)=5>\delta(a)=1$，“首个未确定顶点的标签不超过$\delta(u)$”不再成立。
 
@@ -472,8 +578,6 @@ $x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降，所以$d(y)\
 
 \begin{table}[!htb]
   \centering
-  \caption{三种单源最短路算法的比较（$n$为顶点数，$a$为弧数，邻接表存储）。}
-  \label{tab:graph-opt-shortest-path-methods}
   \begin{tabular}{llll}
     \toprule
     & 有向无环图递推 & Bellman--Ford & Dijkstra \\
@@ -486,6 +590,8 @@ $x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降，所以$d(y)\
     正确性依据 & 拓扑序归纳 & 至多$k$弧递推 & 首个未定顶点 \\
     \bottomrule
   \end{tabular}
+  \caption{三种单源最短路算法的比较（$n$为顶点数，$a$为弧数，邻接表存储）。}
+  \label{tab:graph-opt-shortest-path-methods}
 \end{table}
 
 “允许负边”与“存在负环”是两件不同的事。有向无环图递推与Bellman--Ford算法都允许负边；前者因为无环而不会遇到负环，后者则能在负环存在时正确报告受影响的顶点。Dijkstra算法连负边都不允许，哪怕负边并不构成负环，图~\ref{fig:graph-opt-dijkstra-counterexample}就是这样的例子。一种算法在某组数据上跑得更快、甚至答案碰巧正确，都不能替代对其条件的检查。
@@ -493,12 +599,21 @@ $x$加入$R$时弧$x\to y$已被松弛，此后标签只会下降，所以$d(y)\
 拿到一份声称的最短路结果后，可以不重跑算法而直接核对。对标签有限的顶点，先沿前驱恢复路线，检查起点为$s$、终点为$v$、每一步都是原图中的弧，并重算弧长之和是否等于$d(v)$。这一步证明标签可以达到，即$d(v)\geq\delta(v)$。
 
 最优性需要反方向的下界。若输出满足$d(s)=0$，并且对每条起点标签有限的弧$u\to v$都有
-\[
+\begin{equation}
   d(v)\leq d(u)+\ell_{u,v},
+  \label{eq:graph-opt-shortest-path-certificate}
+\end{equation}
+那么任取一条$s$到$v$的行走$W=(s=w_0,w_1,\ldots,w_k=v)$，沿$W$把这些不等式逐条相加，中间标签相消，得到
+\[
+  d(v)\leq d(s)+\ell(W)=\ell(W).
 \]
-那么任取一条$s$到$v$的行走$W=(s=w_0,w_1,\ldots,w_k=v)$，沿$W$把这些不等式逐条相加，中间标签相消，得到$d(v)\leq d(s)+\ell(W)=\ell(W)$。所以$d(v)\leq\delta(v)$，与上一段的$d(v)\geq\delta(v)$一起给出$d(v)=\delta(v)$。
+所以$d(v)\leq\delta(v)$，与上一段的$d(v)\geq\delta(v)$一起给出$d(v)=\delta(v)$。
 
-这组逐弧不等式只需$O(n+a)$时间核对，它本身就是有限距离的最优性证书；不满足时，违反不等式的弧直接指出了一条更好的路线。例如在表~\ref{tab:graph-opt-dijkstra-trace}的最终标签$(0,2,3,5)$下，五条弧依次给出$2\leq0+2$、$3\leq0+5$、$3\leq2+1$、$5\leq2+5$、$5\leq3+2$，全部成立。
+这组逐弧不等式只需$O(n+a)$时间核对，它本身就是有限距离的最优性证书；不满足时，违反不等式的弧直接指出了一条更好的路线。例如在表~\ref{tab:graph-opt-dijkstra-trace}的最终标签$(0,2,3,5)$下，五条弧依次给出
+\[
+  2\leq0+2,\quad 3\leq0+5,\quad 3\leq2+1,\quad 5\leq2+5,\quad 5\leq3+2,
+\]
+全部成立。
 
 另外两类结果需要不同的证据。对报告为$+\infty$的顶点，用一次广度优先遍历核对它确实不在$s$的可达集中。对报告为$-\infty$的顶点，应给出三段证据：一条从$s$到某个有向环的行走、该环的成本为负，以及一条从环到该顶点的行走。三类结果各有各的验收方式，不能只核对其中一类就宣布整份结果正确。
 

@@ -54,7 +54,7 @@ ax.tick_params(axis="y", length=0)
 ax.spines["left"].set_visible(False)
 ax.set_xticks([.1, 1, 10, 100], ["0.1", "1", "10", "100"])
 ax.set_xlabel(r"特征值 $\lambda$（对数刻度）")
-ax.grid(True, axis="x", which="major")
+ax.grid(False, which="both")
 prepare_figure(fig)
 for ext in ("pdf", "png"):
     fig.savefig(HERE / f"figure.{ext}", dpi=300)

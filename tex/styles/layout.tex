@@ -32,17 +32,19 @@
 \setcounter{tocdepth}{1}
 \setlength{\parindent}{2em}
 \setlength{\parskip}{0.35\baselineskip plus 1pt}
-% 列表与正文同距：列表前后及条目之间只保留段间距，不再叠加列表自身的空白。
+% 列表与正文同距：列表前后及条目之间只保留段间距，不再叠加列表自身的空白；
+% 条目内部的段落与正文段落同样留出段间距（列表会把\parskip换成\parsep，故\parsep取正文段距），
+% 条目中第二段起与正文一样首行缩进两个字（\listparindent）。
 \makeatletter
 \def\@listI{\leftmargin\leftmargini
-  \topsep\z@ \partopsep\z@ \parsep\z@ \itemsep\z@}
+  \topsep\z@ \partopsep\z@ \parsep0.35\baselineskip\@plus\p@ \itemsep\z@ \listparindent2em}
 \let\@listi\@listI
 \def\@listii{\leftmargin\leftmarginii
   \labelwidth\leftmarginii \advance\labelwidth-\labelsep
-  \topsep\z@ \partopsep\z@ \parsep\z@ \itemsep\z@}
+  \topsep\z@ \partopsep\z@ \parsep0.35\baselineskip\@plus\p@ \itemsep\z@ \listparindent2em}
 \def\@listiii{\leftmargin\leftmarginiii
   \labelwidth\leftmarginiii \advance\labelwidth-\labelsep
-  \topsep\z@ \partopsep\z@ \parsep\z@ \itemsep\z@}
+  \topsep\z@ \partopsep\z@ \parsep0.35\baselineskip\@plus\p@ \itemsep\z@ \listparindent2em}
 \makeatother
 \linespread{1.16}
 \emergencystretch=1em
@@ -109,21 +111,39 @@
 \renewcommand{\@tufte@marginnote@justification}{\RaggedRight}
 \makeatother
 
+% 章、节、小节、子小节标题统一使用主题色深金（白底上可读的暖黄色系文字色）。
+\colorlet{BookHeading}{BookAccentText}
 \titleformat{\chapter}[display]
-  {\heiti\color{BookInk}}
+  {\heiti\color{BookHeading}}
   {\colorbox{BookAccent}{\parbox[c][10mm][c]{28mm}{\centering
     \color{BookAccentInk}\fontsize{16}{20}\selectfont\BookChapterName}}}
   {5mm}{\fontsize{27}{34}\selectfont\bfseries}
 \titleformat{name=\chapter,numberless}[display]
-  {\heiti\color{BookInk}}
+  {\heiti\color{BookHeading}}
   {\color{BookAccent}\rule{28mm}{3mm}}
   {5mm}{\fontsize{27}{34}\selectfont\bfseries}
 \titlespacing*{\chapter}{0pt}{6mm}{12mm}
-\titleformat{\section}{\heiti\Large\bfseries\color{BookInk}}{\thesection}{0.7em}{}
-\titleformat{\subsection}{\heiti\large\bfseries\color{BookInk}}{\thesubsection}{0.7em}{}
+% 节、小节、子小节标题左侧有挂在正文左边界外的暖黄色块，逐级变细。
+\newcommand{\booksectionblock}{%
+  \llap{\color{BookAccent}\rule[-0.45ex]{2.2mm}{2.9ex}\hspace{2.6mm}}}
+\newcommand{\booksubsectionblock}{%
+  \llap{\color{BookAccent}\rule[-0.3ex]{1.2mm}{2.4ex}\hspace{2.6mm}}}
+\newcommand{\booksubsubsectionblock}{%
+  \llap{\color{BookAccent}\rule[0.15ex]{1.5mm}{1.5mm}\hspace{2.6mm}}}
+\titleformat{\section}{\heiti\Large\bfseries\color{BookHeading}}
+  {\booksectionblock\thesection}{0.7em}{\BookNavRecordSection}
+\titleformat{name=\section,numberless}{\heiti\Large\bfseries\color{BookHeading}}
+  {}{0pt}{\booksectionblock}
+\titleformat{\subsection}{\heiti\large\bfseries\color{BookHeading}}
+  {\booksubsectionblock\thesubsection}{0.7em}{\BookNavSubsection}
+\titleformat{name=\subsection,numberless}{\heiti\large\bfseries\color{BookHeading}}
+  {}{0pt}{\booksubsectionblock}
 % Tufte 禁用此层级；在项目样式层恢复，保留模型章节的原有结构。
 \titleclass{\subsubsection}{straight}
-\titleformat{\subsubsection}{\heiti\normalsize\bfseries\color{BookInk}}{\thesubsubsection}{0.7em}{}
+\titleformat{\subsubsection}{\heiti\normalsize\bfseries\color{BookHeading}}
+  {\booksubsubsectionblock\thesubsubsection}{0.7em}{}
+
+% 小节右侧的位置导航见 tex/styles/navigation.tex。
 \titleformat{\paragraph}[runin]{\heiti\bfseries\color{BookInk}}{}{0pt}{}
 \titlespacing*{\section}{0pt}{2.5ex plus 1ex}{1ex}
 \titlespacing*{\subsection}{0pt}{2ex plus 1ex}{0.8ex}
@@ -163,8 +183,22 @@
 % 恢复常规浮动体，取消 Tufte 将图表注自动移到边栏的行为。
 \renewenvironment{figure}[1][htbp]{\@float{figure}[#1]}{\end@float}
 \renewenvironment{table}[1][htbp]{\@float{table}[#1]}{\end@float}
-\renewenvironment{figure*}[1][htbp]{\@float{figure}[#1]\begin{fullwidth}}{\end{fullwidth}\end@float}
-\renewenvironment{table*}[1][htbp]{\@float{table}[#1]\begin{fullwidth}}{\end{fullwidth}\end@float}
+% 跨栏浮动体进入右侧边栏，统一放在正文页底，为版心顶端的位置导航留出空间。
+% 保留可选参数以兼容既有正文；此处有意不接受顶部/当前位置/普通浮动页放置。
+% 尺寸不在样式层缩放；过高对象须在正文中分解或调整相邻讲解，逐页检查坐标。
+\renewenvironment{figure*}[1][!b]{\@float{figure}[!b]\begin{fullwidth}}{\end{fullwidth}\end@float}
+\renewenvironment{table*}[1][!b]{\@float{table}[!b]\begin{fullwidth}}{\end{fullwidth}\end@float}
+% 普通正文宽的就地图：图与图注作为一个盒子随正文换页，不进入浮动队列。
+% 先排完此前的浮动体，保证可见图号顺序；caption 沿用下方统一定义。
+\newcommand{\bookinlinebegin}[1]{%
+  \par\FloatBarrier\addvspace{\intextsep}%
+  \noindent\begin{minipage}{\linewidth}\def\@captype{#1}%
+}
+\newcommand{\bookinlineend}{%
+  \end{minipage}\par\addvspace{\intextsep}%
+}
+\newenvironment{BookInlineFigure}{\bookinlinebegin{figure}}{\bookinlineend}
+\newenvironment{BookInlineTable}{\bookinlinebegin{table}}{\bookinlineend}
 \long\def\@caption#1[#2]#3{%
   \hyper@makecurrent{#1}\NR@gettitle{#2}%
   \par\addcontentsline{\csname ext@#1\endcsname}{#1}%
@@ -199,7 +233,7 @@
 \NewDocumentCommand{\bookdraftgraphic}{O{width=\linewidth} m}{%
   \IfFileExists{#2}
     {\includegraphics[#1]{#2}}
-    {\PackageWarning{machine-learning}{Draft figure `#2' is not available}%
+    {\PackageWarning{notes-on-mathematics}{Draft figure `#2' is not available}%
      \begingroup
        \setlength{\fboxsep}{0pt}%
        \fcolorbox{BookRule}{BookPaper}{%

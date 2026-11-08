@@ -3,12 +3,12 @@
 \section{最小成本}
 \label{sec:graph-dp-min-cost}
 
-本节的输入是各变量的有限状态集合、局部成本表（取值于$\mathbb R\cup\{+\infty\}$），以及上一节固定的袋树、根、后序和局部项归属；输出是最小成本$F^\star=\min_{\bm x}F(\bm x)$，并在$F^\star$有限时给出一个达到它的配置，在$F^\star=+\infty$时报告没有可行配置。数值递推、达到值的记录、回溯、正确性与检验在本节一起展开。
+本节的输入是各变量的有限状态集合、局部成本表（取值于$\mathbb R\cup\{+\infty\}$），以及上一节固定的袋树、根、后序和局部项归属；输出是最小成本$F^\star=\min_{\bm x}F(\bm x)$，并在$F^\star$有限时给出一个达到它的配置，在$F^\star=+\infty$时报告没有可行配置。本节依次给出数值递推、达到值的记录与回溯，再证明计算的正确性，并用算例检验。
 
 \subsection{合并本地成本与子消息}
 \label{sec:graph-dp-bag-merge}
 
-处理节点$u$时，它的子节点都已处理完，各自交来一张以接口为索引的消息表$m_{c\to u}(\bm x_{S_c})$，$c\in\operatorname{ch}(u)$。第一步是把本地成本与这些消息按同一个袋配置读取并相加：
+处理节点$u$时，它的子节点都已处理完，各自交来一张以接口为索引的消息表$m_{c\to u}(\bm x_{S_c})$，$c\in\operatorname{ch}(u)$。节点先把本地成本与这些消息按同一个袋配置读取并相加：
 \begin{equation}
 g_u(\bm x_{B_u})=\Phi_u(\bm x_{B_u})+\sum_{c\in\operatorname{ch}(u)}m_{c\to u}(\bm x_{S_c}).
 \label{eq:graph-dp-bag-merge}
@@ -17,13 +17,17 @@ g_u(\bm x_{B_u})=\Phi_u(\bm x_{B_u})+\sum_{c\in\operatorname{ch}(u)}m_{c\to u}(\
 
 叶节点没有子消息，求和为空，$g_u=\Phi_u$；没有局部项归入的节点$\Phi_u\equiv0$，$g_u$只由子消息组成。两种空和都取$0$，每项原始成本仍恰好计入一次：它在自己所归的节点计入$\Phi$，此后只以消息的形式向上传递。
 
-在四环算例中，叶节点$\{1,2,4\}$的合并结果是$g(x_1,x_2,x_4)=\phi_{1,2}(x_1,x_2)+\phi_{1,4}(x_1,x_4)$；根$\{2,3,4\}$的合并结果是$\phi_{2,3}+\phi_{3,4}$加上叶节点交来的消息。
+在四环算例中，叶节点$\{1,2,4\}$的合并结果是
+\[
+g(x_1,x_2,x_4)=\phi_{1,2}(x_1,x_2)+\phi_{1,4}(x_1,x_4);
+\]
+根$\{2,3,4\}$的合并结果是$\phi_{2,3}+\phi_{3,4}$加上叶节点交来的消息。
 
 \subsection{消去接口外变量}
 \label{sec:graph-dp-bag-idea}
 \label{sec:graph-dp-elimination-idea}
 
-第二步对内部变量取最小。记父节点为$p=p(u)$、接口为$S_u=B_u\cap B_p$，从$u$发往$p$的消息是
+合并之后，再对内部变量取最小。记父节点为$p=p(u)$、接口为$S_u=B_u\cap B_p$，从$u$发往$p$的消息是
 \begin{equation}
 m_{u\to p}(\bm x_{S_u})=\min_{\bm x_{I_u}}g_u(\bm x_{S_u},\bm x_{I_u}),\qquad I_u=B_u\setminus S_u .
 \label{eq:graph-dp-bag-message}
@@ -44,7 +48,18 @@ m_{u\to p}(\bm x_{S_u})=\min_{\bm x_{I_u}}g_u(\bm x_{S_u},\bm x_{I_u}),\qquad I_
 \]
 达到最小值的$x_1$依次为$1,0,1,1$。消元后的函数集合是$\{\psi_1,\phi_B\}$。
 
-这一步没有改变剩余变量的最优成本，可以逐项核对。例如取$(x_2,x_3,x_4)=(1,0,1)$，原问题对$x_1$求最小值为$\min\bigl(\phi_A(0,1,0)+\phi_B(1,0,1),\ \phi_A(1,1,0)+\phi_B(1,0,1)\bigr)=\min(2,1)=1$，新集合给出$\psi_1(1,0)+\phi_B(1,0,1)=1+0=1$，两者相同。第~\ref{sec:graph-dp-min-cost-correctness}小节证明这种一致对每个剩余配置、每一步消元都成立。
+消去$x_1$不改变剩余变量取定时的最优成本，这一点可以逐项核对。例如取$(x_2,x_3,x_4)=(1,0,1)$，原问题对$x_1$求最小值为
+\[
+\begin{aligned}
+&\min\bigl(\phi_A(0,1,0)+\phi_B(1,0,1),\ \phi_A(1,1,0)+\phi_B(1,0,1)\bigr)\\
+&\qquad=\min(2,1)=1.
+\end{aligned}
+\]
+新集合给出
+\[
+\psi_1(1,0)+\phi_B(1,0,1)=1+0=1,
+\]
+两者相同。第~\ref{sec:graph-dp-min-cost-correctness}小节证明这种一致对每个剩余配置、每一步消元都成立。
 
 \subsection{根袋求值}
 \label{sec:graph-dp-root-evaluation}
@@ -101,19 +116,71 @@ F^\star=\min_{\bm x_{B_r}}g_r(\bm x_{B_r}).
 \end{algorithm}
 
 \paragraph{消元的执行过程}
-在三元作用域例子上按次序$(1,4,2,3)$执行算法~\ref{alg:graph-dp-variable-elimination}。表~\ref{tab:graph-dp-elimination-trace}汇总了每一步，图~\ref{fig:graph-dp-elimination-trace}画出了函数集合的变化。
-\begin{itemize}
-  \item 消去$x_1$：如上一小节，$\mathcal F_1=\{\phi_A\}$，$S_1=\{2,3\}$，$\psi_1=(0,0,1,2)$，$b_1=(1,0,1,1)$。函数集合变为$\{\psi_1,\phi_B\}$。
-  \item 消去$x_4$：只有$\phi_B$含$4$，$S_4=\{2,3\}$。对$(x_2,x_3)$的四种取值比较$x_4=0,1$：$\min(2,1)$、$\min(0,+\infty)$、$\min(+\infty,0)$、$\min(1,2)$，得$\psi_4=(1,0,0,1)$，$b_4=(1,0,1,0)$。函数集合变为$\{\psi_1,\psi_4\}$。
-  \item 消去$x_2$：$\psi_1$和$\psi_4$都含$2$，要先相加再对$x_2$取最小，$S_2=\{3\}$。$x_3=0$时两个候选为$\psi_1(0,0)+\psi_4(0,0)=1$与$\psi_1(1,0)+\psi_4(1,0)=1$，并列，按约定取$x_2=0$；$x_3=1$时候选为$0+0=0$与$2+1=3$，取$x_2=0$。新函数记为$\psi_2'=(1,0)$，以区别于第~\ref{sec:graph-dp-fill-in}小节先消$x_2$时的$\psi_2$；$b_2=(0,0)$。
-  \item 消去$x_3$：只剩$\psi_2'$，$S_3=\varnothing$，$\min(1,0)=0$在$x_3=1$处达到，$b_3=1$。函数集合只剩常数$0$，即最小成本。
-\end{itemize}
-最小成本有限，按逆序$3,2,4,1$回溯：$x_3=b_3=1$；$x_2=b_2(x_3{=}1)=0$；$x_4=b_4(x_2{=}0,x_3{=}1)=0$；$x_1=b_1(x_2{=}0,x_3{=}1)=0$。恢复的配置为$(0,0,1,0)$，代回表~\ref{tab:graph-dp-ternary-tables}得$\phi_A(0,0,1)+\phi_B(0,1,0)=0+0=0$，与枚举结果一致。
+在三元作用域例子上按次序$(1,4,2,3)$执行算法~\ref{alg:graph-dp-variable-elimination}。下面逐步比较更新前后的函数集合，最后用表~\ref{tab:graph-dp-elimination-trace}汇总数值。
+
+消去$x_1$：如上一小节，$\mathcal F_1=\{\phi_A\}$，$S_1=\{2,3\}$，$\psi_1=(0,0,1,2)$，$b_1=(1,0,1,1)$。函数集合变为$\{\psi_1,\phi_B\}$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=81.284mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/reading-steps/eliminate-x1.pdf}
+  \caption{消去$x_1$：把读取它的$\phi_A$替换为$\psi_1(x_2,x_3)$，$\phi_B$不变。圆点为变量，方块为函数，连线表示读取关系；左侧黄色变量被汇总，右侧绿色方块是新函数。}
+  \label{fig:graph-dp-elimination-trace}
+\end{BookInlineFigure}
+
+消去$x_4$：只有$\phi_B$含$4$，$S_4=\{2,3\}$。对$(x_2,x_3)$的四种取值比较$x_4=0,1$，得到
+  \[
+  \psi_4=\bigl(\min(2,1),\ \min(0,+\infty),\ \min(+\infty,0),\ \min(1,2)\bigr)=(1,0,0,1),
+  \]
+  回溯表$b_4=(1,0,1,0)$。函数集合变为$\{\psi_1,\psi_4\}$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=67.035mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/reading-steps/eliminate-x4.pdf}
+  \caption{消去$x_4$：$\phi_B$被$\psi_4(x_2,x_3)$替换。此时两个函数只共享接口变量$x_2,x_3$。}
+  \label{fig:graph-dp-elimination-trace-x4}
+\end{BookInlineFigure}
+
+消去$x_2$：$\psi_1$和$\psi_4$都含$2$，要先相加再对$x_2$取最小，$S_2=\{3\}$。$x_3=0$时两个候选为
+  \[
+  \psi_1(0,0)+\psi_4(0,0)=1,\qquad \psi_1(1,0)+\psi_4(1,0)=1,
+  \]
+  二者并列，按约定取$x_2=0$。$x_3=1$时候选为$0+0=0$与$2+1=3$，取$x_2=0$。新函数记为$\psi_2'=(1,0)$，以区别于第~\ref{sec:graph-dp-fill-in}小节先消$x_2$时的$\psi_2$；$b_2=(0,0)$。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=66.784mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/reading-steps/eliminate-x2.pdf}
+  \caption{消去$x_2$：先把同一$(x_2,x_3)$下的$\psi_1$与$\psi_4$相加，再对$x_2$取最小。两项共同被一元函数$\psi_2'(x_3)$替换。}
+  \label{fig:graph-dp-elimination-trace-x2}
+\end{BookInlineFigure}
+
+消去$x_3$：只剩$\psi_2'$，$S_3=\varnothing$，$\min(1,0)=0$在$x_3=1$处达到，$b_3=1$。函数集合只剩常数$0$，即最小成本。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=55.785mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/reading-steps/eliminate-x3.pdf}
+  \caption{消去$x_3$：对最后的一元函数$\psi_2'$取最小，得到常数$0$。新函数已无变量，因而右侧没有连线。}
+  \label{fig:graph-dp-elimination-trace-x3}
+\end{BookInlineFigure}
+
+最小成本有限，按逆序$3,2,4,1$回溯：
+\[
+\begin{gathered}
+x_3=b_3=1,\qquad x_2=b_2(x_3{=}1)=0,\\
+x_4=b_4(x_2{=}0,x_3{=}1)=0,\qquad x_1=b_1(x_2{=}0,x_3{=}1)=0.
+\end{gathered}
+\]
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=85.785mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/reading-steps/elimination-recovery.pdf}
+  \caption{按消元的逆序查回溯表。先确定$x_3$，再用已知接口值依次读取$b_2,b_4,b_1$，恢复$(x_1,x_2,x_3,x_4)=(0,0,1,0)$。}
+  \label{fig:graph-dp-elimination-trace-recovery}
+\end{BookInlineFigure}
+
+恢复的配置为$(0,0,1,0)$，代回表~\ref{tab:graph-dp-ternary-tables}得
+\[
+\phi_A(0,0,1)+\phi_B(0,1,0)=0+0=0,
+\]
+与枚举结果一致。
 
 \begin{table}[!htb]
   \centering
-  \caption{按次序$(1,4,2,3)$对三元作用域例子消元。新函数与回溯表的取值按剩余变量的字典序列出：作用域为$\{2,3\}$时依次对应$(x_2,x_3)=(0,0),(0,1),(1,0),(1,1)$，作用域为$\{3\}$时对应$x_3=0,1$。}
-  \label{tab:graph-dp-elimination-trace}
   \small
   \begin{tabular}{@{}cccccc@{}}
     \toprule
@@ -125,21 +192,29 @@ F^\star=\min_{\bm x_{B_r}}g_r(\bm x_{B_r}).
     $x_3$ & $\psi_2'$ & $\varnothing$ & $0$ & $1$ & $\{0\}$\\
     \bottomrule
   \end{tabular}
+  \caption{按次序$(1,4,2,3)$对三元作用域例子消元。新函数与回溯表的取值按剩余变量的字典序列出：作用域为$\{2,3\}$时依次对应$(x_2,x_3)=(0,0),(0,1),(1,0),(1,1)$，作用域为$\{3\}$时对应$x_3=0,1$。}
+  \label{tab:graph-dp-elimination-trace}
 \end{table}
 
-\begin{figure*}[!htb]
-  \centering
-  \includegraphics[width=147.581mm]{figures/01-basic-mathematics/04-graphs/tikz/c5-elimination-trace/figure.pdf}
-  \caption{按次序$(1,4,2,3)$消元时函数集合的逐步变化。圆点是变量，方块是当前函数，连线表示函数读取该变量；黄色变量是下一步要消去的变量，绿色方块是刚产生的新函数，虚线圆是已消去的变量。每个面板下方是新函数与回溯表，取值按作用域的字典序列出。底行按消元的逆序查回溯表，恢复最优配置$(0,0,1,0)$。}
-  \label{fig:graph-dp-elimination-trace}
-\end{figure*}
 
 \paragraph{袋树上的执行过程}
 同一个例子也可以直接在两个袋$B_s=\{1,2,3\}$、$B_t=\{2,3,4\}$上执行算法~\ref{alg:graph-dp-bag-dp}，取$t$为根，后序为$s,t$。本地成本为$\Phi_s=\phi_A$、$\Phi_t=\phi_B$。
 
-$s$是叶节点，没有子消息，内部变量只有$x_1$，所以$m_{s\to t}(x_2,x_3)=\min_{x_1}\phi_A(x_1,x_2,x_3)$。图~\ref{fig:graph-dp-bag-message-table}逐行列出了这张四项表：接口取值为$00,01,10,11$时，消息值依次为$0,0,1,2$，达到最小值的$x_1$依次为$1,0,1,1$。它与消去$x_1$得到的$\psi_1$相同。$x_1$已经被汇总，不再出现在表中；$x_2,x_3$作为接口仍然显式保留，根袋读取这张表时要按同样的$(x_2,x_3)$取值对齐。
+$s$是叶节点，没有子消息，内部变量只有$x_1$，所以
+\[
+m_{s\to t}(x_2,x_3)=\min_{x_1}\phi_A(x_1,x_2,x_3).
+\]
+图~\ref{fig:graph-dp-bag-message-table}逐行列出了这张四项表：接口取值为$00,01,10,11$时，消息值依次为$0,0,1,2$，达到最小值的$x_1$依次为$1,0,1,1$。它与消去$x_1$得到的$\psi_1$相同。
 
-根处合并得$g_t=\phi_B+m_{s\to t}$，按$(x_2,x_3,x_4)$的字典序依次为$2$，$1$，$0$，$+\infty$，$+\infty$，$1$，$3$，$4$，最小值$0$在$(0,1,0)$处达到。回溯时根取$(x_2,x_3,x_4)=(0,1,0)$，查叶节点的回溯表得$b_s(0,1)=0$，即$x_1=0$。恢复的配置$(0,0,1,0)$与枚举和消元的结果相同。
+$x_1$已经被汇总，不再出现在表中；$x_2,x_3$作为接口仍然显式保留，根袋读取这张表时要按同样的$(x_2,x_3)$取值对齐。
+
+根处合并得$g_t=\phi_B+m_{s\to t}$，按$(x_2,x_3,x_4)$的字典序依次为
+\[
+g_t=(2,\,1,\,0,\,+\infty,\,+\infty,\,1,\,3,\,4),
+\]
+最小值$0$在$(0,1,0)$处达到。
+
+回溯时根取$(x_2,x_3,x_4)=(0,1,0)$，查叶节点的回溯表得$b_s(0,1)=0$，即$x_1=0$。恢复的配置$(0,0,1,0)$与枚举和消元的结果相同。
 
 \begin{figure}[!htb]
   \centering
@@ -220,12 +295,16 @@ I_u,\qquad V_{D_{c_1}}\setminus B_u,\qquad\ldots,\qquad V_{D_{c_k}}\setminus B_u
 
 叶节点的接口为$\{2,4\}$，内部变量为$\{1\}$。对接口的每种取值比较$x_1=0,1$两个候选$\phi_{1,2}+\phi_{1,4}$，表~\ref{tab:graph-dp-four-cycle-min-messages}的左半部分列出了结果，消息与第~\ref{sec:graph-dp-four-cycle}小节的$\psi_1$相同。
 
-根处合并$g=\phi_{2,3}(x_2,x_3)+\phi_{3,4}(x_3,x_4)+m(x_2,x_4)$，右半部分按$(x_2,x_3,x_4)$的字典序列出。最小值$3$在$(0,0,1)$处唯一达到。回溯时根取$(x_2,x_3,x_4)=(0,0,1)$，查叶节点的回溯表得$b(0,1)=1$，恢复$\bm x^\star=(1,0,0,1)$。这与表~\ref{tab:graph-dp-four-cycle-enumeration}的枚举结果一致；代回四项成本$1+1+1+0=3$，每项恰计一次。
+根处合并
+\[
+g=\phi_{2,3}(x_2,x_3)+\phi_{3,4}(x_3,x_4)+m(x_2,x_4),
+\]
+表的右半部分按$(x_2,x_3,x_4)$的字典序列出。最小值$3$在$(0,0,1)$处唯一达到。
+
+回溯时根取$(x_2,x_3,x_4)=(0,0,1)$，查叶节点的回溯表得$b(0,1)=1$，恢复$\bm x^\star=(1,0,0,1)$。这与表~\ref{tab:graph-dp-four-cycle-enumeration}的枚举结果一致；代回四项成本$1+1+1+0=3$，每项恰计一次。
 
 \begin{table}[!htb]
   \centering
-  \caption{四环算例的最小成本计算。左：叶节点$\{1,2,4\}$对$x_1=0,1$的两个候选、消息值与回溯表。右：根$\{2,3,4\}$的合并值$g=\phi_{2,3}+\phi_{3,4}+m$。}
-  \label{tab:graph-dp-four-cycle-min-messages}
   \small
   \begin{tabular}{@{}cccc@{\qquad}cc@{}}
     \toprule
@@ -237,17 +316,41 @@ I_u,\qquad V_{D_{c_1}}\setminus B_u,\qquad\ldots,\qquad V_{D_{c_k}}\setminus B_u
     $(1,1)$ & $+\infty,\ 2$ & $2$ & $1$ & $(1,1,0)$, $(1,1,1)$ & $4$, $+\infty$\\
     \bottomrule
   \end{tabular}
+  \caption{四环算例的最小成本计算。左：叶节点$\{1,2,4\}$对$x_1=0,1$的两个候选、消息值与回溯表。右：根$\{2,3,4\}$的合并值$g=\phi_{2,3}+\phi_{3,4}+m$。}
+  \label{tab:graph-dp-four-cycle-min-messages}
 \end{table}
 
-改用未合并的消元森林，即按次序$(1,2,3,4)$执行算法~\ref{alg:graph-dp-variable-elimination}，第一步同样得到$\psi_1$。消去$x_2$时取出$\psi_1$与$\phi_{2,3}$，得$\psi_2(x_3,x_4)=(4,2,4,3)$，回溯表为$(1,0,1,1)$；消去$x_3$时取出$\psi_2$与$\phi_{3,4}$，$x_4=0$时两个候选$4+0$与$4+0$并列，按约定取$x_3=0$，$x_4=1$时候选为$2+1$与$3+\infty$，得$\psi_3(x_4)=(4,3)$；最后消去$x_4$得常数$3$。逆序回溯给出$x_4=1$、$x_3=0$、$x_2=0$、$x_1=1$，结果相同，中间表则与合并袋上的计算不同。
+改用未合并的消元森林，即按次序$(1,2,3,4)$执行算法~\ref{alg:graph-dp-variable-elimination}，第一步同样得到$\psi_1$。消去$x_2$时取出$\psi_1$与$\phi_{2,3}$，得
+\[
+\psi_2(x_3,x_4)=(4,2,4,3),
+\]
+回溯表为$(1,0,1,1)$。
+
+消去$x_3$时取出$\psi_2$与$\phi_{3,4}$。$x_4=0$时两个候选$4+0$与$4+0$并列，按约定取$x_3=0$；$x_4=1$时候选为$2+1$与$3+\infty$。于是
+\[
+\psi_3(x_4)=(4,3).
+\]
+最后消去$x_4$得常数$3$。逆序回溯给出$x_4=1$、$x_3=0$、$x_2=0$、$x_1=1$，结果相同，中间表则与合并袋上的计算不同。
 
 \paragraph{并列最优}
 把$\phi_{2,3}(1,0)$从$1$改为$0$，其余不变。这时$(0,1,0,0)$、$(1,0,0,1)$、$(1,1,0,1)$三个配置的成本都是$3$。叶节点的消息不变，根处$g$在$(0,0,1)$、$(1,0,0)$、$(1,0,1)$三处取最小值$3$。按字典序规则，根取$(0,0,1)$，恢复的仍是$(1,0,0,1)$；若规则改为取字典序最大者，根取$(1,0,1)$，恢复$(1,1,0,1)$。两者都是最优配置，固定规则只是让输出可以复现；要得到全部最优配置，须保留全部达到值。
 
 \paragraph{不可行}
-把四项成本换成约束：$\phi_{1,2},\phi_{2,3},\phi_{3,4}$在两端相等时为$0$、不等时为$+\infty$，$\phi_{1,4}$在两端不等时为$0$、相等时为$+\infty$。每张表单独看都有可行的组合，但沿环要求$x_1=x_2=x_3=x_4$且$x_1\neq x_4$，互相矛盾。叶节点的消息为$m(x_2,x_4)=(+\infty,0,0,+\infty)$：只有$x_2\neq x_4$时存在可行的$x_1$。根处$\phi_{2,3}+\phi_{3,4}$要求$x_2=x_3=x_4$，此时$m=+\infty$，所以$g$的八项全是$+\infty$，算法报告不可行，不做恢复。$+\infty$按运算约定沿消息传递，不需要特殊处理。
+把四项成本换成约束：$\phi_{1,2},\phi_{2,3},\phi_{3,4}$在两端相等时为$0$、不等时为$+\infty$，$\phi_{1,4}$在两端不等时为$0$、相等时为$+\infty$。每张表单独看都有可行的组合，但沿环要求$x_1=x_2=x_3=x_4$且$x_1\neq x_4$，互相矛盾。
+
+叶节点的消息为
+\[
+m(x_2,x_4)=(+\infty,0,0,+\infty),
+\]
+即只有$x_2\neq x_4$时存在可行的$x_1$。根处$\phi_{2,3}+\phi_{3,4}$要求$x_2=x_3=x_4$，此时$m=+\infty$，所以$g$的八项全是$+\infty$，算法报告不可行，不做恢复。$+\infty$按运算约定沿消息传递，不需要特殊处理。
 
 \paragraph{孤立变量与多个分量}
-在原问题上再加两个分量：一个没有任何局部项的孤立变量$x_5\in\{0,1,2\}$，以及一条边$\{6,7\}$上的成本$\phi_{6,7}$，其表的行对应$x_6$、列对应$x_7$，为$\begin{bmatrix}2&1\\0&3\end{bmatrix}$。结构上增加袋$\{5\}$和$\{6,7\}$，各用一条空接口的边连到根$\{2,3,4\}$。
+在原问题上再加两个分量：一个没有任何局部项的孤立变量$x_5\in\{0,1,2\}$，以及一条边$\{6,7\}$上的成本$\phi_{6,7}$，其表的行对应$x_6$、列对应$x_7$：
+\[
+\phi_{6,7}=\begin{bmatrix}2&1\\0&3\end{bmatrix}.
+\]
+结构上增加袋$\{5\}$和$\{6,7\}$，各用一条空接口的边连到根$\{2,3,4\}$。
 
-袋$\{5\}$没有局部项，$g\equiv0$，对三个状态取最小得标量消息$0$，回溯记录$x_5=0$（字典序最小）。袋$\{6,7\}$的接口也为空，消息是$\min\phi_{6,7}=0$，在$(x_6,x_7)=(1,0)$处达到。根把这两个标量加进$g$，最小成本为$3+0+0=3$，恢复的配置在原四个变量上不变，并有$x_5=0$、$(x_6,x_7)=(1,0)$。孤立变量虽不影响最小值，仍须出现在某个袋中，才会在恢复时被赋值。
+袋$\{5\}$没有局部项，$g\equiv0$，对三个状态取最小得标量消息$0$，回溯记录$x_5=0$（字典序最小）。袋$\{6,7\}$的接口也为空，消息是$\min\phi_{6,7}=0$，在$(x_6,x_7)=(1,0)$处达到。
+
+根把这两个标量加进$g$，最小成本为$3+0+0=3$，恢复的配置在原四个变量上不变，并有$x_5=0$、$(x_6,x_7)=(1,0)$。孤立变量虽不影响最小值，仍须出现在某个袋中，才会在恢复时被赋值。

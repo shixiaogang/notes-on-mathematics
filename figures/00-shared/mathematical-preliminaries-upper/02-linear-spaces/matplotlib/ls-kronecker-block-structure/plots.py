@@ -1,115 +1,98 @@
-"""教学图：Kronecker 积 A⊗B 的块结构。
+"""Kronecker product using exactly the adjacent worked example.
 
-固定构造：A=[[1,2],[3,4]]，B=[[1,1],[0,1]]，
-A⊗B 为 4×4：[[1,1,2,2],[0,1,0,2],[3,3,4,4],[0,3,0,4]]，
-每个 2×2 小块为 a_{ij} B。无随机数，不调用 LaTeX。
-从任意目录运行：python3 plots.py [--only ls-kronecker-block-structure]
+A=[[1,2],[3,4]], B=[[0,1],[1,0]]; four 2x2 blocks form numpy.kron(A,B).
+Color denotes block correspondence, never numerical magnitude.
 """
 from pathlib import Path
 import argparse
 import json
-
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import Rectangle
-from matplotlib.text import Text
+from matplotlib.patches import FancyArrowPatch, Polygon, Rectangle
 
 HERE = Path(__file__).resolve().parent
 NAME = HERE.name
-ROOT = next(p for p in Path(__file__).resolve().parents
-            if (p / "build.sh").is_file() and (p / "tex/book.tex").is_file())
-
-for fname in ["SourceHanSansSC-Normal.otf", "LXGWWenKai-Regular.ttf", "FiraMath-Regular.otf"]:
-    font_manager.fontManager.addfont(ROOT / "fonts" / fname)
-
-BLUE, INK, MUTED, STROKE = "#7188A3", "#3B4252", "#6B7280", "#4C4D4F"
-BLUE_FILL = "#E5EAF0"
-CN_MAIN, CN_AUX, EN = "Source Han Sans SC", "LXGW WenKai", "Fira Math"
-
-matplotlib.rcParams.update({
-    "font.family": [EN, CN_MAIN], "font.size": 8,
-    "mathtext.fontset": "custom", "mathtext.rm": EN, "mathtext.it": EN,
-    "mathtext.bf": EN, "mathtext.sf": EN,
-    "axes.unicode_minus": False, "text.color": INK,
-    "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white",
-    "pdf.fonttype": 3, "svg.fonttype": "path",
-})
-
+ROOT = next(p for p in HERE.parents if (p / "build.sh").is_file())
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure, style_record
+from plot_style import BLUE, GREEN, BLUE_FILL, GREEN_FILL, STROKE, INK
+configure()
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--only", default=NAME, choices=[NAME],
-                    help="本目录仅一幅图；保留参数以统一调用方式。")
-selection = parser.parse_args().only
+parser.add_argument("--only", default=NAME, choices=[NAME])
+parser.parse_args()
 
-A = np.array([[1., 2.], [3., 4.]])
-B = np.array([[1., 1.], [0., 1.]])
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[0, 1], [1, 0]])
 K = np.kron(A, B)
+assert np.array_equal(K, [[0, 1, 0, 2], [1, 0, 2, 0],
+                          [0, 3, 0, 4], [3, 0, 4, 0]])
 
+def bracket(ax, x, y, width, height):
+    d = .13
+    for xx, inward in [(x - .18, d), (x + width + .18, -d)]:
+        ax.plot([xx + inward, xx, xx, xx + inward],
+                [y, y, y + height, y + height], color=STROKE, linewidth=1.05)
 
-def finalize(fig):
-    for t in fig.findobj(Text):
-        s = t.get_text()
-        has_cjk = any(("⺀" <= ch <= "鿿") or ("＀" <= ch <= "￯") for ch in s)
-        t.set_fontfamily([CN_MAIN, EN] if has_cjk else [EN, CN_MAIN])
-        t.set_fontweight("normal")
+def matrix(ax, values, x, y, cell, fills, block_gap=0.):
+    rows, cols = values.shape
+    width = cols * cell + ((cols - 1) // 2) * block_gap
+    height = rows * cell + ((rows - 1) // 2) * block_gap
+    for i in range(rows):
+        for j in range(cols):
+            xx = x + j * cell + (j // 2) * block_gap
+            yy = y + (rows - 1 - i) * cell + ((rows - 1 - i) // 2) * block_gap
+            ax.add_patch(Rectangle((xx + .025, yy + .025), cell - .05, cell - .05,
+                                   facecolor=fills[i][j], edgecolor="none", linewidth=0))
+            ax.text(xx + cell / 2, yy + cell / 2, str(values[i, j]), ha="center", va="center")
+    bracket(ax, x, y, width, height)
 
-
-fig, ax = plt.subplots(figsize=(112 / 25.4, 88 / 25.4))
-cmap = LinearSegmentedColormap.from_list("block", ["#FFFFFF", BLUE_FILL, BLUE])
-vmax = 4.0
-
-for i in range(4):
-    for j in range(4):
-        v = K[i, j]
-        ax.add_patch(Rectangle((j, 3 - i), 1, 1, facecolor=cmap(v / vmax),
-                               edgecolor=STROKE, lw=.5))
-        ax.text(j + .5, 3 - i + .5, f"{v:g}", fontsize=8,
-                ha="center", va="center",
-                color="white" if v >= 3 else INK)
-
-# 块边界粗线
-ax.plot([2, 2], [0, 4], color=INK, lw=1.4)
-ax.plot([0, 4], [2, 2], color=INK, lw=1.4)
-
-# 块标签（置于各块左上角，避开格内数字中心）
-block_labels = [("$a_{11}B$", .08, 3.92), ("$a_{12}B$", 2.08, 3.92),
-                ("$a_{21}B$", .08, 1.92), ("$a_{22}B$", 2.08, 1.92)]
-for lab, cx, cy in block_labels:
-    ax.text(cx, cy, lab, fontsize=6.5, ha="left", va="top", color=INK,
-            bbox=dict(facecolor="white", edgecolor="none", pad=1.0, alpha=.9))
-
-ax.text(2, 4.35, "$A\\otimes B$，$A$=(1,2; 3,4)，$B$=(1,1; 0,1)",
-        fontsize=8, ha="center", color=INK)
-ax.text(2, -.35, "块 $(i,j)$ 整体等于标量 $a_{ij}$ 乘矩阵 $B$；色深编码数值大小",
-        fontsize=7.5, ha="center", color=MUTED)
-ax.set_xlim(-.2, 4.2); ax.set_ylim(-.6, 4.7); ax.axis("off")
-ax.set_aspect("equal")
-
-finalize(fig)
-fig.tight_layout()
-for ext in ("pdf", "svg", "png"):
-    if selection == NAME:
-        fig.savefig(HERE / f"{NAME}.{ext}", dpi=300)
-plt.close(fig)
-
+fig = plt.figure(figsize=(112 / 25.4, 85 / 25.4))
+ax = fig.add_axes([0., 0., 1., 1.])
+ax.set(xlim=(0., 11.2), ylim=(0., 8.5), aspect="equal")
+ax.axis("off")
+cell = .63
+matrix(ax, A, 2.45, 6.6, cell, [[GREEN_FILL, BLUE_FILL], [BLUE_FILL, BLUE_FILL]])
+matrix(ax, B, 7.5, 6.6, cell, [[GREEN_FILL] * 2] * 2)
+ax.text(3.08, 8.05, r"$A$", ha="center", va="bottom")
+ax.text(8.13, 8.05, r"$B$", ha="center", va="bottom")
+ax.text(5.6, 7.23, r"$\otimes$", ha="center", va="center", fontsize=12)
+ax.add_patch(FancyArrowPatch((5.6, 6.25), (5.6, 5.65), arrowstyle="-|>",
+                            mutation_scale=8, color=STROKE, linewidth=1.1))
+cell, gap = .94, .14
+width = 4 * cell + gap
+x, y = (11.2 - width) / 2, .62
+fills = [[GREEN_FILL if i < 2 and j < 2 else BLUE_FILL for j in range(4)] for i in range(4)]
+matrix(ax, K, x, y, cell, fills, block_gap=gap)
+# These boundaries express the mathematical blocks; there is no background grid.
+for i in range(2):
+    for j in range(2):
+        ax.add_patch(Rectangle((x + j * (2 * cell + gap), y + i * (2 * cell + gap)),
+                               2 * cell, 2 * cell, facecolor="none",
+                               edgecolor=GREEN if i == 1 and j == 0 else BLUE, linewidth=1.05))
+ax.text(5.6, 4.96, r"$A\otimes B$", ha="center", va="bottom")
 record = {
-    "kind": "analytical teaching construction, not observed experimental data",
-    "reader_question": "A⊗B 的每个块为什么正好是 a_{ij} 乘上整个 B？",
-    "formula": "A=[[1,2],[3,4]], B=[[1,1],[0,1]]; "
-               "A⊗B = [[1·B, 2·B],[3·B, 4·B]] = [[1,1,2,2],[0,1,0,2],[3,3,4,4],[0,3,0,4]].",
+    "kind": "analytical teaching construction",
+    "reader_question": "How does each entry of A select and scale one block B?",
+    "formula": "(A kron B)[2*i+k,2*j+l]=A[i,j]*B[k,l]",
     "parameters": {"A": A.tolist(), "B": B.tolist()},
-    "evaluated_data": {"kron_product": K.tolist()},
-    "processing": "numpy.kron 直接求值；无随机采样。",
-    "width_mm": 112, "height_mm": 88, "png_dpi": 300,
-    "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
+    "evaluated_data": {"kronecker_product": K.tolist()},
+    "visual_encoding": "Top inputs, bottom product; green links A[0,0], B, and first block; outlined 2x2 blocks, no background grid.",
+    "width_mm": 112, "height_mm": 85,
+    "processing": "Exact integer data, calculated by numpy.kron; no random data.",
 }
-(HERE / "sources.json").write_text(
-    json.dumps({"style": "figures.md 统一色板：蓝#7188A3 绿#829C8B 黄#B4A16F 红#A7787D",
-                "fonts": {"Chinese": "fonts/SourceHanSansSC-Normal.otf",
-                          "Chinese_aux": "fonts/LXGWWenKai-Regular.ttf",
-                          "math": "fonts/FiraMath-Regular.otf"},
-                "figures": {NAME: record}}, ensure_ascii=False, indent=2) + "\n")
+prepare_figure(fig)
+for ext in ("pdf", "svg", "png"):
+    fig.savefig(HERE / f"{NAME}.{ext}", dpi=300)
+plt.close(fig)
+record.update({
+    "source": str(Path(__file__).relative_to(ROOT)),
+    "reference_width_mm": record["width_mm"], "reference_scale": 1,
+    "label_size_pt_at_reference": 8, "png_dpi": 300,
+    "outputs": [f"{NAME}.{ext}" for ext in ("pdf", "svg", "png")],
+})
+(HERE / "sources.json").write_text(json.dumps(
+    {"style": style_record(), "figures": {NAME: record}}, ensure_ascii=False, indent=2) + "\n")
 print("generated", NAME)

@@ -8,10 +8,25 @@ import argparse
 import hashlib
 import json
 import subprocess
+import re
 import pymupdf as fitz
 
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "build.sh").exists())
 PREAMBLE = (ROOT / "figures/00-shared/academic-drawing/preamble.tex").read_text() + "\n\\begin{document}\n"
+
+def publication_strokes(text):
+    """Increase explicit thin strokes at export; preserve editable geometry.
+
+    Sources retain their relative weights. This is applied exactly once to the
+    temporary compilation input, never repeatedly to the editable source.
+    """
+    def width(match):
+        value=float(match[2])
+        return match[1]+f"{max(.65, value*1.35):.3f}"+"pt"
+    text=re.sub(r"(line width\s*=\s*)([0-9]*\.?[0-9]+)pt",width,text)
+    text=re.sub(r"grid\s*=\s*(?:both|major|minor)","grid=none",text)
+    return text
+
 
 def render(source, output_dir=None):
     source = source.resolve()
@@ -24,7 +39,9 @@ def render(source, output_dir=None):
                                  "figures/08-neural-network-models/",
                                  "figures/09-probabilistic-graphical-models/")):
         theme = "\\input{figures/00-shared/model-generators/muted-theme.tex}\n"
-    driver.write_text(PREAMBLE + theme + r"\input{" + str(relative) + "}\n\\end{document}\n")
+    prepared=work / "drawing.tex"
+    prepared.write_text(publication_strokes(source.read_text()))
+    driver.write_text(PREAMBLE + theme + r"\input{" + str(prepared.relative_to(ROOT)) + "}\n\\end{document}\n")
     with (work / "compile.log").open("w") as log:
         subprocess.run(["xelatex", "-no-pdf", "-interaction=nonstopmode", "-halt-on-error",
                         "-output-directory="+str(work.relative_to(ROOT)), str(driver.relative_to(ROOT))], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
@@ -46,7 +63,7 @@ def render(source, output_dir=None):
         report = {"source":str(relative),"source_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),
                   "physical_size_mm":[round(x*25.4/72,3) for x in [page.rect.width,page.rect.height]],
                   "raster_images_embedded":len(page.get_images()),"math":"Actual FiraMath-Regular.otf via unicode-math",
-                  "exports":["PDF","SVG paths","PNG 300 dpi"],"status":"rendered; scientific and visual review required"}
+                  "exports":["PDF","SVG paths","PNG 300 dpi"],"stroke_policy":"explicit widths x1.35, minimum .65pt; default .95pt", "status":"rendered; scientific and visual review required"}
         if theme:
             theme_path = ROOT / "figures/00-shared/model-generators/muted-theme.tex"
             report.update(volume_theme=str(theme_path.relative_to(ROOT)),theme_sha256=hashlib.sha256(theme_path.read_bytes()).hexdigest())

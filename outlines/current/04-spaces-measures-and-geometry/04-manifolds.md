@@ -1,6 +1,6 @@
-# 卷4《度量、测度、函数空间与流形》：流形大纲
+# 卷4《函数空间与流形》：流形大纲
 
-所属：卷四《度量、测度、函数空间与流形》第四部分“流形”（第24—31章）。卷入口：[volume.tex](../../../tex/04-spaces-measures-and-geometry/volume.tex)；部分入口：[part.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/part.tex)。以下按 `volume.tex → part.tex → 章 → 节 → 小节 → paragraph` 的实际层级记录当前正文；章号在卷内连续，本部分为第24—31章。目标结构依据[十卷计划的本部分细纲](../../../plans/ten-volume-migration/04-spaces-measures-and-geometry/04-manifolds.md)。
+所属：卷四《函数空间与流形》第四部分“流形”（第24—31章）。卷入口：[volume.tex](../../../tex/04-spaces-measures-and-geometry/volume.tex)；部分入口：[part.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/part.tex)。以下按 `volume.tex → part.tex → 章 → 节 → 小节 → paragraph` 的实际层级记录当前正文；章号在卷内连续，本部分为第24—31章。目标结构依据[十卷计划的本部分细纲](../../../plans/ten-volume-migration/04-spaces-measures-and-geometry/04-manifolds.md)。
 
 ## 部分主线与导读
 

@@ -1,0 +1,36 @@
+% Krylov子空间法：Krylov子空间、Arnoldi正交化、Lanczos过程、Golub--Kahan双对角化、MINRES、CG、GMRES、BiCG、BiCGSTAB、LSQR、LSMR与预条件
+\chapter{Krylov子空间法}
+\label{sec:ls-krylov-iterations}
+\label{chap:krylov-methods}
+
+第~\ref{chap:stationary-iterations}章的定常迭代每轮按同一个规则修正近似解：算出残差$\bm r_k$，解一次$\bm M\bm\delta_k=\bm r_k$，加到$\bm x_k$上。这一轮的残差用完就被丢弃，下一轮只看到新的近似。可是$\bm r_0,\bm r_1,\ldots$以及它们被$\bm A$作用后的向量都携带着关于解的信息；只用最新的一个，等于每轮放弃了此前积累的全部方向。
+
+本章的方法把这些向量张成的子空间保留下来，每轮在逐步扩大的子空间中按某个准则重新选择近似。由此产生三个问题：怎样以数值上可靠的方式生成子空间的基；在子空间中按什么准则选解，这个准则对矩阵提出什么要求；以及怎样只用固定数量的向量完成计算，而不让存储随步数增长。
+
+各节先建立生成子空间基的工具，再给出使用这些基的求解方法。第~\ref{sec:ls-krylov-subspaces}节建立Krylov子空间及其与残差多项式的对应，并比较在子空间中选解的几种准则。
+
+随后三节给出生成基的过程。Arnoldi正交化从一般方阵说起，把$\bm A\bm v_j$与全部已有基向量正交化，得到标准正交基，并把$\bm A$压缩成上Hessenberg小矩阵，原方程由此化为小型方程组或小型最小二乘问题；Lanczos过程是它在对称矩阵上的简化，正交化只剩三项递推，小矩阵成为对称三对角矩阵；长方或秩亏的最小二乘问题中，残差与未知量不在同一个空间，Golub--Kahan双对角化交替作用$\bm A$与$\bm A^\top$，在两个空间中各生成一组标准正交基，把$\bm A$压缩成下双对角小矩阵。
+
+此后各节展开求解方法：MINRES借Lanczos过程对对称（可以不定）矩阵使原残差最小；对称正定矩阵还可用共轭梯度法，使误差的能量范数最小，它利用三对角矩阵的分解把递推压缩到只需上一步的信息；GMRES借Arnoldi正交化对一般方阵同样使原残差最小，代价是基的存储随步数增长；非对称矩阵若要固定存储，可放弃残差最小化，BiCG借转置矩阵维持双正交关系，BiCGSTAB再用局部的残差平滑取代转置乘法；LSQR与LSMR借Golub--Kahan双对角化，分别使原残差与正规残差最小。
+
+这三个生成基的过程是求解方法共用的底层子空间工具，只给出基与压缩后的小矩阵，不作为方程求解的输出；它们集中放在所有求解方法之前，读到求解方法时，所需的基与小矩阵关系都已建立。最后一节讨论所有方法共用的预条件：用接近$\bm A$而又易解的矩阵改善迭代面对的谱分布，并说明它以左预条件、右预条件或预条件共轭梯度法的形式嵌入求解器。各求解方法的停止判断沿用第~\ref{sec:ls-stationary-stopping}节的规则，以真实残差为准。
+
+这些方法依赖前面几章的结论。第~\ref{chap:linear-solution-selection}章给出正规方程、最小范数解与加权最小二乘；第~\ref{chap:direct-least-squares-solvers}章给出修正Gram--Schmidt与Givens旋转，第~\ref{chap:direct-linear-solvers}章给出三角代入以及LU与Cholesky的消元公式；收敛界用到第~\ref{chap:eigen-spectral-decomposition}章的实对称谱定理；停止准则、贯穿例与SSOR分裂沿用第~\ref{chap:stationary-iterations}章。需要注意，Krylov方法每轮的步长和组合系数都由当前向量算出，迭代不是同一个线性映射的反复作用，所以第~\ref{chap:linear-recurrence-stability}章关于固定误差矩阵的谱半径判据不能直接套用；收敛性要从各方法自己的选解准则推出。
+
+记号沿用前几章：方阵情形$\bm A\in\mathbb R^{d\times d}$，最小二乘情形$\bm A\in\mathbb R^{m\times d}$；精确解记作$\bm x_\star$，最小二乘解记作$\hat{\bm x}$，迭代近似记作$\bm x_k$，残差记作$\bm r_k=\bm b-\bm A\bm x_k$。
+
+三个生成基的过程都按主要思想、计算过程、算法分析、应用四部分展开，算法分析说明$\bm A$被压缩成怎样的小矩阵，应用说明小矩阵怎样用于求解方程；每种求解方法从相应工具的应用出发，先在主要思想中推出怎样求解子空间中的小问题，再在算法实现中写出变量、初始化与每轮更新，并结合贯穿例给出数值，最后在算法分析中说明正确性与收敛性。
+
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/01-krylov-subspaces}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/02-arnoldi}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/03-lanczos}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/04-golub-kahan}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/05-minres}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/06-conjugate-gradient}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/07-gmres}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/08-bicg}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/09-bicgstab}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/10-lsqr}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/11-lsmr}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/12-preconditioning}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/05-krylov-methods/13-summary}

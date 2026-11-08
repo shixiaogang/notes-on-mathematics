@@ -21,13 +21,15 @@ N=\sum_{\bm x\in\mathcal X}\ \prod_{a\in A}\iota_a(\bm x_{S_a}).
 输入与最小成本问题相同（只用到哪些组合被禁止），输出是一个非负整数。
 
 在袋树上计算时，节点$u$先把归入它的指示值与子节点交来的计数相乘，
-\[
+\begin{equation}
 h_u(\bm x_{B_u})=\prod_{a\in A_u}\iota_a(\bm x_{S_a})\cdot\prod_{c\in\operatorname{ch}(u)}n_{c\to u}(\bm x_{S_c}),
-\]
+\label{eq:graph-dp-count-merge}
+\end{equation}
 再对接口外的状态求和，得到发往父节点的计数消息
-\[
+\begin{equation}
 n_{u\to p(u)}(\bm x_{S_u})=\sum_{\bm x_{I_u}}h_u(\bm x_{S_u},\bm x_{I_u}).
-\]
+\label{eq:graph-dp-count-message}
+\end{equation}
 它的含义是：接口取这组值时，$u$下方的变量有多少种取值能使下方全部约束满足。
 
 两种空运算的约定与最小成本不同：空乘积取$1$，求和从$0$开始。没有局部项归入、也没有子节点的袋，$h_u\equiv1$，但求和仍要累计内部变量的全部状态。孤立变量$x_v$单独成袋$\{v\}$时，消息是$\sum_{x_v}1=|\mathcal X_v|$，不能直接把它的计数设为$1$：它不受约束，每个状态都与其余变量的每个可行取值组合成不同的可行配置。
@@ -35,7 +37,11 @@ n_{u\to p(u)}(\bm x_{S_u})=\sum_{\bm x_{I_u}}h_u(\bm x_{S_u},\bm x_{I_u}).
 \subsection{求和}
 \label{sec:graph-dp-weighted-sum}
 
-把指示值推广为非负有限的局部权重$w_a(\bm x_{S_a})\geq0$，配置的权重定义为各局部权重之积$W(\bm x)=\prod_{a\in A}w_a(\bm x_{S_a})$，要求的是全部配置的权重总和
+把指示值推广为非负有限的局部权重$w_a(\bm x_{S_a})\geq0$，配置的权重定义为各局部权重之积
+\[
+W(\bm x)=\prod_{a\in A}w_a(\bm x_{S_a}),
+\]
+要求的是全部配置的权重总和
 \begin{equation}
 Z=\sum_{\bm x\in\mathcal X}\ \prod_{a\in A}w_a(\bm x_{S_a}).
 \label{eq:graph-dp-weighted-sum}
@@ -46,9 +52,20 @@ Z=\sum_{\bm x\in\mathcal X}\ \prod_{a\in A}w_a(\bm x_{S_a}).
 \[
 h_u(\bm x_{B_u})=\prod_{a\in A_u}w_a(\bm x_{S_a})\cdot\prod_{c\in\operatorname{ch}(u)}z_{c\to u}(\bm x_{S_c}),
 \]
-再对接口外状态求和，得到消息$z_{u\to p(u)}(\bm x_{S_u})=\sum_{\bm x_{I_u}}h_u(\bm x_{B_u})$；若没有接口外变量，就直接把这个乘积作为消息。消息表照样以接口为索引，但不再需要回溯表：计数和加权总和是对全部配置的汇总，没有“达到它的配置”。
+再对接口外状态求和，得到消息
+\begin{equation}
+z_{u\to p(u)}(\bm x_{S_u})=\sum_{\bm x_{I_u}}h_u(\bm x_{B_u});
+\label{eq:graph-dp-sum-message}
+\end{equation}
+若没有接口外变量，就直接把这个乘积作为消息。
 
-链上这一递推就是矩阵乘法：以$z_{k-1\to k}$为行向量、以成对权重$w_{k-1,k}(x_{k-1},x_k)$为矩阵，求和$\sum_{x_{k-1}}z_{k-1\to k}(x_{k-1})\,w_{k-1,k}(x_{k-1},x_k)$正是行向量右乘矩阵；一般袋上对多个变量相乘再求和，则是沿指定轴汇总的张量运算。这些运算可参考\BookChapterRef{chap:linear-operations}{卷二“向量、矩阵与张量的运算”章}。
+消息表照样以接口为索引，但不再需要回溯表：计数和加权总和是对全部配置的汇总，没有“达到它的配置”。
+
+链上这一递推就是矩阵乘法。把$z_{k-1\to k}$看作行向量，把成对权重看作矩阵，矩阵的元素是$w_{k-1,k}(x_{k-1},x_k)$。于是求和
+\[
+\sum_{x_{k-1}}z_{k-1\to k}(x_{k-1})\,w_{k-1,k}(x_{k-1},x_k)
+\]
+正是行向量右乘矩阵。一般袋上对多个变量相乘再求和，则是沿指定轴汇总的张量运算。这些运算可参考\BookChapterRef{chap:linear-operations}{卷二“向量、矩阵与张量的运算”章}。
 
 \subsection{无保留变量时的计数与求和汇总}
 \label{sec:graph-dp-total-aggregation}
@@ -60,15 +77,13 @@ Z=\sum_{\bm x_{B_r}}h_r(\bm x_{B_r}),
 \end{equation}
 输出一个总计数或加权总和。根袋没有变量时（例如只用来连接各分量的空袋），直接取它的合并值。
 
-原始图不连通时，各分量的根经空接口交来标量，即各分量的总计数或总和；空接口意味着结果是单表项标量，但发出它的节点仍须对自己袋中的状态求和。这些标量作为因子乘进根的合并值，所以非连通分量的结果相乘。这与有限集合的乘法原理一致：各分量的取值互相独立地组合。
+原始图不连通时，各分量的根经空接口交来标量，即各分量的总计数或总和；空接口上的消息只有一项，但发出它的节点仍须对自己袋中的全部状态求和。这些标量作为因子乘进根的合并值，所以非连通分量的结果相乘。这与有限集合的乘法原理一致：各分量的取值互相独立地组合。
 
 \paragraph{三元作用域例子}
 表~\ref{tab:graph-dp-weights}给出三元作用域例子的权重表，权重恰在禁止的组合处为$0$。在分解$\{1,2,3\}-\{2,3,4\}$上，表~\ref{tab:graph-dp-three-aggregations}对接口的每种取值并列三种任务的左袋消息和右袋汇总值，最后一行是根处的结果：最小成本为$0$，可行配置有$10$个，权重总和为$19$。逐一枚举$16$个配置可以核对这三个数，其中最小成本和可行配置数已在第~\ref{sec:graph-dp-problem}小节的枚举中得到。
 
 \begin{table}[!htb]
   \centering
-  \caption{三元作用域例子的非负局部权重。第一列的三位二进制串对$w_A$表示$(x_1,x_2,x_3)$，对$w_B$表示$(x_2,x_3,x_4)$；权重为$0$的位置恰是表~\ref{tab:graph-dp-ternary-tables}中成本为$+\infty$的位置。}
-  \label{tab:graph-dp-weights}
   \begin{tabular}{ccccccccc}
     \toprule
     取值 & $000$ & $001$ & $010$ & $011$ & $100$ & $101$ & $110$ & $111$\\
@@ -77,12 +92,12 @@ Z=\sum_{\bm x_{B_r}}h_r(\bm x_{B_r}),
     $w_B$ & $1$ & $1$ & $2$ & $0$ & $0$ & $2$ & $1$ & $2$\\
     \bottomrule
   \end{tabular}
+  \caption{三元作用域例子的非负局部权重。第一列的三位二进制串对$w_A$表示$(x_1,x_2,x_3)$，对$w_B$表示$(x_2,x_3,x_4)$；权重为$0$的位置恰是表~\ref{tab:graph-dp-ternary-tables}中成本为$+\infty$的位置。}
+  \label{tab:graph-dp-weights}
 \end{table}
 
 \begin{table}[!htb]
   \centering
-  \caption{三种任务在同一接口上的消息。最小成本使用$\min$与$+$，可行计数与加权总和使用$\sum$与$\times$。“左”列是从$\{1,2,3\}$发出的消息，对$x_1$汇总；“右”列是根袋$\{2,3,4\}$对$x_4$的汇总；根处对每个接口取值组合两列（最小成本相加，其余相乘），再对接口汇总（最小成本取最小，其余求和）。}
-  \label{tab:graph-dp-three-aggregations}
   \begin{tabular}{ccccccc}
     \toprule
     & \multicolumn{2}{c}{最小成本} & \multicolumn{2}{c}{可行计数} & \multicolumn{2}{c}{加权总和}\\
@@ -97,6 +112,8 @@ Z=\sum_{\bm x_{B_r}}h_r(\bm x_{B_r}),
     根处 & \multicolumn{2}{c}{$\min(1,0,1,3)=0$} & \multicolumn{2}{c}{$4+2+2+2=10$} & \multicolumn{2}{c}{$6+6+4+3=19$}\\
     \bottomrule
   \end{tabular}
+  \caption{三种任务在同一接口上的消息。最小成本使用$\min$与$+$，可行计数与加权总和使用$\sum$与$\times$。“左”列是从$\{1,2,3\}$发出的消息，对$x_1$汇总；“右”列是根袋$\{2,3,4\}$对$x_4$的汇总；根处对每个接口取值组合两列（最小成本相加，其余相乘），再对接口汇总（最小成本取最小，其余求和）。}
+  \label{tab:graph-dp-three-aggregations}
 \end{table}
 
 以接口取$(1,1)$的一行为例：$x_1=0$的一行被禁止，左袋的最小成本消息为$\min(+\infty,2)=2$，计数消息为$0+1=1$，加权消息为$0+1=1$。三种任务的计算量与表大小相同，但输出含义不同：最小成本是一个配置的值，可以回溯出达到它的配置；计数和加权总和是对全部配置的汇总。
@@ -121,7 +138,11 @@ Z_R(\bm x_R)=\sum_{\bm x_{B_r\setminus R}}h_r(\bm x_{B_r}).
 \[
 \sum_{y,z}h(y,z)=\sum_z\sum_y h(y,z),\qquad \sum_y c\,g(y)=c\sum_y g(y),
 \]
-并且对取值于互不相交变量组$y_1,\ldots,y_k$的函数，$\sum_{y_1,\ldots,y_k}\prod_j g_j(y_j)=\prod_j\sum_{y_j}g_j(y_j)$。第一条是有限求和的重排；第二条是乘法对加法的分配律；第三条由分配律展开乘积得到，展开后的每一项恰对应各$y_j$的一组取值。
+并且对取值于互不相交变量组$y_1,\ldots,y_k$的函数，
+\[
+\sum_{y_1,\ldots,y_k}\prod_j g_j(y_j)=\prod_j\sum_{y_j}g_j(y_j).
+\]
+第一条是有限求和的重排；第二条是乘法对加法的分配律；第三条由分配律展开乘积得到，展开后的每一项恰对应各$y_j$的一组取值。
 
 \paragraph{消息的含义}
 仿照定理~\ref{thm:graph-dp-bag-message}，记号同前，求和任务的消息满足
@@ -143,7 +164,9 @@ a\otimes(b\oplus c)=(a\otimes b)\oplus(a\otimes c),
 \]
 就称$(\mathcal S,\allowbreak\oplus,\allowbreak\otimes,\allowbreak\bar0,\allowbreak\bar1)$为交换\term{半环}（semiring）。
 
-最小成本对应$(\mathbb R\cup\{+\infty\},\allowbreak\min,\allowbreak+,\allowbreak+\infty,\allowbreak0)$，此时分配律就是$a+\min(b,c)=\min(a+b,a+c)$；计数对应自然数上的$(+,\times,0,1)$；加权求和对应非负实数上的$(+,\times,0,1)$；只判断是否存在可行配置时，还可以用布尔值上的“或”与“且”。把变量消元和袋消息中的$\min$换成$\oplus$、$+$换成$\otimes$，前面的正确性证明逐字成立，因为证明只用到了结合律、交换律和分配律。半环不要求减法或除法。
+最小成本对应$(\mathbb R\cup\{+\infty\},\allowbreak\min,\allowbreak+,\allowbreak+\infty,\allowbreak0)$，此时分配律就是$a+\min(b,c)=\min(a+b,a+c)$；计数对应自然数上的$(+,\times,0,1)$；加权求和对应非负实数上的$(+,\times,0,1)$；只判断是否存在可行配置时，还可以用布尔值上的“或”与“且”。
+
+把变量消元和袋消息中的$\min$换成$\oplus$、$+$换成$\otimes$，前面的正确性证明逐字成立，因为证明只用到了结合律、交换律和分配律；证明中没有用到减法或除法，所以半环也不必具备这两种运算。
 
 \subsection{求和与取最小的顺序}
 \label{sec:graph-dp-mixed-order}
@@ -160,23 +183,30 @@ a\otimes(b\oplus c)=(a\otimes b)\oplus(a\otimes c),
 \]
 前者要求所有$z$共用同一个$y$，后者允许$y$随$z$改变，所以两种顺序回答的是不同的问题。
 
+图~\ref{fig:graph-dp-mixed-aggregation}把两种选择并排画出：先求和再取最小需要选择完整的一行，先逐列取最小则可以在不同列选择不同的行。换序改变了允许的选择，因此不能只看运算符就交换顺序。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=91.468mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/dp-mixed-aggregation/figure.pdf}
+  \caption{求和与取最小不能任意换序。两图均使用正文的$2\times2$表。(a)先逐行求和再选一行，两行的和都是$1$，蓝框任选其中一行；(b)每列各选一个最小项，两个绿框落在不同行，得到$0+0=0$。}
+  \label{fig:graph-dp-mixed-aggregation}
+\end{figure}
+
 \paragraph{混合汇总}
 不同变量混合使用求和与取最小（或取最大）时，须按所求结果确定运算顺序，不能直接沿用纯求和或纯最小化的换序结论。例如对表$h(x,y)$，$h(0,0)=h(1,1)=4$、$h(0,1)=h(1,0)=0$，有
 \[
 \max_x\sum_y h(x,y)=4,\qquad \sum_y\max_x h(x,y)=8 .
 \]
-这类混合问题只能按限定的次序消元：被外层汇总的变量必须最后处理，消元次序因而受到约束，所需的中间表可能比单一汇总时大。把非负权重归一化为概率还要求总和为正且有限；这些概率解释、边缘化查询以及带环图上的近似消息方法，都留到后续的概率推断内容。
+这类混合问题只能按限定的次序消元：被外层汇总的变量必须最后处理，消元次序因而受到约束，所需的中间表可能比单一汇总时大。
 
 \subsection{四环算例与结果检验}
 \label{sec:graph-dp-four-cycle-sums}
 
 \paragraph{约束指示表与权重表}
-四环算例的约束指示表由表~\ref{tab:graph-dp-four-cycle-costs}读出：只有$\iota_{3,4}(1,1)=0$与$\iota_{1,4}(0,1)=0$，其余指示值都是$1$。另取一组非负权重，在被禁止的组合处为$0$，其余取$1$或$2$，见表~\ref{tab:graph-dp-four-cycle-weights}；这些权重是教学示例，与成本表的具体数值无关。
+四环算例的约束指示表由表~\ref{tab:graph-dp-four-cycle-costs}读出：只有$\iota_{3,4}(1,1)=0$与$\iota_{1,4}(0,1)=0$，其余指示值都是$1$。另取一组非负权重，在被禁止的组合处为$0$，其余取$1$或$2$，见表~\ref{tab:graph-dp-four-cycle-weights}；这些权重只用于演示计算，与成本表的具体数值无关。
 
 \begin{table}[!htb]
   \centering
-  \caption{四环算例的非负局部权重。行列约定与表~\ref{tab:graph-dp-four-cycle-costs}相同；权重为$0$的位置恰是成本为$+\infty$的位置。}
-  \label{tab:graph-dp-four-cycle-weights}
   \begin{tabular}{cccc}
     \toprule
     $w_{1,2}(x_1,x_2)$ & $w_{2,3}(x_2,x_3)$ & $w_{3,4}(x_3,x_4)$ & $w_{1,4}(x_1,x_4)$\\
@@ -187,6 +217,8 @@ a\otimes(b\oplus c)=(a\otimes b)\oplus(a\otimes c),
     $\begin{bmatrix}1&0\\1&2\end{bmatrix}$\\
     \bottomrule
   \end{tabular}
+  \caption{四环算例的非负局部权重。行列约定与表~\ref{tab:graph-dp-four-cycle-costs}相同；权重为$0$的位置恰是成本为$+\infty$的位置。}
+  \label{tab:graph-dp-four-cycle-weights}
 \end{table}
 
 \paragraph{总量}
@@ -194,11 +226,30 @@ a\otimes(b\oplus c)=(a\otimes b)\oplus(a\otimes c),
 \[
 n(x_2,x_4)=\sum_{x_1}\iota_{1,2}\,\iota_{1,4}=(2,\ 1,\ 2,\ 1),
 \]
-加权消息为$z(x_2,x_4)=\sum_{x_1}w_{1,2}\,w_{1,4}=(1\cdot1+2\cdot1,\ 1\cdot0+2\cdot2,\ 2\cdot1+1\cdot1,\ 2\cdot0+1\cdot2)=(3,4,3,2)$，取值按$(x_2,x_4)$的字典序排列。
+加权消息为
+\[
+\begin{aligned}
+z(x_2,x_4)&=\sum_{x_1}w_{1,2}\,w_{1,4}\\
+&=(1\cdot1+2\cdot1,\ 1\cdot0+2\cdot2,\ 2\cdot1+1\cdot1,\ 2\cdot0+1\cdot2)\\
+&=(3,4,3,2),
+\end{aligned}
+\]
+取值按$(x_2,x_4)$的字典序排列。
 
-根处把消息与$\phi_{2,3},\phi_{3,4}$对应的指示值或权重相乘，按$(x_2,x_3,x_4)$的字典序，计数的合并值为$(2,1,2,0,2,1,2,0)$，求和得$N=10$；加权的合并值为$(6,16,3,0,3,4,3,0)$，求和得$Z=35$。
+根处把消息与$\phi_{2,3},\phi_{3,4}$对应的指示值或权重相乘，按$(x_2,x_3,x_4)$的字典序，计数的合并值为
+\[
+(2,1,2,0,2,1,2,0),
+\]
+求和得$N=10$。加权的合并值为
+\[
+(6,16,3,0,3,4,3,0),
+\]
+求和得$Z=35$。
 
-用表~\ref{tab:graph-dp-four-cycle-enumeration}核对：可行配置恰有$10$个。逐个计算可行配置的权重，按字典序依次为$2,1,2,2,4,16,2,1,4,1$，总和为$35$。例如最优配置$(1,0,0,1)$的权重为$w_{1,2}(1,0)w_{2,3}(0,0)w_{3,4}(0,1)w_{1,4}(1,1)=2\cdot2\cdot2\cdot2=16$。
+用表~\ref{tab:graph-dp-four-cycle-enumeration}核对：可行配置恰有$10$个。逐个计算可行配置的权重，按字典序依次为$2,1,2,2,4,16,2,1,4,1$，总和为$35$。例如最优配置$(1,0,0,1)$的权重为
+\[
+w_{1,2}(1,0)\,w_{2,3}(0,0)\,w_{3,4}(0,1)\,w_{1,4}(1,1)=2\cdot2\cdot2\cdot2=16.
+\]
 
 \paragraph{保留变量的累计表}
 在$R=\{1,3\}$的查询结构上，两个子节点分别对$x_2$与$x_4$求和，根袋$\{1,3\}$把两条消息相乘，不再求和。按$(x_1,x_3)$的字典序，计数消息为$(2,2,2,2)$与$(1,1,2,1)$，累计表为
@@ -209,9 +260,37 @@ N_R=(2,\ 2,\ 4,\ 2);
 \[
 Z_R=(4,\ 3,\ 25,\ 3).
 \]
-全表求和分别为$2+2+4+2=10=N$与$4+3+25+3=35=Z$。逐项核对：例如$x_1=1,x_3=0$时可行配置为$(1,0,0,0),(1,0,0,1),(1,1,0,0),(1,1,0,1)$，共$4$个，权重为$4+16+1+4=25$。
+全表求和分别为
+\[
+2+2+4+2=10=N,\qquad 4+3+25+3=35=Z.
+\]
+
+这些表项也可以逐个核对。例如$x_1=1,x_3=0$时，可行配置为
+\[
+ (1,0,0,0),\qquad (1,0,0,1),\qquad (1,1,0,0),\qquad (1,1,0,1),
+\]
+共$4$个，权重之和为$4+16+1+4=25$。
 
 \paragraph{结果的解释与边界}
-计数为零表示没有可行配置：第~\ref{sec:graph-dp-four-cycle-min}小节的不可行约束变体中，叶节点的计数消息为$(0,1,1,0)$，根处要求$x_2=x_3=x_4$时这条消息为$0$，于是$N=0$，与最小成本为$+\infty$一致。一般的加权和为零却不直接表示不可行：权重可以在可行的组合上取$0$，例如把$w_{1,2}$全部改为$0$，则$Z=0$，而可行配置仍有$10$个。
+计数为零表示没有可行配置：第~\ref{sec:graph-dp-four-cycle-min}小节的不可行约束变体中，叶节点的计数消息为$(0,1,1,0)$，根处要求$x_2=x_3=x_4$时这条消息为$0$，于是$N=0$，与最小成本为$+\infty$一致。
 
-第~\ref{sec:graph-dp-four-cycle-min}小节加入孤立变量$x_5\in\{0,1,2\}$和边$\{6,7\}$后，两个新分量经空接口交来标量。袋$\{5\}$没有局部项，$h\equiv1$，计数消息为$3$。若$\phi_{6,7}$的四项都有限，袋$\{6,7\}$的计数消息为$4$；若再给它权重表$\begin{bmatrix}1&1\\2&1\end{bmatrix}$，加权消息为$5$。根把这些标量乘进合并值，得$N=10\cdot3\cdot4=120$、$Z=35\cdot3\cdot5=525$。若错把孤立变量的计数设为$1$，结果会少乘一个因子$3$。
+一般的加权和为零却不直接表示不可行：权重可以在可行的组合上取$0$，例如把$w_{1,2}$全部改为$0$，则$Z=0$，而可行配置仍有$10$个。
+
+互不相连的分量通过取值的自由组合贡献乘法因子。图~\ref{fig:graph-dp-count-product}单独画出下面两个新增分量：三种$x_5$状态分别与四种$(x_6,x_7)$状态配对，得到$12$种配置。
+
+\begin{figure}[!htb]
+  \centering
+  \includegraphics[width=104.937mm]{figures/03-graphs/04-local-functions-and-dynamic-programming/tikz/dp-count-product/figure.pdf}
+  \caption{独立分量的配置数相乘。左侧是孤立变量$x_5\in\{0,1,2\}$，中间是均可行的四种二值对$(x_6,x_7)$；右侧每个点表示一种联合取值，共$3\times4=12$种。}
+  \label{fig:graph-dp-count-product}
+\end{figure}
+
+第~\ref{sec:graph-dp-four-cycle-min}小节加入孤立变量$x_5\in\{0,1,2\}$和边$\{6,7\}$后，两个新分量经空接口交来标量。袋$\{5\}$没有局部项，$h\equiv1$，计数消息为$3$。若$\phi_{6,7}$的四项都有限，袋$\{6,7\}$的计数消息为$4$；若再给它权重表
+\[
+w_{6,7}=\begin{bmatrix}1&1\\2&1\end{bmatrix},
+\]
+加权消息为$5$。根把这些标量乘进合并值，得
+\[
+N=10\cdot3\cdot4=120,\qquad Z=35\cdot3\cdot5=525.
+\]
+若错把孤立变量的计数设为$1$，结果会少乘一个因子$3$。

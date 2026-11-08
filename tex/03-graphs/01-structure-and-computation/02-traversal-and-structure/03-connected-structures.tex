@@ -1,7 +1,7 @@
 \section{连通结构的计算}
 \label{sec:graph-connectivity-computation}
 
-第~\ref{sec:graph-connectivity-separation}节按相互可达把顶点划分为连通分量或强连通分量，那是存在性的定义。本节把它们算出来，处理三个相关的问题：无向图的连通分量，边不断加入时无向图的连通分量，以及有向图的强连通分量。三个问题的任务相同，都是给每个顶点$v$打上一个分量标签$\operatorname{comp}(v)$，使两个顶点标签相同当且仅当它们属于同一个分量。有了标签，“$u$与$v$是否连通”就变成比较两个数是否相等，不必再去找路径。
+第~\ref{sec:graph-connectivity-separation}节按相互可达把顶点划分为连通分量或强连通分量，但这些定义只说明了分量是什么，没有给出求法。本节说明怎样计算它们，依次处理三个相关的问题：无向图的连通分量，边不断加入时无向图的连通分量，以及有向图的强连通分量。三个问题的任务相同，都是给每个顶点$v$打上一个分量标签$\operatorname{comp}(v)$，使两个顶点标签相同当且仅当它们属于同一个分量。有了标签，“$u$与$v$是否连通”就变成比较两个数是否相等，不必再去找路径。
 
 三种做法都从遍历出发，差别来自图的形态。无向图上可达关系是对称的，一次遍历恰好找出一个分量，只需在外面套一层扫描；边逐条加入时，分量只会合并，需要一种能快速合并标签的数据结构；有向图上从一个顶点能到达的范围往往大于与它相互可达的范围，一次遍历不再恰好停在分量边界上，需要借助深度优先遍历的完成次序。
 
@@ -34,12 +34,17 @@
 \end{algorithm}
 
 \paragraph{执行过程}
-图~\ref{fig:graph-trav-components-forest}中的图由贯穿四点图、一条边$\{5,6\}$和孤立点$7$组成。按编号扫描、每次启动广度优先遍历，标签数组的变化如表~\ref{tab:graph-trav-components-trace}所示。扫描到$1$时它尚未标记，令$c=1$，从$1$出发的遍历标出$\{1,2,3,4\}$；扫描到$2,3,4$时它们已有标签，跳过；扫描到$5$时令$c=2$，遍历标出$\{5,6\}$；扫描到$6$跳过；最后$7$没有任何邻居，但外层扫描仍会遇到它，令$c=3$，它自成一个分量。
+图~\ref{fig:graph-trav-components-forest}中的图由贯穿四点图、一条边$\{5,6\}$和孤立点$7$组成。按编号扫描、每次启动广度优先遍历，标签数组的变化如表~\ref{tab:graph-trav-components-trace}所示。外层扫描依次经过：
+\begin{itemize}
+  \item 扫描到$1$：它尚未标记，令$c=1$，从$1$出发的遍历标出$\{1,2,3,4\}$。
+  \item 扫描到$2,3,4$：它们已有标签，跳过。
+  \item 扫描到$5$：令$c=2$，遍历标出$\{5,6\}$。
+  \item 扫描到$6$：已有标签，跳过。
+  \item 扫描到$7$：它没有任何邻居，但外层扫描仍会遇到它，令$c=3$，它自成一个分量。
+\end{itemize}
 
 \begin{table}[!htb]
   \centering
-  \caption{按编号扫描时标签数组$\operatorname{comp}$的变化。只列出启动遍历的三次扫描，其余扫描遇到已标记的顶点而跳过；“$0$”表示尚未标记。}
-  \label{tab:graph-trav-components-trace}
   \small
   \begin{tabular}{@{}lcccccccc@{}}
     \toprule
@@ -51,6 +56,8 @@
     $7$ & $3$ & $1$ & $1$ & $1$ & $1$ & $2$ & $2$ & $3$ \\
     \bottomrule
   \end{tabular}
+  \caption{按编号扫描时标签数组$\operatorname{comp}$的变化。只列出启动遍历的三次扫描，其余扫描遇到已标记的顶点而跳过；“$0$”表示尚未标记。}
+  \label{tab:graph-trav-components-trace}
 \end{table}
 
 \subsubsection{算法分析}
@@ -83,12 +90,16 @@
 
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=104.8mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-components-spanning-forest/figure.pdf}
+  \includegraphics[width=72.592mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-components-spanning-forest/figure.pdf}
   \caption{外层扫描与生成森林。图由贯穿四点图、边$\{5,6\}$和孤立点$7$组成，按编号扫描、每次启动广度优先遍历。三个分量分别获得编号$1,2,3$；双圈是每次遍历的起点，蓝色粗线是保留的父边，共$4=7-3$条，虚线边被检查过但未选入森林。}
   \label{fig:graph-trav-components-forest}
 \end{figure}
 
-生成森林可以用来检验输出：它应有$n-c$条边、不含环，并且同一棵树上的顶点标签相同。它只保留了谁和谁连通，不保留其他结构。图~\ref{fig:graph-trav-components-forest}中第一个分量保留了$\{1,2\}$、$\{1,3\}$、$\{2,4\}$，舍弃了$\{2,3\}$和$\{3,4\}$。原图中$3$与$4$直接相邻，在森林中却要走$3\to1\to2\to4$三步；原图没有割点，而在森林中删去$1$或$2$都会把树断开。边上若有权重，算法选出的边也没有任何总权最小的保证；在所有生成树中选总权最小的一棵，是第~\ref{sec:graph-minimum-spanning-tree}章的问题。
+生成森林可以用来检验输出：它应有$n-c$条边、不含环，并且同一棵树上的顶点标签相同。它只保留了谁和谁连通，不保留其他结构。
+
+图~\ref{fig:graph-trav-components-forest}中第一个分量保留了$\{1,2\}$、$\{1,3\}$、$\{2,4\}$，舍弃了$\{2,3\}$和$\{3,4\}$。原图中$3$与$4$直接相邻，在森林中却要走$3\to1\to2\to4$三步；原图没有割点，而在森林中删去$1$或$2$都会把树断开。
+
+边上若有权重，算法选出的边也没有任何总权最小的保证；在所有生成树中选总权最小的一棵，是第~\ref{sec:graph-minimum-spanning-tree}章的问题。
 
 \subsection{增量无向图的连通分量}
 \label{sec:graph-trav-union-find}
@@ -97,7 +108,12 @@
 
 现在顶点集固定，边一条一条地加入，每加入一条边之后都可能被问到“两个给定顶点现在是否连通”。用上一小节的方法，每次加边后重新给全图打标签需要$O(n+m)$时间，加入$m$条边共要$O(m(n+m))$，太浪费。我们希望每次加边和每次查询都只花很少的时间。
 
-加入边$\{u,v\}$对分量的影响很简单：若$u,v$原来已在同一分量，分量不变；否则把两个分量合并成一个。分量构成顶点集的一个划分，加边只会合并其中的两块，不会拆分。所以只需一种数据结构，维护若干互不相交的集合，支持两种操作：$\operatorname{find}(v)$返回$v$所在集合的代表元，它扮演分量标签的角色，两顶点连通当且仅当代表元相同；$\operatorname{union}(u,v)$把$u$和$v$所在的两个集合合并。这种数据结构称为\term{并查集}（union-find），也称不相交集合结构。
+加入边$\{u,v\}$对分量的影响很简单：若$u,v$原来已在同一分量，分量不变；否则把两个分量合并成一个。分量构成顶点集的一个划分，加边只会合并其中的两块，不会拆分。所以只需一种数据结构，维护若干互不相交的集合，支持两种操作：
+\begin{itemize}
+  \item $\operatorname{find}(v)$返回$v$所在集合的代表元，它扮演分量标签的角色，两顶点连通当且仅当代表元相同；
+  \item $\operatorname{union}(u,v)$把$u$和$v$所在的两个集合合并。
+\end{itemize}
+这种数据结构称为\term{并查集}（union-find），也称不相交集合结构。
 
 最直接的实现是让每个顶点直接存自己的标签。查询只需$O(1)$，但合并两个分量时，要把其中一个分量的所有顶点逐个改写标签，一次合并可能改写$O(n)$个顶点。改进的办法是不立即改写，而把每个集合组织成一棵有根树：合并时只改一个指针，查询时再顺着指针找到代表元。
 
@@ -109,11 +125,13 @@
   \item 父指针$\operatorname{parent}(v)$：每个元素$v$在所属集合的树中的父元素；根的父指针指向自己，根就是集合的代表元；
   \item 集合大小$\operatorname{size}(r)$：只对根$r$有意义，记录这棵树中的元素个数。
 \end{itemize}
-初始时没有任何边，每个元素自成一个集合：$\operatorname{parent}(v)=v$，$\operatorname{size}(v)=1$。图~\ref{fig:graph-trav-union-find-structure}画出了某一时刻的状态：两棵树对应两个集合，实际存储的只是右边两个长度为$n$的数组。$\operatorname{find}(4)$读$\operatorname{parent}(4)=3$，再读$\operatorname{parent}(3)=1$，到达指向自己的$1$，于是返回根$1$。合并两个集合只需把一个根的父指针改为另一个根，并更新新根的大小。
+初始时没有任何边，每个元素自成一个集合：$\operatorname{parent}(v)=v$，$\operatorname{size}(v)=1$。
+
+图~\ref{fig:graph-trav-union-find-structure}画出了某一时刻的状态：两棵树对应两个集合，实际存储的只是右边两个长度为$n$的数组。$\operatorname{find}(4)$读$\operatorname{parent}(4)=3$，再读$\operatorname{parent}(3)=1$，到达指向自己的$1$，于是返回根$1$。合并两个集合只需把一个根的父指针改为另一个根，并更新新根的大小。
 
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=90.392mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-union-find-structure/figure.pdf}
+  \includegraphics[width=82.952mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-union-find-structure/figure.pdf}
   \caption{并查集的数据结构。元素$1,\ldots,6$分为集合$\{1,2,3,4\}$与$\{5,6\}$。(a)每个集合是一棵父指针树，箭头由元素指向父指针，根（蓝色）指向自己；$\operatorname{find}(4)$沿黄色路径$4\to3\to1$找到根。(b)计算机中实际存储的是$\operatorname{parent}$与$\operatorname{size}$两个数组，$\operatorname{size}$只在根上使用。}
   \label{fig:graph-trav-union-find-structure}
 \end{figure}
@@ -143,7 +161,7 @@
 
 \begin{figure}[!htb]
   \centering
-  \includegraphics[width=110.5mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-union-find/figure.pdf}
+  \includegraphics[width=110.500mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-union-find/figure.pdf}
   \caption{并查集的父指针树，箭头由元素指向其父指针，蓝色填充为根。(a)合并$\{1,2\}$、$\{3,4\}$后；(b)合并两个大小为$2$的集合，按约定把根$3$接到根$1$下（绿色箭头）；(c)查询$\operatorname{find}(4)$经过$4\to3\to1$（黄色虚线是原父指针），路径压缩后$4$直接指向根$1$；(d)合并$\{5,6\}$后再处理$\{4,6\}$，较小集合的根$5$接到较大集合的根$1$下。}
   \label{fig:graph-trav-union-find}
 \end{figure}
@@ -165,10 +183,12 @@
 先不考虑路径压缩。一个元素的深度只在它所在的根被接到另一个根下面时增加$1$；按规则，被接的那一侧不大于另一侧，所以合并后该元素所在集合的大小至少是原来的两倍。集合大小从$1$开始，不超过$n$，至多翻倍$\log_2 n$次，深度也就至多为$\log_2 n$。路径压缩只把元素的父指针改为它的某个祖先，只会让深度变小，不影响这个上界。
 \end{proof}
 
-由定理~\ref{thm:graph-trav-union-by-size}，每次$\operatorname{find}$和$\operatorname{union}$都只需$O(\log n)$时间，存储为$O(n)$。路径压缩使反复查询同一区域变得更快。可以证明，两条规则同时使用时，任意$k$次操作的总时间为$O(k\,\alpha(n))$，其中$\alpha$是增长极慢的反Ackermann函数，对任何实际规模的$n$都不超过$4$；这一摊还分析较长，这里不展开，使用时只需记住每次操作的平均代价几乎是常数。与每次加边后重新遍历的$O(n+m)$相比，差距随图的规模迅速拉大。
+由定理~\ref{thm:graph-trav-union-by-size}，每次$\operatorname{find}$和$\operatorname{union}$都只需$O(\log n)$时间，存储为$O(n)$。
+
+路径压缩使反复查询同一区域变得更快。可以证明，两条规则同时使用时，任意$k$次操作的总时间为$O(k\,\alpha(n))$，其中$\alpha$是增长极慢的反Ackermann函数，对任何实际规模的$n$都不超过$4$。这个界来自对整个操作序列的摊还分析：单次查询仍可能走过较长的路径，但路径压缩随即把这条路径上的元素直接接到根上，后续查询不必再走这一段，把代价平摊到全部操作上，每次操作的平均代价几乎是常数。与每次加边后重新遍历的$O(n+m)$相比，差距随图的规模迅速拉大。
 
 \paragraph{适用范围}
-并查集适合“只加边、不删边”的情形。第~\ref{sec:graph-minimum-spanning-tree}章的Kruskal算法按边权从小到大考虑每条边，需要判断加入这条边是否会成环，也就是判断两个端点是否已在同一分量，正好用并查集完成。删除一条边可能把一个分量拆成两个，而并查集的合并无法撤销，所以它不能直接维护任意删边后的分量。在图像中给相连的像素区域编号时，也常先给像素临时标号、再用并查集合并相遇的标号，具体扫描方式不在本卷讨论。
+并查集适合“只加边、不删边”的情形。第~\ref{sec:graph-minimum-spanning-tree}章的Kruskal算法按边权从小到大考虑每条边，需要判断加入这条边是否会成环，也就是判断两个端点是否已在同一分量，正好用并查集完成。删除一条边可能把一个分量拆成两个，而并查集的合并无法撤销，所以它不能直接维护任意删边后的分量。
 
 \subsection{有向图的强连通分量}
 \label{sec:graph-trav-scc}
@@ -181,7 +201,7 @@
 
 \begin{figure*}[!htb]
   \centering
-  \includegraphics[width=138.4mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-scc-forward-backward/figure.pdf}
+  \includegraphics[width=138.400mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-scc-forward-backward/figure.pdf}
   \caption{强连通分量是前向可达集与后向可达集的交。图中弧为$1\to2$、$2\to1$、$2\to3$、$3\to4$、$4\to3$、$5\to6$、$6\to4$、$6\to7$、$7\to1$、$7\to5$，双圈为顶点$1$。(a)从$1$出发可达$\{1,2,3,4\}$；(b)能到达$1$的顶点为$\{1,2,5,6,7\}$；(c)两者的交$\{1,2\}$就是$1$所在的强连通分量。}
   \label{fig:graph-trav-scc-reach}
 \end{figure*}
@@ -214,13 +234,24 @@
 \paragraph{执行过程}
 仍用图~\ref{fig:graph-trav-scc-reach}中的有向图。它的强连通分量是$\{5,6,7\}$、$\{1,2\}$和$\{3,4\}$，分量之间只有单向的弧。
 
-第一遍按编号选择起点、按编号读取出邻居。从$1$出发，依次发现$1,2,3,4$；$4$的出邻居$3$在栈中，$4$完成，随后$3,2,1$依次完成，完成时刻为$f(4)=5$、$f(3)=6$、$f(2)=7$、$f(1)=8$。接着从$5$重新出发，发现$5,6$；$6$的出邻居$4$已完成，跳过，再发现$7$；$7$的出邻居$1$已完成、$5$在栈中，于是$7,6,5$依次完成，$f(7)=12$、$f(6)=13$、$f(5)=14$。完成次序为$4,3,2,1,7,6,5$，见图~\ref{fig:graph-trav-kosaraju}(a)。
+第一遍按编号选择起点、按编号读取出邻居，共启动两次：
+\begin{itemize}
+  \item 从$1$出发，依次发现$1,2,3,4$；$4$的出邻居$3$在栈中，$4$完成，随后$3,2,1$依次完成，完成时刻为$f(4)=5$、$f(3)=6$、$f(2)=7$、$f(1)=8$。
+  \item 从$5$重新出发，发现$5,6$；$6$的出邻居$4$已完成，跳过，再发现$7$；$7$的出邻居$1$已完成、$5$在栈中，于是$7,6,5$依次完成，$f(7)=12$、$f(6)=13$、$f(5)=14$。
+\end{itemize}
+完成次序为$4,3,2,1,7,6,5$，见图~\ref{fig:graph-trav-kosaraju}(a)。
 
-第二遍按完成时刻从大到小，即$5,6,7,1,2,3,4$选择起点，在反向图上遍历，见图~\ref{fig:graph-trav-kosaraju}(b)。从$5$出发，令$c=1$，反向弧把它引向$7$，再引向$6$；$\{5,6,7\}$中没有反向弧通往别处，于是$\operatorname{comp}(5)=\operatorname{comp}(6)=\operatorname{comp}(7)=1$。扫描到$6,7$时已标记，跳过。下一个未标记的是$1$，令$c=2$：反向弧$1\to2$、$1\to7$中$7$已标记，只进入$2$，得到$\{1,2\}$。最后从$3$出发，令$c=3$，反向弧$3\to2$通往已标记的$2$，只进入$4$，得到$\{3,4\}$。每次遍历恰好停在一个强分量的边界上。
+第二遍按完成时刻从大到小，即$5,6,7,1,2,3,4$选择起点，在反向图上遍历，见图~\ref{fig:graph-trav-kosaraju}(b)。三次遍历依次为：
+\begin{itemize}
+  \item 从$5$出发，令$c=1$，反向弧把它引向$7$，再引向$6$；$\{5,6,7\}$中没有反向弧通往别处，于是$\operatorname{comp}(5)=\operatorname{comp}(6)=\operatorname{comp}(7)=1$。扫描到$6,7$时已标记，跳过。
+  \item 下一个未标记的是$1$，令$c=2$：反向弧$1\to2$、$1\to7$中$7$已标记，只进入$2$，得到$\{1,2\}$。
+  \item 最后从$3$出发，令$c=3$，反向弧$3\to2$通往已标记的$2$，只进入$4$，得到$\{3,4\}$。
+\end{itemize}
+每次遍历恰好停在一个强分量的边界上。
 
 \begin{figure*}[!htb]
   \centering
-  \includegraphics[width=146.5mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-kosaraju-condensation/figure.pdf}
+  \includegraphics[width=146.500mm]{figures/01-basic-mathematics/04-graphs/tikz/c2-kosaraju-condensation/figure.pdf}
   \caption{Kosaraju算法的两遍过程与缩点图。(a)原图上按编号重启的深度优先遍历，顶点旁为发现/完成时刻；粗箭头是连接不同强分量的弧。(b)反向图上按完成时刻从大到小（$5,6,7,1,2,3,4$）选择起点，三次遍历分别得到蓝、绿、黄三个强连通分量，指向已标记分量的反向弧不再进入。(c)把每个强分量缩成一点得到的缩点图，旁注为各分量中最大的完成时刻；缩点图无环，且最大完成时刻沿弧方向递减。}
   \label{fig:graph-trav-kosaraju}
 \end{figure*}
@@ -228,7 +259,11 @@
 \subsubsection{算法分析}
 
 \paragraph{正确性}
-第二遍之所以不会越界，是因为第一遍的完成时刻在分量之间有固定的先后。对强连通分量$C$，记$f(C)=\max_{v\in C}f(v)$为其中最大的完成时刻。在上例中，$f(\{5,6,7\})=14$、$f(\{1,2\})=8$、$f(\{3,4\})=6$，而分量之间的弧都从$f$值大的指向$f$值小的，即从上游指向下游。
+第二遍之所以不会越界，是因为第一遍的完成时刻在分量之间有固定的先后。对强连通分量$C$，记其中最大的完成时刻为
+\[
+f(C)=\max_{v\in C}f(v).
+\]
+在上例中，$f(\{5,6,7\})=14$、$f(\{1,2\})=8$、$f(\{3,4\})=6$，而分量之间的弧都从$f$值大的指向$f$值小的，即从上游指向下游。
 
 \begin{lemma}[分量间的完成时刻]
 \label{lem:graph-trav-scc-finish}
@@ -256,7 +291,12 @@
 $C$在反向图中仍然强连通，从$r$出发能到达$C$的全部顶点，而$C$中的顶点都未标记，因此都会被这次遍历标记。另一方面，设反向图中有一条弧从$C$中顶点指向另一个分量$C'$中的顶点，它对应原图中一条从$C'$指向$C$的弧，由引理~\ref{lem:graph-trav-scc-finish}有$f(C')>f(C)$。而$C$是未标记分量中$f$值最大的，所以$C'$已经被标记，这次遍历不会进入。因此这次遍历标记的恰好是$C$。
 \end{proof}
 
-这一论证依赖算法的三处细节，缺一不可：第一遍必须覆盖全部顶点，否则有些顶点没有完成时刻；第二遍必须在反向图上进行，若在原图上从$5$遍历，会经$6\to4$、$7\to1$走进另外两个分量；起点必须按完成时刻从大到小选择，若改为从小到大，上例中第二遍会先从$4$出发，在反向图上经$4\to6$进入$\{5,6,7\}$，再经$3\to2$进入$\{1,2\}$，把三个分量全部混在一起。
+这一论证依赖算法的三处细节，缺一不可：
+\begin{itemize}
+  \item 第一遍必须覆盖全部顶点，否则有些顶点没有完成时刻；
+  \item 第二遍必须在反向图上进行，若在原图上从$5$遍历，会经$6\to4$、$7\to1$走进另外两个分量；
+  \item 起点必须按完成时刻从大到小选择，若改为从小到大，上例中第二遍会先从$4$出发，在反向图上经$4\to6$进入$\{5,6,7\}$，再经$3\to2$进入$\{1,2\}$，把三个分量全部混在一起。
+\end{itemize}
 
 \paragraph{复杂度}
 第一遍深度优先遍历用$O(n+m)$时间。构造反向图需要扫描每条弧一次，时间与额外存储都是$O(n+m)$。第二遍按完成时刻从大到小扫描，只需把第一遍的完成次序倒过来读，不必排序；遍历本身再用$O(n+m)$时间。总时间为$O(n+m)$，与无向图的分量编号同阶，远小于逐点求两个可达集的$O(n(n+m))$。
