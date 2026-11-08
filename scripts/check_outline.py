@@ -26,7 +26,10 @@ def check(root=ROOT):
         (root / "scripts/outline/math-ten-part-files-manifest.json").read_text()
     )
     errors, warnings = [], []
-    counts = dict(volumes=len(manifest), parts=0, chapters=0, sections=0, subsections=0)
+    counts = dict(
+        volumes=len(manifest), parts=0, chapters=0, sections=0,
+        subsections=0, subsubsections=0,
+    )
     expected = {Path("README.md")}
     all_chapters = []
 
@@ -47,7 +50,7 @@ def check(root=ROOT):
             if chapters != wanted:
                 errors.append(f"Chapter titles/order differ from manifest: {relative}")
             volume_chapters.extend(chapters)
-            chapter, section, subsection, last_section = None, 0, 0, None
+            chapter, section, subsection, subsubsection, last_section = None, 0, 0, 0, None
             for index, heading in enumerate(headings):
                 level, number, title = len(heading[1]), heading[2], heading[3]
                 end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
@@ -59,18 +62,30 @@ def check(root=ROOT):
                     counts["chapters"] += 1
                     if chapter and last_section != "本章小结":
                         errors.append(f"Missing chapter summary: {relative}:{chapter}")
-                    chapter, section, subsection, last_section = number, 0, 0, None
+                    chapter, section, subsection, subsubsection, last_section = number, 0, 0, 0, None
                 elif level == 3:
                     counts["sections"] += 1
                     section += 1
-                    subsection, last_section = 0, title
+                    subsection, subsubsection, last_section = 0, 0, title
+                    if chapter is None:
+                        errors.append(f"Section missing parent chapter: {location}")
                     if number != f"{chapter}.{section}":
                         errors.append(f"Section numbering: {location}")
                 elif level == 4:
                     counts["subsections"] += 1
                     subsection += 1
+                    subsubsection = 0
+                    if chapter is None or section == 0:
+                        errors.append(f"Subsection missing parent section: {location}")
                     if number != f"{chapter}.{section}.{subsection}":
                         errors.append(f"Subsection numbering: {location}")
+                elif level == 5:
+                    counts["subsubsections"] += 1
+                    subsubsection += 1
+                    if chapter is None or section == 0 or subsection == 0:
+                        errors.append(f"Subsubsection missing parent subsection: {location}")
+                    if number != f"{chapter}.{section}.{subsection}.{subsubsection}":
+                        errors.append(f"Subsubsection numbering: {location}")
                 else:
                     errors.append(f"Unexpected heading depth: {location}")
                 if level >= 3:
