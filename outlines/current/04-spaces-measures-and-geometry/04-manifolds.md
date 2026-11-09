@@ -2646,7 +2646,7 @@
 
 正文入口：[06-lie-groups.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups.tex)，章内依次输入[01-groups.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/01-groups.tex)、[02-group-actions.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/02-group-actions.tex)、[03-matrix-lie-groups.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/03-matrix-lie-groups.tex)、[04-three-dimensional-rotations.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/04-three-dimensional-rotations.tex)、[05-rigid-body-poses.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/05-rigid-body-poses.tex)、[06-quotient-manifolds.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/06-quotient-manifolds.tex)、[07-summary.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/06-lie-groups/07-summary.tex)。
 
-章职责与主线：本章把“变换的复合规则”当作研究对象，沿“代数结构—作用—连续结构—具体变换—等价对象”展开。由置换、平移、旋转建立群、子群与同态，规定群在点、点云、图像上的作用，用轨道、稳定子描述可达与不动，定义不变与等变；把矩阵群看成流形，用左平移、Lie代数和矩阵指数在单位元附近线性地计算；比较三维旋转的矩阵、轴角、Euler角与单位四元数，加入平移得到刚体位姿；最后用自由且适当的作用构造商流形，建立射影空间与Grassmann空间。实际估计位姿与射影变换归第30章，流形约束优化归卷五第12章。
+章职责与主线：本章把“变换的复合规则”当作研究对象，沿“代数结构—作用—连续结构—具体变换—等价对象”展开。由置换、平移、旋转建立群、子群与同态，规定群在点、点云、图像上的作用，用轨道、稳定子描述可达与不动，定义不变与等变；把矩阵群看成流形，用左平移、Lie代数和矩阵指数在单位元附近线性地计算；比较三维旋转的矩阵、轴角、Euler角与单位四元数，加入平移得到刚体位姿；最后用自由且适当的作用构造商流形，建立射影空间与Grassmann空间。实际估计位姿与射影变换归第30章，流形约束优化归卷五“流形优化”章。
 
 1. 第一段用点云整体旋转（距离不变、朝向向量随之转动）和重新编号（点不动、矩阵换行序）两个现象，提出要区分“不受影响”与“同步变化”，须先规定允许的变换及其复合。
 
@@ -2658,7 +2658,7 @@
 
 5. 第五段概括最后一节：用群作用合并等价记录，讨论光滑商流形，建立射影空间与Grassmann空间。
 
-6. 第六段列出依赖的第24、25、26章和第1章内容，以及后续第30章和卷五第12章的分工。
+6. 第六段列出依赖的第24、25、26章和第1章内容，以及后续第30章和卷五“流形优化”章的分工。
 
 ### 29.1 群
 
@@ -3366,7 +3366,7 @@
 
 1. 用$\begin{bmatrix}\bm I_k\\\bm B\end{bmatrix}$给出局部坐标，$k=1$时是首分量仿射图。
 
-2. 指出子空间优化归卷五第12章，本节只说明对象与自由度。
+2. 指出子空间优化归卷五“流形优化”章，本节只说明对象与自由度。
 
 ### 29.7 本章小结
 
@@ -3880,7 +3880,7 @@
 
 3. 配图`fig:smap-homography-weight`：(a)分母的等值线与三个点，(b)网格的像与三个等大的误差圈。
 
-4. 代数最优一般不使重投影误差最小，实际做法是先用归一化解作初值再迭代，迭代方法归卷五第3章；双向误差取决于噪声在哪一端。
+4. 代数最优一般不使重投影误差最小，实际做法是先用归一化解作初值再迭代，迭代方法归卷五“光滑优化”部分；双向误差取决于噪声在哪一端。
 
 ### 30.4 本章小结
 
@@ -4174,7 +4174,7 @@
 
 正文：[03-local-fitting.tex](../../../tex/04-spaces-measures-and-geometry/04-manifolds/08-manifold-geometry-topology-recovery/03-local-fitting.tex)
 
-1. 说明切空间估计只给平面，本节建立局部坐标拟合法向分量并分析误差与拼接，一般拟合目标归卷五。
+1. 说明切空间估计只给平面，本节建立局部坐标拟合法向分量并分析误差与拼接，拟合准则的加权、正则化等选择留待机器学习回归讨论，给定目标后的迭代求解归卷五。
 
 #### 31.3.1 局部图函数的拟合
 

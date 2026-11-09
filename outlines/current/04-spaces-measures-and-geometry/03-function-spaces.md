@@ -4,7 +4,7 @@
 
 ## 部分主线与导读
 
-部分主线：本部分把整个函数当作无限维空间中的向量。第10—13章建立共同结构：对照有限维线性代数说明无限项展开与闭球不紧，加入范数研究完备性与Lᵖ空间，加入内积研究Hilbert空间、正交投影与正交展开，并用有限覆盖衡量函数类的大小；第14—20章研究表示与作用：Fourier与小波分别按频率和尺度给函数建立坐标，线性泛函研究标量观测及弱收敛，线性算子研究函数之间的变换、伴随、紧性与基本定理，算子谱与奇异系统给出展开，算子方程讨论可解性与稳定恢复，函数逼近在误差与表示预算下比较各种方案；第21—23章按问题选取空间：Sobolev空间控制导数与边界，Besov空间区分不同尺度上的变化，再生核Hilbert空间由离散点值观测函数。一般拓扑与度量判据回用第一部分，积分工具回用第二部分；拟合目标、正则化与优化求解归卷五。
+部分主线：本部分把整个函数当作无限维空间中的向量。第10—13章建立共同结构：对照有限维线性代数说明无限项展开与闭球不紧，加入范数研究完备性与Lᵖ空间，加入内积研究Hilbert空间、正交投影与正交展开，并用有限覆盖衡量函数类的大小；第14—20章研究表示与作用：Fourier与小波分别按频率和尺度给函数建立坐标，线性泛函研究标量观测及弱收敛，线性算子研究函数之间的变换、伴随、紧性与基本定理，算子谱与奇异系统给出展开，算子方程讨论可解性与稳定恢复，函数逼近在误差与表示预算下比较各种方案；第21—23章按问题选取空间：Sobolev空间控制导数与边界，Besov空间区分不同尺度上的变化，再生核Hilbert空间由离散点值观测函数。一般拓扑与度量判据回用第一部分，积分工具回用第二部分；拟合损失与正则化的选择留待机器学习笔记的回归内容讨论，给定目标后的优化求解归卷五。
 
 部分导读（`\BookPartGuide`）的自然段：
 
@@ -14,7 +14,7 @@
 
 3. 说明第14—20章研究表示与作用：Fourier与小波分别按频率与尺度建立坐标，泛函研究标量观测，算子把观测推广为变换，谱与奇异系统分析算子并讨论算子方程的可解与稳定恢复，函数逼近在误差与预算下比较逼近方式。
 
-4. 说明第21—23章按问题选空间：控制导数与边界用Sobolev空间，区分不同尺度局部变化用Besov空间，由离散点值观测用再生核Hilbert空间；交代一般判据回用第一部分、积分工具回用第二部分，拟合与优化归卷五。
+4. 说明第21—23章按问题选空间：控制导数与边界用Sobolev空间，区分不同尺度局部变化用Besov空间，由离散点值观测用再生核Hilbert空间；交代一般判据回用第一部分、积分工具回用第二部分，拟合损失与正则化的选择留待机器学习回归讨论，一般优化求解归卷五。
 
 ## 第10章 函数作为无限维向量
 
@@ -2686,7 +2686,7 @@
 
 ###### paragraph：平方范数
 
-1. 由$\lVert2f\rVert^2=4\lVert f\rVert^2$说明平方范数非线性，它是二次式而非行向量读取；非线性泛函的变分与极小化引向卷五第11章。
+1. 由$\lVert2f\rVert^2=4\lVert f\rVert^2$说明平方范数非线性，它是二次式而非行向量读取；非线性泛函的变分与极小化引向卷五“泛函优化”章。
 
 2. 引出汇总表。
 
@@ -2926,7 +2926,7 @@
 
 1. 写出$C([0,1])$中带相位的点评估和实值$L^p$中的归一化权重，由$(p-1)q=p$验证；说明定理在写不出读取时仍保证存在。
 
-2. 说明凸集分离与优化对偶是同一延拓思想的几何形式，引向卷五第5章。
+2. 说明凸集分离与优化对偶是同一延拓思想的几何形式，引向卷五的约束优化与对偶。
 
 ### 16.4 泛函族的一致有界性
 
@@ -4366,7 +4366,7 @@
 
 正文入口：[10-linear-operator-equations.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/10-linear-operator-equations.tex)，章内依次输入[01-first-kind-equations.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/10-linear-operator-equations/01-first-kind-equations.tex)、[02-second-kind-equations.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/10-linear-operator-equations/02-second-kind-equations.tex)、[03-stability.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/10-linear-operator-equations/03-stability.tex)、[04-summary.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/10-linear-operator-equations/04-summary.tex)。
 
-章职责与主线：本章沿用第10章“函数是无限维向量”的类比，把积分算子看成无限大矩阵，把算子方程看成线性方程组$\bm A\bm x=\bm b$，在Hilbert空间中回答存在、唯一与误差放大三个问题，并逐处说明类比在哪里失效。第一类方程$Kf=g$的存在与唯一由像与零空间决定，奇异系统把它们写成正交条件与Picard条件，像可以不闭；第二类方程$(I-\lambda K)u=f$因恒等项恢复有限维局面，小参数下用Neumann级数构造逆，一般参数下由Fredholm择一给出有限个相容条件；最后固定范数讨论适定性，区分离散矩阵的病态与无限维的不适定，并比较两类方程的敏感性。贯穿例子是离散累积积分$\bm A_n$、$L^2([-1,1],\mathrm dz/2)$上核为$1+xz$的秩二算子$T$与$L^2(0,1)$上的累积积分$V$，正则化参数选择与算法留给卷五。
+章职责与主线：本章沿用第10章“函数是无限维向量”的类比，把积分算子看成无限大矩阵，把算子方程看成线性方程组$\bm A\bm x=\bm b$，在Hilbert空间中回答存在、唯一与误差放大三个问题，并逐处说明类比在哪里失效。第一类方程$Kf=g$的存在与唯一由像与零空间决定，奇异系统把它们写成正交条件与Picard条件，像可以不闭；第二类方程$(I-\lambda K)u=f$因恒等项恢复有限维局面，小参数下用Neumann级数构造逆，一般参数下由Fredholm择一给出有限个相容条件；最后固定范数讨论适定性，区分离散矩阵的病态与无限维的不适定，并比较两类方程的敏感性。贯穿例子是离散累积积分$\bm A_n$、$L^2([-1,1],\mathrm dz/2)$上核为$1+xz$的秩二算子$T$与$L^2(0,1)$上的累积积分$V$，正则化参数选择需另行指定误差模型与准则，离散后的一般优化求解回用卷五。
 
 1. 章首第一段回顾第10章的类比，指出积分算子相当于行列下标连续变化的无限大矩阵，给定输出求输入就是解线性方程组，本章把前几章正向使用的算子反过来。
 
@@ -4374,7 +4374,7 @@
 
 3. 第三段说明三节分工：19.1处理对应一般方程组的第一类方程，19.2说明恒等项为何恢复有限维局面，19.3单独讨论误差放大并区分病态与不适定。
 
-4. 第四段交代三个贯穿例子，并划定范围：本章只回答何时可解与解怎样依赖数据，求解方法的设计属于卷五的正则化问题。
+4. 第四段交代三个贯穿例子，并划定范围：本章只回答何时可解与解怎样依赖数据，求解方法的设计还需指定误差模型与正则化准则。
 
 ### 19.1 第一类算子方程
 
@@ -4644,7 +4644,7 @@
 
 4. 表`tab:opeq-truncation`列出不同$m$的舍弃项、放大项与合计。
 
-5. 说明截断稳定但不再精确，截断位置须结合误差水平选择，并指向卷五与卷二。
+5. 说明截断稳定但不再精确，截断位置须结合误差模型与正则化准则选择，有限维方法指向卷二。
 
 ###### paragraph：第二类方程与共振参数
 
@@ -4676,7 +4676,7 @@
 
 5. 第四段综述适定性、无限秩紧算子的无界逆、病态与不适定的关系、截断误差及共振敏感性。
 
-6. 第五段划定范围，把正则化交给卷五，并引向用有限个简单函数逼近目标函数的下一章。
+6. 第五段划定范围，说明正则化参数选择还需误差模型与准则、离散后的一般优化求解回用卷五，并引向用有限个简单函数逼近目标函数的下一章。
 
 ## 第20章 函数逼近
 
@@ -4696,7 +4696,7 @@
 
 6. 第六段指出有限维直觉的两处修正：单位球不紧使函数类没有共同速率，范数不等价使结论随尺子改变。
 
-7. 第七段划定范围：正则性刻画分别由第21、22、23章承担，带误差数据的拟合属于卷五。
+7. 第七段划定范围：正则性刻画分别由第21、22、23章承担，带误差数据的拟合留待机器学习笔记的回归内容讨论。
 
 ### 20.1 可积函数的逼近
 
@@ -6350,7 +6350,7 @@
 
 正文入口：[14-reproducing-kernel-hilbert-spaces.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces.tex)，章内依次输入[01-recovery-from-observations.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/01-recovery-from-observations.tex)、[02-reproducing-relation.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/02-reproducing-relation.tex)、[03-spaces-from-kernels.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/03-spaces-from-kernels.tex)、[04-kernel-constructions.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/04-kernel-constructions.tex)、[05-minimum-norm-interpolation.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/05-minimum-norm-interpolation.tex)、[06-finite-subspace-approximation.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/06-finite-subspace-approximation.tex)、[07-mercer-spectral-representation.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/07-mercer-spectral-representation.tex)、[08-summary.tex](../../../tex/04-spaces-measures-and-geometry/03-function-spaces/14-reproducing-kernel-hilbert-spaces/08-summary.tex)。
 
-章职责与主线：本章沿用第10章“函数是下标取遍定义域的向量”的图景，把读取点值看成取坐标，追问这一操作何时能写成内积。点评估连续的Hilbert函数空间称为RKHS，读坐标用的向量是核截面，核是下标取遍$X\times X$的半正定“矩阵”。随后反向由正定核构造唯一的RKHS，给出特征映射、非负组合与逐点乘积三条造核规则；用观测映射、Gram矩阵与观测零空间的正交分解处理插值的相容性与最小范数解；比较核截面与一般有限特征的表示误差；最后加入全支撑测度，经积分算子与Mercer定理得到谱坐标及两种范数下的截断误差。全章以三点网格上的矩阵$\bm K=[\min(x_i,x_j)]$、仿射核与最小值核为贯穿例子，并逐处说明类比失效的位置。带损失与正则项的拟合归卷五，随机观测的统计误差归卷八。
+章职责与主线：本章沿用第10章“函数是下标取遍定义域的向量”的图景，把读取点值看成取坐标，追问这一操作何时能写成内积。点评估连续的Hilbert函数空间称为RKHS，读坐标用的向量是核截面，核是下标取遍$X\times X$的半正定“矩阵”。随后反向由正定核构造唯一的RKHS，给出特征映射、非负组合与逐点乘积三条造核规则；用观测映射、Gram矩阵与观测零空间的正交分解处理插值的相容性与最小范数解；比较核截面与一般有限特征的表示误差；最后加入全支撑测度，经积分算子与Mercer定理得到谱坐标及两种范数下的截断误差。全章以三点网格上的矩阵$\bm K=[\min(x_i,x_j)]$、仿射核与最小值核为贯穿例子，并逐处说明类比失效的位置。带损失与正则项的拟合留待机器学习笔记的回归内容讨论，随机观测的统计误差归卷八。
 
 1. 章首第一段由有限读数恢复整条函数的问题进入，指出候选空间须让“在一点取值”既有确定意义又随函数连续变化。
 
@@ -6358,7 +6358,7 @@
 
 3. 第三段给出回答：核是下标取遍$X\times X$的矩阵，第$x$列是读坐标的向量；并说明这一类比怎样贯穿造空间、观测与Mercer展开，且每处都交代失效位置。
 
-4. 第四段交代所用前置（Hilbert空间与投影、Riesz表示、紧自伴谱定理、完备化），并划定噪声拟合归卷五、随机观测归卷八。
+4. 第四段交代所用前置（Hilbert空间与投影、Riesz表示、紧自伴谱定理、完备化），并划定噪声拟合留待机器学习回归讨论、随机观测归卷八。
 
 ### 23.1 从离散观测恢复函数
 
@@ -6372,7 +6372,7 @@
 
 4. 提出精确插值与带残差拟合两个问题，分别说明它们问的是什么。
 
-5. 提出域外误差问题，划定本章处理精确插值与只依赖空间结构的域外误差，拟合归卷五，随机测点指向卷八。
+5. 提出域外误差问题，划定本章处理精确插值与只依赖空间结构的域外误差，拟合留待机器学习回归讨论，随机测点指向卷八。
 
 #### 23.1.1 有限特征空间
 
@@ -6722,7 +6722,7 @@
 
 4. 例`ex:rkhs-hmin-null-space`：$N$含$\sin(3k\pi x)$，由逐段积分验证正交，$Pf$是折线插值。
 
-5. 说明这是卷五表示定理的结构依据。
+5. 说明这是拟合表示定理的结构依据，其回归应用留待机器学习笔记讨论。
 
 #### 23.5.3 约束相容性
 
