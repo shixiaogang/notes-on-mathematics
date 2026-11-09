@@ -1,10 +1,10 @@
 # 卷二·第二部分：谱分析
 
-状态：十卷调整方案的部分大纲，尚未落实到正文。本部分研究给定线性映射怎样分解，以及分解所揭示的扰动响应与长期作用。
+本部分已迁入正文。各章研究线性映射的分解，以及分解所揭示的扰动响应与长期作用。
 
 先由特征方向、正交坐标和极分解解释映射，再用这些表示研究条件数、谱扰动与反复更新。所需前置为本卷向量、矩阵、范数与内积；Rayleigh商及低秩、正交逼近的最优性统一放在第三部分的2.18章。
 
-[返回全局大纲](../README.md) · [当前正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
+[返回全局大纲](../README.md) · [本卷正文](../../../tex/02-vectors-matrices-and-multivariate-calculus/volume.tex) · [本部分正文](../../../tex/02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis/part.tex) · [当前正文提要](../../../outlines/current/02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md) · [迁移前的正文提要](../../../tex_bak/outlines/current/01-basic-mathematics/03-vectors-matrices-and-multivariate-functions.md)
 
 ## 2.6 谱分解
 
@@ -250,7 +250,7 @@
 
 对可对角化矩阵用Bauer--Fike界控制扰动后特征值到原谱的距离，强调敏感性由特征基的条件数决定。用不可对角化的例子说明特征值的移动可以不与扰动成比例。
 
-#### 2.9.4.1 Bauer--Fike界
+#### 2.9.4.1 Bauer–Fike界
 
 证明扰动后的特征值离原谱不超过特征基条件数乘以扰动的范数。
 
