@@ -1,12 +1,12 @@
 # 卷五 · 第三部分：非光滑优化
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷五正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：怎样利用次梯度、邻近映射和可计算模型求解非光滑目标，并控制求解误差。
 
 承接5.5的光滑性和5.6的一阶方法，处理普通梯度不存在或目标包含非光滑项的情形。第四部分按变量分块组织更新，第五部分研究随机梯度、零阶估计与随机搜索，约束乘子、增广Lagrange与ADMM由第六部分建立。
 
-整理依据：[既有大纲](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[旧稿的邻近梯度方法](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/04-nonsmooth-composite-optimization/04-proximal-gradient.tex)和[旧稿的光滑化](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/04-nonsmooth-composite-optimization/05-smoothing.tex)。算法与构造核对[Beck与Teboulle的FISTA论文](https://epubs.siam.org/doi/10.1137/080716542)、[Parikh与Boyd的邻近算法专著](https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf)及[Nesterov的平滑方法论文](https://doi.org/10.1007/s10107-004-0552-5)；本文件仍是待实施计划。
+整理依据：[既有大纲](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[旧稿的邻近梯度方法](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/04-nonsmooth-composite-optimization/04-proximal-gradient.tex)和[旧稿的光滑化](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/04-nonsmooth-composite-optimization/05-smoothing.tex)。算法与构造核对[Beck与Teboulle的FISTA论文](https://epubs.siam.org/doi/10.1137/080716542)、[Parikh与Boyd的邻近算法专著](https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf)及[Nesterov的平滑方法论文](https://doi.org/10.1007/s10107-004-0552-5)。
 
 ## 5.11 非光滑优化
 

@@ -1,6 +1,6 @@
 # 卷五 · 第六部分：约束优化
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷五正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：怎样判别、分析并求解一般约束问题，以及利用可行集的几何结构改进计算。
 
@@ -8,7 +8,7 @@
 
 方法之间的关系：外点罚函数、障碍和ALM改变约束的处理方式；SQP构造局部QP，原始—对偶内点法对扰动最优性方程作Newton近似；可行迭代研究如何保持或恢复可行性，有效集法研究哪些不等式应暂按等式处理。这些视角可以交叉，障碍子问题仍可保留等式约束，不能把“消解约束”理解为所有方法都直接变成无约束问题。
 
-整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[既有大纲2](../source-outline/04-geometry-distributions-and-inference/12-manifolds.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[既有大纲2](../source-outline/04-geometry-distributions-and-inference/12-manifolds.md)。
 
 最优性、对偶和敏感性核对[Wright约束优化讲义](https://pages.cs.wisc.edu/~swright/nd2016/IMA_constrained_theory.pdf)、[Boyd与Vandenberghe教材](https://stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)、[Bertsekas凸分析讲义](https://www.mit.edu/~dimitrib/Convex_Slides_2014.pdf)及[参数敏感性教程](https://arxiv.org/html/2504.15851v1)；可行迭代核对[Frank–Wolfe分析](https://proceedings.mlr.press/v28/jaggi13.pdf)、[镜像下降原文](https://www.tau.ac.il/~becka/3.pdf)与[GRG原始论文](https://www.numdam.org/item/RO_1974__8_3_73_0.pdf)。
 

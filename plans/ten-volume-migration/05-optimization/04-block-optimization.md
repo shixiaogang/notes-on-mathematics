@@ -1,12 +1,12 @@
 # 卷五 · 第四部分：分块优化
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷五正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：怎样利用变量分块和块内计算结构降低求解成本，并保证完整目标的进展。
 
 回用第二部分的梯度和曲率方法，以及第三部分的邻近映射，5.12按块内算法组织坐标下降、局部近似、交替极小化和模型更新。选块规则可与多种更新组合，随机选块在本部分建立，目标项抽样由5.13衔接；耦合约束的分解由5.22.3—5.22.5处理。
 
-整理依据：[既有大纲](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[旧稿的分块更新](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/06-stochastic-block-optimization/05-block-alternating.tex)、[坐标下降综述](https://optimization-online.org/2014/12/4679/)、[APCG原文](https://arxiv.org/abs/1407.1296)与[BSUM原文](https://arxiv.org/abs/1209.2385)；本文件仍是待实施计划。
+整理依据：[既有大纲](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)、[旧稿的分块更新](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/06-stochastic-block-optimization/05-block-alternating.tex)、[坐标下降综述](https://optimization-online.org/2014/12/4679/)、[APCG原文](https://arxiv.org/abs/1407.1296)与[BSUM原文](https://arxiv.org/abs/1209.2385)。
 
 ## 5.12 分块优化
 

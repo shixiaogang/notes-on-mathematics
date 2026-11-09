@@ -1,12 +1,12 @@
 # 卷五 · 第七部分：多目标与嵌套优化
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷五正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：多个目标之间怎样取舍，最坏响应怎样改变外层目标，内层最优选解怎样影响外层决策。
 
 依赖前六部分的单目标求解、最优条件、对偶和参数敏感性，双层微分另用卷二的隐函数与线性方程。三章分别处理目标向量、共同代价下的最坏响应及不同目标下的嵌套选解，不把它们当成同一问题的三个算法变种。
 
-整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/09-optimization.md)。
 
 多目标方法核对[凸优化教材](https://stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)、[Miettinen的标量化论述](https://jyx.jyu.fi/bitstream/handle/123456789/79802/1/Miettinen_Kaisa_screen.pdf)、[MGDA原文](https://www.numdam.org/item/CRMATH_2012__350_5-6_313_0.pdf)与[NSGA-II原文](https://web.njit.edu/~horacio/Math451H/download/2002-6-2-DEB-NSGA-II.pdf)。
 

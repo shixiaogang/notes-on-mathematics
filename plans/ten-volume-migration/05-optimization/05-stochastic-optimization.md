@@ -1,12 +1,12 @@
 # 卷五 · 第五部分：随机优化
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷五正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：怎样利用抽样、函数值反馈、随机搜索和概率代理模型求解优化问题，并评价有限预算下的结果。
 
 5.13利用可取得的随机梯度，5.14只用函数值构造局部方向，5.15通过候选状态、搜索分布或种群探索解空间，5.16利用概率代理模型安排昂贵评价，四章按所用信息和更新机制分工。零阶估计与演化策略存在交叉，贝叶斯优化也常用零阶反馈；概率建模不要求目标本身随机或每步随机选点；所需概率含义就地说明，条件期望、高斯回归、长期路径性质与统计误差分别由7.4.2、8.2.5.1、9.3.7和8.4.4展开。
 
-整理依据：[旧稿的随机和分块优化](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/06-stochastic-block-optimization.tex)。随机梯度与历史信息核对[SVRG](https://proceedings.neurips.cc/paper/2013/hash/ac1dd209cbcc5e5d1c6e28598e8cbbe8-Abstract.html)、[SAGA](https://arxiv.org/abs/1407.0202)和[AdamW](https://arxiv.org/abs/1711.05101)原文；零阶构造核对[SPSA](https://doi.org/10.1109/9.119632)、[球平滑估计](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/2005-Online_Convex_Optimization_in_the_Bandit_Setting.pdf)及[双点反馈](https://arxiv.org/abs/1312.2139)原文；本文件仍是待实施计划。
+整理依据：[旧稿的随机和分块优化](../../../tex_bak/03-optimization-evolution-and-signals/01-optimization/06-stochastic-block-optimization.tex)。随机梯度与历史信息核对[SVRG](https://proceedings.neurips.cc/paper/2013/hash/ac1dd209cbcc5e5d1c6e28598e8cbbe8-Abstract.html)、[SAGA](https://arxiv.org/abs/1407.0202)和[AdamW](https://arxiv.org/abs/1711.05101)原文；零阶构造核对[SPSA](https://doi.org/10.1109/9.119632)、[球平滑估计](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/2005-Online_Convex_Optimization_in_the_Bandit_Setting.pdf)及[双点反馈](https://arxiv.org/abs/1312.2139)原文。
 
 随机搜索核对[模拟退火的降温条件](https://web.mit.edu/6.435/www/Hajek88.pdf)、[CMA-ES作者教程](https://arxiv.org/abs/1604.00772)、[自然演化策略](https://jmlr.csail.mit.edu/papers/volume15/wierstra14a/wierstra14a.pdf)、[遗传算法原理](https://www.ifisica.uaslp.mx/~givan/images/ACP_2017/SA_1992.pdf)及[PSO原文](https://doi.org/10.1109/ICNN.1995.488968)。
 
