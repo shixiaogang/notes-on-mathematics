@@ -13,7 +13,7 @@ REGISTRY = ROOT / 'figures/00-shared/academic-drawing/integration-manifest.json'
 def figure_blocks(text):
     """Include ordinary floats and explicitly numbered inline figures."""
     result = []
-    for env, block in re.findall(r'\\begin\{(figure\*?)\}(.*?)\\end\{\1\}', text, re.S):
+    for env, block in re.findall(r'\\begin\{(figure\*?|BookInlineFigure)\}(.*?)\\end\{\1\}', text, re.S):
         labels = re.findall(r'\\label\{(fig:[^}]+)\}', block)
         result.append((env, block, labels))
     for block in re.findall(r'\\begin\{minipage\}.*?\\end\{minipage\}', text, re.S):

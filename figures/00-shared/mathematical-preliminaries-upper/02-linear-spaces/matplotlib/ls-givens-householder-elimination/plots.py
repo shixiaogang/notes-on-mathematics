@@ -43,6 +43,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -87,14 +92,14 @@ arrow(a, (0, 0), TARGET, GREEN)
 a.plot(*X, "o", ms=4, mfc=BLUE, mec=INK, mew=.4, zorder=5)
 a.text(2.08, 1.02, "$(a,b)=(2,1)$", fontsize=8, color=BLUE)
 a.text(1.55, -0.30, "$(r,0)=(\\sqrt{5},0)$", fontsize=8, color=GREEN)
-a.annotate("旋转角 $\\theta\\approx26.6°$", xy=(R * np.cos(np.radians(PHI / 2)),
+a.annotate("$\\theta$", xy=(R * np.cos(np.radians(PHI / 2)),
           R * np.sin(np.radians(PHI / 2))), xytext=(0.55, 1.55),
           fontsize=7.5, color=MUTED,
           arrowprops=dict(arrowstyle="->", color=MUTED, lw=.6))
-a.set_title("(a) Givens 旋转：把第二分量旋到 0", fontsize=8)
+a.set_title("")
 a.set(xlim=(-0.6, 3.3), ylim=(-0.9, 2.1), xticks=range(0, 4), yticks=range(0, 2))
 a.set_aspect("equal")
-a.grid(True)
+a.grid(False, which="both")
 
 # ---- 右 panel：Householder 反射 ----
 alpha = np.radians(PHI / 2)                 # 反射轴方位角
@@ -106,13 +111,13 @@ arrow(b, (0, 0), REFLECTED, GREEN)
 b.plot(*X, "o", ms=4, mfc=BLUE, mec=INK, mew=.4, zorder=5)
 b.text(2.08, 1.02, "$(a,b)=(2,1)$", fontsize=8, color=BLUE)
 b.text(1.55, -0.30, "$Hx=(r,0)$", fontsize=8, color=GREEN)
-b.text(1.55, 0.62, "反射轴（虚线）", fontsize=7.5, color=MUTED, rotation=PHI / 2)
-b.set_title("(b) Householder 反射：映到 $(\\pm r,0)$", fontsize=8)
+b.text(1.55, 0.62, "反射轴", fontsize=7.5, color=MUTED, rotation=PHI / 2)
+b.set_title("")
 b.set(xlim=(-0.6, 3.3), ylim=(-0.9, 2.1), xticks=range(0, 4), yticks=range(0, 2))
 b.set_aspect("equal")
-b.grid(True)
+b.grid(False, which="both")
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 if selection == NAME:
     for ext in ("pdf", "svg", "png"):

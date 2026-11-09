@@ -10,9 +10,21 @@ import numpy as np
 
 ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
 sys.path.insert(0, str(ROOT/'figures/00-shared/mathematical-preliminaries-upper/00-shared/comprehension-figures'))
-from support import figure, save, BLUE, GREEN, YELLOW, RED, PURPLE, INK, MUTED, GRID, BLUE_FILL, GREEN_FILL, YELLOW_FILL
+from support import figure, save as legacy_save, BLUE, GREEN, YELLOW, RED, PURPLE, INK, MUTED, GRID, BLUE_FILL, GREEN_FILL, YELLOW_FILL
 
 D = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import prepare_figure, style_record, configure
+import support as legacy_support
+legacy_support.configure = configure
+import json
+
+def save(fig, directory, name, facts):
+    prepare_figure(fig)
+    record = legacy_save(fig, directory, name, facts)
+    record.update(source=str(Path(__file__).relative_to(ROOT)), visual_style=style_record(), background_grid=False)
+    (Path(directory)/(name+'.json')).write_text(json.dumps(record, ensure_ascii=False, indent=2)+'\n')
+    return record
 
 
 def power_sequence_nonuniform():
@@ -28,7 +40,6 @@ def power_sequence_nonuniform():
     ax.plot([1], [1], 'o', color=INK, ms=3.4)
     ax.plot([1], [0], 'o', mfc='white', mec=INK, ms=3.4)
     ax.axhline(0.5, color=MUTED, lw=.6, ls='--')
-    ax.text(0.02, 0.53, '误差 1/2', color=MUTED, fontsize=7.5)
     ax.set(xlim=(0, 1.04), ylim=(-0.04, 1.06), xlabel=r'$x$', ylabel=r'$f_n(x)=x^n$')
     ax.set_xticks([0, .25, .5, .75, 1]); ax.set_yticks([0, .5, 1])
     ax.legend(loc='upper left', ncol=2, handlelength=1.6, columnspacing=1.2)
@@ -88,7 +99,7 @@ def finite_difference_error():
     ax.loglog(hs, exact*hs**2/6 + eps*exact/hs, color=GREEN, lw=.8, ls='--')
     ax.set(xlim=(1e-15, 0.5), ylim=(1e-12, 10), xlabel=r'$h$', ylabel='绝对误差')
     ax.set_xticks([1e-15, 1e-12, 1e-9, 1e-6, 1e-3]); ax.set_yticks([1e-12, 1e-9, 1e-6, 1e-3, 1])
-    ax.legend(loc='upper right')
+    ax.legend(loc='lower left')
     hopt_f = 2*np.sqrt(eps); hopt_c = (3*eps)**(1/3)
     save(fig, D/'finite-difference-error', 'figure', {
         'function': 'exp', 'x0': x0, 'arithmetic': 'IEEE double precision (numpy float64)',
@@ -111,7 +122,7 @@ def riemann_sums():
         ax.plot([t], [v], 'o', color=INK, ms=2.6)
     ax.plot(x, np.cos(x), color=INK, lw=1.2)
     ax.axhline(0, color=MUTED, lw=.6)
-    ax.set(xlim=(0, 3), ylim=(-1.1, 1.1), xlabel=r'$x$', ylabel=r'$\cos x$', title='(a) 一个黎曼和')
+    ax.set(xlim=(0, 3), ylim=(-1.1, 1.1), xlabel=r'$x$', ylabel=r'$\cos x$', title='(a)')
     ax = axes[1]
     n = 12; xs = np.linspace(0, 3, n+1)
     for a, b in zip(xs[:-1], xs[1:]):
@@ -120,7 +131,7 @@ def riemann_sums():
         ax.add_patch(mp.Rectangle((a, lo), b-a, hi-lo, facecolor=GREEN_FILL, edgecolor=GREEN, lw=.6))
     ax.plot(x, np.cos(x), color=INK, lw=1.2)
     ax.axhline(0, color=MUTED, lw=.6)
-    ax.set(xlim=(0, 3), ylim=(-1.1, 1.1), xlabel=r'$x$', title='(b) 下和与上和')
+    ax.set(xlim=(0, 3), ylim=(-1.1, 1.1), xlabel=r'$x$', title='(b)')
     U = sum((xs[1]-xs[0])*np.cos(a) for a in xs[:-1]); Lw = sum((xs[1]-xs[0])*np.cos(b) for b in xs[1:])
     save(fig, D/'riemann-sums', 'figure', {
         'function': 'cos(x) on [0,3]', 'panel_a_partition': pts, 'panel_a_tags': tags,
@@ -148,14 +159,14 @@ def quadrature_rules():
     f = lambda t: np.exp(2*t)/3
     x = np.linspace(0, 1, 400)
     ax.fill_between([0, 1], [f(.5), f(.5)], color=YELLOW_FILL, lw=0)
-    ax.plot([0, 1], [f(.5), f(.5)], color=YELLOW, lw=1.1, label='中点矩形')
-    ax.plot([0, 1], [f(0), f(1)], color=GREEN, lw=1.1, ls='--', label='梯形直线')
+    ax.plot([0, 1], [f(.5), f(.5)], color=YELLOW, lw=1.1, label='中点')
+    ax.plot([0, 1], [f(0), f(1)], color=GREEN, lw=1.1, ls='--', label='梯形')
     # quadratic through the three nodes 0, 1/2, 1
     A = f(.5); C = (f(0)+f(1)-2*f(.5))/(2*.25); B = (f(1)-f(0))/1.0
-    ax.plot(x, A + B*(x-.5) + C*(x-.5)**2, color=PURPLE, lw=1.1, ls='-.', label='Simpson抛物线')
+    ax.plot(x, A + B*(x-.5) + C*(x-.5)**2, color=PURPLE, lw=1.1, ls='-.', label='Simpson')
     ax.plot(x, f(x), color=INK, lw=1.3, label=r'$f(x)$')
     ax.plot([0, .5, 1], [f(0), f(.5), f(1)], 'o', color=INK, ms=3)
-    ax.set(xlim=(-0.02, 1.02), ylim=(0, 2.6), xlabel=r'$x$', title='(a) 一段上的近似')
+    ax.set(xlim=(-0.02, 1.02), ylim=(0, 2.6), xlabel=r'$x$', title='(a)')
     ax.set_xticks([0, .5, 1]); ax.legend(loc='upper left', fontsize=7)
     ax = axes[1]
     exact = np.e - 1
@@ -169,7 +180,7 @@ def quadrature_rules():
         err = np.array([abs(rule(n) - exact) for n in ns])
         ax.loglog(ns, err, marker=m, color=c, ms=3, lw=1, label=name)
         data[name] = err.tolist()
-    ax.set(xlabel='段数 n', ylabel='绝对误差', title='(b) 积分误差随段数的变化')
+    ax.set(xlabel='段数 n', ylabel='绝对误差', title='(b)')
     ax.set_xticks([2, 8, 32, 128]); ax.set_xticklabels(['2', '8', '32', '128'])
     ax.legend(loc='lower left', fontsize=7)
     save(fig, D/'quadrature-rules', 'figure', {
@@ -187,9 +198,9 @@ def quadrature_comparison():
     x = np.linspace(0, 1, 600)
     A = f(.5); B = f(1) - f(0); C = (f(0) + f(1) - 2*f(.5))/(2*.25)
     rules = [
-        ('(a) 中点矩形：常数', np.full_like(x, f(.5)), [.5], f(.5)),
-        ('(b) 梯形：直线', f(0) + (f(1) - f(0))*x, [0, 1], (f(0) + f(1))/2),
-        ('(c) Simpson：抛物线', A + B*(x-.5) + C*(x-.5)**2, [0, .5, 1], (f(0) + 4*f(.5) + f(1))/6),
+        ('(a) 中点', np.full_like(x, f(.5)), [.5], f(.5)),
+        ('(b) 梯形', f(0) + (f(1) - f(0))*x, [0, 1], (f(0) + f(1))/2),
+        ('(c) Simpson', A + B*(x-.5) + C*(x-.5)**2, [0, .5, 1], (f(0) + 4*f(.5) + f(1))/6),
     ]
     facts = {'integrand': 'exp(2x)/3 on [0,1]', 'exact': float(exact), 'rules': {}}
     for k, (ax, low, (title, p, nodes, value)) in enumerate(zip(axes, lower, rules)):
@@ -204,19 +215,19 @@ def quadrature_comparison():
         low.set(xlim=(0, 1), ylim=(-span, span), xlabel=r'$x$')
         low.set_xticks([0, .5, 1])
         if k == 0:
-            low.set_ylabel('近似函数 − f(x)')
+            low.set_ylabel('$p-f$')
         if k > 0:
             ax.set_yticklabels([])
         facts.setdefault('max_abs_pointwise_gap', {})[title] = float(np.abs(d).max())
-        ax.fill_between(x, 0, np.minimum(y, p), color=BLUE_FILL, lw=0, label='两者共有的面积')
-        ax.fill_between(x, y, p, where=p > y, interpolate=True, color=RED_FILL, lw=0, label='近似多算')
-        ax.fill_between(x, p, y, where=p < y, interpolate=True, color=YELLOW_FILL, lw=0, label='近似少算')
-        ax.plot(x, p, color=BLUE, lw=1.1, label='近似函数')
+        ax.fill_between(x, 0, np.minimum(y, p), color=BLUE_FILL, lw=0)
+        ax.fill_between(x, y, p, where=p > y, interpolate=True, color=RED_FILL, lw=0)
+        ax.fill_between(x, p, y, where=p < y, interpolate=True, color=YELLOW_FILL, lw=0)
+        ax.plot(x, p, color=BLUE, lw=1.1, label='$p$')
         ax.plot(x, y, color=INK, lw=1.2, label=r'$f(x)$')
         ax.plot(nodes, f(np.array(nodes)), 'o', color=INK, ms=3, zorder=5)
         err = value - exact
         sign = '−' if err < 0 else '+'
-        ax.set_title(f'{title}\n近似值 {value:.3f}，误差 {sign}{abs(err):.3f}')
+        ax.set_title(title)
         ax.set(xlim=(0, 1), ylim=(0, 2.6))
         ax.set_xticks([0, .5, 1])
         facts['rules'][title] = {'nodes': nodes, 'approximation': float(value), 'signed_error': float(err)}
@@ -232,13 +243,13 @@ def function_properties():
     g = lambda t: np.piecewise(t, [t <= 1, (t > 1) & (t <= 2), t > 2],
                                [lambda s: 0.15 + 0.55*s, 0.7, lambda s: 0.7 + 0.55*(s - 2)])
     x = np.linspace(0, 3, 400)
-    ax.plot(x, g(x), color=GREEN, label='单调不减 g')
-    ax.plot(x, f(x), color=BLUE, label='严格递增 f')
+    ax.plot(x, g(x), color=GREEN, label='$g$')
+    ax.plot(x, f(x), color=BLUE, label='$f$')
     x1, x2 = 0.7, 2.3
     for xi in (x1, x2):
         ax.plot([xi, xi, 0], [0, f(xi), f(xi)], color=MUTED, lw=.6, ls='--')
         ax.plot([xi], [f(xi)], 'o', color=BLUE, ms=3)
-    ax.set(xlim=(0, 3.1), ylim=(0, 2.5), xlabel=r'$x$', title='(a) 单调性')
+    ax.set(xlim=(0, 3.1), ylim=(0, 2.5), xlabel=r'$x$', title='(a)')
     ax.set_xticks([x1, x2], [r'$x_1$', r'$x_2$'])
     ax.set_yticks([f(x1), f(x2)], [r'$f(x_1)$', r'$f(x_2)$'])
     ax.legend(loc='upper left', handlelength=1.6)
@@ -249,14 +260,14 @@ def function_properties():
     go = lambda t: 0.25*t**3
     x = np.linspace(-1.8, 1.8, 400)
     ax.axhline(0, color=MUTED, lw=.6); ax.axvline(0, color=MUTED, lw=.6)
-    ax.plot(x, fe(x), color=BLUE, label='偶函数 f')
-    ax.plot(x, go(x), color=GREEN, label='奇函数 g')
+    ax.plot(x, fe(x), color=BLUE, label='$f$')
+    ax.plot(x, go(x), color=GREEN, label='$g$')
     ax.plot([-a, a], [fe(a), fe(a)], color=BLUE, lw=.6, ls='--')
     ax.plot([-a, a], [fe(a), fe(a)], 'o', color=BLUE, ms=3)
     ax.plot([-a, a], [go(-a), go(a)], color=GREEN, lw=.6, ls='--')
     ax.plot([-a, a], [go(-a), go(a)], 'o', color=GREEN, ms=3)
     ax.plot([0], [0], 'o', color=INK, ms=2.2)
-    ax.set(xlim=(-1.9, 1.9), ylim=(-1.6, 1.7), xlabel=r'$x$', title='(b) 奇偶性')
+    ax.set(xlim=(-1.9, 1.9), ylim=(-1.6, 1.7), xlabel=r'$x$', title='(b)')
     ax.set_xticks([-a, 0, a], [r'$-a$', r'$0$', r'$a$']); ax.set_yticks([]); ax.spines["left"].set_visible(False)
     ax.legend(loc='upper center', ncol=2, handlelength=1.4, columnspacing=1.0)
     # (c) periodicity with period T = 2
@@ -275,7 +286,7 @@ def function_properties():
         ax.annotate('', xy=(left + T, 1.6), xytext=(left, 1.6),
                     arrowprops=dict(arrowstyle='<->', color=INK, lw=.6, shrinkA=0, shrinkB=0))
         ax.text(left + T/2, 1.68, r'$T$', ha='center', va='bottom')
-    ax.set(xlim=(-0.3, 4.5), ylim=(-1.5, 2.05), xlabel=r'$x$', title='(c) 周期性')
+    ax.set(xlim=(-0.3, 4.5), ylim=(-1.5, 2.05), xlabel=r'$x$', title='(c)')
     ax.set_xticks(xs, [r'$x_0$', r'$x_0+T$', r'$x_0+2T$']); ax.set_yticks([]); ax.spines["left"].set_visible(False)
     save(fig, D/'function-properties', 'figure', {
         'panel_a_strict': '0.85+0.45x+0.1 sin(2x) on [0,3]',

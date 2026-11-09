@@ -1,0 +1,119 @@
+\section{局部流形拟合}
+\label{sec:mrec-local-fit}
+
+切空间估计只给出一个平面，而流形在邻域内是弯的。要得到穿过或逼近样本的连续曲面片，还需要描述法向上怎样随切向坐标变化。本节在估计的平面上建立局部坐标，把法向分量拟合成切向坐标的函数，再分析拟合片的误差以及多片能否拼起来。拟合目标的加权、正则化等更一般的选择属于\BookChapterRef{chap:optimization}{卷五第1章“优化问题与解”}开始的优化理论，本节只用普通最小二乘。
+
+\subsection{局部图函数的拟合}
+\label{sec:mrec-graph-fit}
+
+设已选定局部中心$\bm q\in\mathbb R^D$，例如一个样本或局部质心，以及估计子空间的标准正交基$\widehat{\bm U}\in\mathbb R^{D\times m}$。把它补成$\mathbb R^D$的标准正交基$[\widehat{\bm U},\widehat{\bm V}]$，对邻域内每个观测计算切向坐标与法向分量：
+\[
+ \bm u_j=\widehat{\bm U}^\top(\bm x_j-\bm q)\in\mathbb R^m,\qquad
+ \bm w_j=\widehat{\bm V}^\top(\bm x_j-\bm q)\in\mathbb R^{D-m}.
+\]
+
+这相当于把坐标系转到估计的平面上：$\bm u_j$是样本在平面内的位置，$\bm w_j$是它离开平面的高度。目标是找函数$g$使$\bm w_j\approx g(\bm u_j)$，由此得到连续片
+\begin{equation}
+ \bm\phi(\bm u)=\bm q+\widehat{\bm U}\bm u+\widehat{\bm V}g(\bm u),\qquad\bm u\in\Omega ,
+ \label{eq:mrec-patch}
+\end{equation}
+其中$\Omega\subseteq\mathbb R^m$是切向坐标的定义域，例如半径为$\rho$的球。
+
+\paragraph{图表示的前提}
+
+只有当流形在这个邻域内确实是估计平面上的图时，拟合才有意义。把$M$上的点投影到估计平面，这个映射在$\bm p$处的导数是从$T_{\bm p}M$到$\widehat S$的正交投影，它的奇异值是两个子空间主夹角的余弦。
+
+只要最大主夹角小于$\pi/2$，导数就可逆。由反函数定理，$M$在$\bm p$附近可以写成
+\[
+ \bm q+\widehat{\bm U}\bm u+\widehat{\bm V}\widetilde g(\bm u),
+\]
+$\widetilde g$是$C^2$的。夹角越小、邻域越小，这个图表示的定义域越大、$\widetilde g$越平缓。
+
+\paragraph{为什么要保留常数项和一次项}
+
+真实切空间上的图函数满足$g(\bm0)=\bm0$与$Dg(\bm0)=\bm0$，但估计平面上的$\widetilde g$一般不满足：$\bm q$未必在$M$上，所以$\widetilde g(\bm0)\neq\bm0$；估计平面有倾斜，所以$D\widetilde g(\bm0)\neq\bm0$。
+
+在例~\ref{ex:mrec-one-sided}中，估计方向的斜率约为$h/R$，抛物线在新坐标下于$\bm p$处的斜率约为$-h/R$。若强行要求一次项为零，邻域边缘$\lvert u\rvert\approx2h$处的拟合误差就有$2h^2/R$量级，与弯曲本身一样大。
+
+所以把估计平面的偏差纳入模型，用含常数项、一次项和二次项的多项式拟合每个法向分量：
+\begin{equation}
+ g(\bm u)=\bm c_0+\bm L\bm u+\bigl(\tfrac12\bm u^\top\bm Q_l\bm u\bigr)_{l=1}^{D-m},
+ \label{eq:mrec-quadratic-model}
+\end{equation}
+其中$\bm c_0\in\mathbb R^{D-m}$，$\bm L\in\mathbb R^{(D-m)\times m}$，每个$\bm Q_l$是$m$阶对称矩阵。每个法向分量有$N_c=1+m+m(m+1)/2$个系数，$m=1$时为$3$个，$m=2$时为$6$个。
+
+\paragraph{系数的求解与约束}
+
+系数关于数据是线性的。把每个$\bm u_j$处全部单项式的值排成一行，得到设计矩阵$\bm\Phi\in\mathbb R^{k\times N_c}$。每个法向分量的系数是以$\bm\Phi$为设计矩阵的普通最小二乘解，其构造与核对可参考\BookChapterRef{chap:linear-solution-selection}{卷二第9章“线性方程与最小二乘的选解”}。系数唯一当且仅当$\bm\Phi$满列秩。
+
+满列秩有直接的几何含义。$\bm\Phi\bm a=\bm0$意味着系数为$\bm a$的二次多项式在全部$\bm u_j$处为零，所以$\bm\Phi$满列秩当且仅当没有非零的二次多项式在全部切向坐标处同时为零。
+
+$m=1$时，这要求至少有三个不同的$u_j$。$m=2$时，要求至少六个点且它们不全落在同一条二次曲线上，例如全部落在一条直线上就不行。这正是第~\ref{sec:mrec-coverage}节方向分布条件在二阶拟合中的形式。
+
+\begin{example}[圆弧上的二次拟合]
+\label{ex:mrec-circle-fit}
+在半径为$R$的圆的最低点取$\bm q=\bm p=(0,0)$，切线为横轴，样本取在横坐标$u=-h,0,h$处，纵坐标为$w=c,0,c$，其中
+\[
+ c=R-\sqrt{R^2-h^2}.
+\]
+
+三点恰好确定二次多项式。由$u=0$得常数项为零，由左右对称得一次项为零，再由$u=h$得
+\[
+ g(u)=\frac c{h^2}u^2,\qquad\frac c{h^2}=\frac1{R+\sqrt{R^2-h^2}}.
+\]
+当$h\to0$时二次系数趋于$1/(2R)$，与真实图函数$\widetilde g(u)=u^2/(2R)+u^4/(8R^3)+\cdots$的二次项一致。
+
+把两者相减，主要部分是
+\[
+ \widetilde g(u)-g(u)\approx\frac{u^2(u^2-h^2)}{8R^3}.
+\]
+它在$u^2=h^2/2$处绝对值最大，约为$h^4/(32R^3)$。
+
+取$R=1$，$h=0.5$，则$c\approx0.134$，二次系数$c/h^2\approx0.536$。上式预测最大差约为$0.0020$，直接计算的最大差约为$0.0024$，发生在$\lvert u\rvert\approx0.36$处，多出来的部分来自六次及更高次项。
+\end{example}
+
+图~\ref{fig:mrec-fit}(a)(b)画出了这个例子。拟合曲线在三个样本处与圆重合，两点之间略有偏差，偏差的形状就是上式的四次多项式。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/mrec-fit/figure.pdf}
+  \caption{局部二次拟合及其误差。(a) 单位圆最低点附近的真实图函数$\widetilde g$（蓝）与三点拟合$g$（绿虚线，$h=0.5$）。(b) 差$\widetilde g-g$，三个样本处为零，最大约$2.4\times10^{-3}$。(c) 真实流形是直线$w=0$（蓝），观测带交替的$\pm\sigma$法向扰动时，插值折线（红）处处离真值不超过$\sigma$，斜率却是$\pm2\sigma/s$。}
+  \label{fig:mrec-fit}
+\end{BookInlineFigure}
+
+\subsection{局部片的误差与拼接}
+\label{sec:mrec-patch-error}
+
+拟合片要与真实流形比较，就要在同一个定义域上比较同一种量。在估计平面的坐标域$\Omega$上，真实流形写成$\widetilde g$，拟合片写成$g$，法向偏差是
+\begin{equation}
+ \sup_{\bm u\in\Omega}\lVert g(\bm u)-\widetilde g(\bm u)\rVert_2 .
+ \label{eq:mrec-patch-error}
+\end{equation}
+这个量把几种误差合在了一起，分析时要分别检查。
+
+\paragraph{误差的来源}
+
+第一是切空间估计的偏差。它本身不是拟合误差，而是改变了$\widetilde g$的形状：倾斜越大，$\widetilde g$的一次项越大、图表示的定义域越小，夹角接近$\pi/2$时图表示不复存在。模型含一次项可以吸收小的倾斜，但不能挽救大的倾斜。
+
+第二是函数截断。$\widetilde g$一般不是二次多项式。若它是$C^3$的，在半径为$\rho$的定义域上，二次Taylor多项式的余项为$\rho^3$量级；若只知道它是$C^2$的，则只能说余项比$\rho^2$小，没有确定的阶。截断误差指$\widetilde g$中任何二次多项式都消除不了的部分，Taylor余项给出它的一个上界。
+
+第三是样本分布与观测噪声。设法向数据是$\bm\Phi\bm a_*$加上偏差$\bm\eta$，$\bm a_*$是某个参考多项式的系数，偏差中既有截断余项，也有观测扰动。最小二乘系数的误差满足
+\begin{equation}
+ \lVert\widehat{\bm a}-\bm a_*\rVert_2\leq\frac{\lVert\bm\eta\rVert_2}{s_{\min}(\bm\Phi)},
+ \label{eq:mrec-coefficient-error}
+\end{equation}
+其中$s_{\min}(\bm\Phi)$是设计矩阵的最小奇异值。切向坐标挤在一起或接近落在同一条二次曲线上时，$s_{\min}$小，偏差被放大。有界扰动可以有系统的方向，增加样本数并不自动使它平均掉。
+
+\paragraph{函数值误差不控制导数}
+
+法向偏差小，不说明拟合片的切方向或曲率也准确。设真实流形在局部是直线$w=0$，观测沿$u$方向以间距$s$交替带有$+\sigma$与$-\sigma$的法向扰动。用插值样本的折线作拟合片，每一点的函数值误差不超过$\sigma$，斜率却到处是$\pm2\sigma/s$，如图~\ref{fig:mrec-fit}(c)。$s$越小，即样本越密，斜率误差反而越大。
+
+固定阶数的多项式不会这样振荡，但它与$\widetilde g$之差一般不是多项式，函数值上的误差界不能直接换成导数上的误差界。要从拟合片读出切方向或曲率，需要对导数单独分析误差，函数值逼近只是其中一个条件。
+
+\paragraph{多片的并不自动是流形}
+
+在每个样本附近各拟合一片以后，所有片的并未必是光滑流形。相邻两片在重叠区域可能不一致，留下台阶或缝隙；来自两个相近分支的片可能彼此穿过，并集出现自交，在交线附近根本不是流形。
+
+要拼成一个整体，至少需要相邻片的坐标域相互重叠，在重叠处的坐标转换光滑且一致，并用适当的方式把各片平滑地合成一张曲面。即使拼接成功，所得曲面与真实流形同胚，也需要额外的条件和论证。
+
+后面的同调恢复不以局部拟合为前提：第~\ref{sec:mrec-homology-recovery}节直接由样本的球并与复形得到拓扑信息，不需要先构造曲面。

@@ -37,6 +37,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -85,10 +90,9 @@ ax.text(.50, .22, "$A^T$：先作用 $y$", fontsize=7.5, color=GREEN, ha="center
 # 恒等等式
 ax.text(.50, .12, "$\\langle Ax,\\, y\\rangle_W = \\langle x,\\, A^Ty\\rangle_V$",
         fontsize=9, color=INK, ha="center")
-ax.text(.50, .03, "伴随把内积中的作用从一侧整体搬到另一侧",
-        fontsize=7.5, color=MUTED, ha="center")
+pass
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

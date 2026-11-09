@@ -2,11 +2,32 @@
 """Two linear-space analytic teaching charts. No sampled empirical or random data."""
 from pathlib import Path
 import sys
+import argparse
+import json
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
-sys.path.insert(0, str(ROOT/'figures/01-mathematical-preliminaries-upper/00-shared/comprehension-figures'))
-from support import figure, save, BLUE, GREEN, PURPLE, RED, INK, MUTED, GRID, BLUE_FILL, GREEN_FILL
+sys.path.insert(0, str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure, prepare_figure, style_record, BLUE, GREEN, PURPLE, RED, INK, MUTED, GRID, BLUE_FILL, GREEN_FILL
 D=Path(__file__).resolve().parent
+
+
+def figure(width_mm=112, height_mm=48):
+    configure()
+    return plt.subplots(figsize=(width_mm/25.4, height_mm/25.4), layout='constrained')
+
+
+def save(fig, directory, name, facts):
+    prepare_figure(fig)
+    for ext in ('pdf', 'svg', 'png'):
+        fig.savefig(directory/(name+'.'+ext), dpi=300)
+    record = {'name': name, 'method': 'Matplotlib',
+        'width_mm': fig.get_figwidth()*25.4, 'height_mm': fig.get_figheight()*25.4,
+        'facts': facts, 'style': style_record(), 'exports': ['PDF vector', 'SVG paths', 'PNG 300 dpi']}
+    (directory/(name+'.json')).write_text(json.dumps(record, ensure_ascii=False, indent=2)+'\n')
+    plt.close(fig)
 
 
 def conjugate_directions():
@@ -35,6 +56,12 @@ def jordan_accumulation():
 
 
 if __name__=='__main__':
-    for draw in [conjugate_directions,jordan_accumulation]:
-        draw()
-    print('Generated two linear-space analytic charts.')
+    drawings = {'linear-conjugate-directions': conjugate_directions,
+                'linear-jordan-accumulation': jordan_accumulation}
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--only', choices=list(drawings), help='Render only the selected figure.')
+    args = parser.parse_args()
+    for name, draw in drawings.items():
+        if args.only is None or args.only == name:
+            draw()
+            print('Generated', name)

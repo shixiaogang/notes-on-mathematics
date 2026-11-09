@@ -1,0 +1,432 @@
+% LSQR recursion follows Paige and Saunders, ACM TOMS 8 (1982), Algorithm LSQR.
+\section{LSQR算法}
+\label{sec:ls-lsqr}
+
+设$\bm A\in\mathbb R^{m\times d}$是一般的长方矩阵，可以秩亏，方程$\bm A\bm x=\bm b$也可以不相容。LSQR由Paige与Saunders提出\scite{math-paige1982lsqr}，它从零初值出发，在第$k$步取Krylov子空间$\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$中使原残差$\lVert\bm b-\bm A\bm x\rVert_2$最小的近似。
+
+本节紧接第~\ref{sec:ls-golub-kahan-application}节：那里已借Golub--Kahan双对角化把这个最小化化为双对角的小最小二乘问题。基与系数按递推~\eqref{eq:ls-golub-kahan-step}生成，所用的关系~\eqref{eq:ls-golub-kahan-relations}由定理~\ref{thm:ls-golub-kahan-relations}保证，下面不再重述；要讨论的是怎样随着双对角矩阵逐列增长，逐步解出这个小问题，并且只用短递推更新近似解。
+
+\subsection{主要思想}
+
+\paragraph{逐步长大的小问题}
+按第~\ref{sec:ls-golub-kahan-application}节，令$\bm x=\bm V_k\bm y$，则
+\[
+ \bm b-\bm A\bm x=\bm U_{k+1}(\beta_1\bm e_1-\bm B_k\bm y),
+\]
+而$\bm U_{k+1}$不改变长度，所以第$k$步的近似是
+\begin{equation}
+ \bm x_k=\bm V_k\bm y_k,\qquad
+ \bm y_k=\argmin_{\bm y\in\mathbb R^k}\lVert\beta_1\bm e_1-\bm B_k\bm y\rVert_2 .
+ \label{eq:ls-lsqr-subproblem}
+\end{equation}
+LSQR在每一步都要求出这个$\bm y_k$。
+
+这个小问题随步数长大。第$k$步的$(k+1)\times k$下双对角矩阵是
+\[
+ \bm B_k=
+ \begin{bmatrix}
+ \alpha_1&&&\\
+ \beta_2&\alpha_2&&\\
+ &\beta_3&\ddots&\\
+ &&\ddots&\alpha_k\\
+ &&&\beta_{k+1}
+ \end{bmatrix}.
+\]
+从第$k-1$步到第$k$步，双对角化只多算出一对系数$\alpha_k,\beta_{k+1}$，矩阵只在右侧添了一列、在下方添了一行：新的一列是$(0,\ldots,0,\alpha_k,\beta_{k+1})^\top$，只有最后两个元素非零，比MINRES的新列还少一个；新的一行只有末元素$\beta_{k+1}$。
+
+右端$\beta_1\bm e_1$只是多出一个零分量。与MINRES一样，前一步的消元结果可以沿用，只需处理新增的部分。
+
+\paragraph{沿用前一步的消元结果}
+小问题按第~\ref{sec:ls-qr-method}节的思路用正交变换化为上三角。这里沿用Paige与Saunders原文的反射式约定：第$i$个变换$\bm Q_i$只作用于第$i$、$i+1$两行，在这两行上的形式为
+\[
+ \begin{bmatrix}c_i&s_i\\s_i&-c_i\end{bmatrix},\qquad c_i^2+s_i^2=1 ,
+\]
+与第~\ref{sec:ls-minres}节的旋转只差第二行的符号，各量的绝对值与残差估计都不受影响。
+
+设前$k-1$步已经用$\bm Q_1,\ldots,\bm Q_{k-1}$把$\bm B_{k-1}$消成了上三角。由于$\bm B_{k-1}$是下双对角的，所得上三角矩阵是上双对角的：第$i$列只有对角元$\rho_i$与它上方的$\theta_i$。以$k=3$为例，前两列经过$\bm Q_1,\bm Q_2$后成为
+\[
+ \begin{bmatrix}
+ \rho_1&\theta_2\\
+ 0&\rho_2\\
+ 0&0\\
+ 0&0
+ \end{bmatrix}.
+\]
+以后的变换只作用于第$3$行及以下，这两列不再改变。
+
+\paragraph{新列只需两次变换}
+第$k$步添入的新列只在第$k$、$k+1$行非零。$\bm Q_1,\ldots,\bm Q_{k-2}$作用的行在新列中都是零，不起作用；真正改变新列的只有最后一个旧变换$\bm Q_{k-1}$，它作用于第$k-1$、$k$行，把$(0,\alpha_k)$变成$(\theta_k,\bar\rho_k)$。之后新列最下方还剩$\beta_{k+1}$，再构造新变换$\bm Q_k$把它消去。
+
+仍以$k=3$为例，新列是$(0,0,\alpha_3,\beta_4)^\top$，逐次变换的变化为
+\[
+ \begin{bmatrix}0\\0\\\alpha_3\\\beta_4\end{bmatrix}
+ \xrightarrow{\ \bm Q_2\ }
+ \begin{bmatrix}0\\\theta_3\\\bar\rho_3\\\beta_4\end{bmatrix}
+ \xrightarrow{\ \bm Q_3\ }
+ \begin{bmatrix}0\\\theta_3\\\rho_3\\0\end{bmatrix}.
+\]
+$\bm Q_1$作用于第$1$、$2$行，那里都是零，所以没有画出。整个矩阵在新变换之前与之后分别是
+\[
+ \begin{bmatrix}
+ \rho_1&\theta_2&0\\
+ 0&\rho_2&\theta_3\\
+ 0&0&\bar\rho_3\\
+ 0&0&\beta_4
+ \end{bmatrix}
+ \xrightarrow{\ \bm Q_3\ }
+ \begin{bmatrix}
+ \rho_1&\theta_2&0\\
+ 0&\rho_2&\theta_3\\
+ 0&0&\rho_3\\
+ 0&0&0
+ \end{bmatrix}.
+\]
+只有右下角的$\bar\rho_3$与$\beta_4$需要新变换处理，其余元素都沿用上一步的结果。
+
+实际计算中，$\bm Q_k$一构造出来，就顺手作用在下一列的$(0,\alpha_{k+1})$上，提前算出下一列的$\theta_{k+1}$与$\bar\rho_{k+1}$；同时作用在右端上。于是第$k$步的全部计算可以写成一个$2\times3$的块：
+\[
+ \begin{bmatrix}c_k&s_k\\s_k&-c_k\end{bmatrix}
+ \begin{bmatrix}\bar\rho_k&0&\bar\phi_k\\\beta_{k+1}&\alpha_{k+1}&0\end{bmatrix}
+ =\begin{bmatrix}\rho_k&\theta_{k+1}&\phi_k\\0&\bar\rho_{k+1}&\bar\phi_{k+1}\end{bmatrix},
+\]
+三列分别是本列、下一列与右端。逐个元素比较，得到
+\begin{equation}
+ \begin{gathered}
+ \rho_k=\sqrt{\bar\rho_k^2+\beta_{k+1}^2},\qquad
+ c_k=\frac{\bar\rho_k}{\rho_k},\qquad s_k=\frac{\beta_{k+1}}{\rho_k},\\
+ \theta_{k+1}=s_k\alpha_{k+1},\qquad
+ \bar\rho_{k+1}=-c_k\alpha_{k+1},\\
+ \phi_k=c_k\bar\phi_k,\qquad
+ \bar\phi_{k+1}=s_k\bar\phi_k .
+ \end{gathered}
+ \label{eq:ls-lsqr-rotation}
+\end{equation}
+第一行构造$\bm Q_k$，使它把$(\bar\rho_k,\beta_{k+1})$变成$(\rho_k,0)$；第二行是$\bm Q_k$作用于下一列；第三行是$\bm Q_k$作用于右端。起步时第一列没有旧变换作用，$\bar\rho_1=\alpha_1$，$\bar\phi_1=\beta_1$。
+
+\paragraph{右端与残差}
+右端的变化与MINRES相同：第$k+1$个分量起初为零，只有$\bm Q_k$才把非零值带下来。以$k=3$为例，右端在$\bm Q_3$前后分别是
+\[
+ \begin{bmatrix}\phi_1\\\phi_2\\\bar\phi_3\\0\end{bmatrix}
+ \xrightarrow{\ \bm Q_3\ }
+ \begin{bmatrix}\phi_1\\\phi_2\\\phi_3\\\bar\phi_4\end{bmatrix}.
+\]
+变换保长，消元后的小问题是
+\[
+ \min_{\bm y}\left\lVert\begin{bmatrix}\phi_1\\\vdots\\\phi_k\\\bar\phi_{k+1}\end{bmatrix}-\begin{bmatrix}\bm R_k\\\bm 0^\top\end{bmatrix}\bm y\right\rVert_2 ,
+\]
+其中$\bm R_k$是对角元$\rho_i$、上对角元$\theta_i$的上双对角矩阵。前$k$个方程可由$\bm R_k$精确满足，记$\bm f_k=(\phi_1,\ldots,\phi_k)^\top$，即
+\[
+ \bm y_k=\bm R_k^{-1}\bm f_k ;
+\]
+最后一个分量$\bar\phi_{k+1}$无法消去，所以最小残差长度就是$\lvert\bar\phi_{k+1}\rvert$。
+
+记$\bm r_k=\bm b-\bm A\bm x_k$。原残差的长度就是这个最小残差；正规残差$\bm A^\top\bm r_k$由关系~\eqref{eq:ls-golub-kahan-relations}的第二式化为$\bm v_{k+1}$方向上的一个分量，其系数也只用到本轮的标量。两者分别为
+\begin{equation}
+ \lVert\bm r_k\rVert_2=\lvert\bar\phi_{k+1}\rvert,\qquad
+ \lVert\bm A^\top\bm r_k\rVert_2=\lvert\bar\phi_{k+1}\rvert\,\alpha_{k+1}\lvert c_k\rvert .
+ \label{eq:ls-lsqr-estimates}
+\end{equation}
+两个估计不必形成残差即可用于停止检查；有限精度下会偏离真实值，仍须重算真实残差复核。
+
+\paragraph{增量求解的两个好处}
+与MINRES一样，增量求解有两个好处。
+
+其一，每步的工作量固定：只作用一个旧变换（实际上已在上一步提前完成）、构造一个新变换、更新右端的两个分量；加上一步双对角化与下面的向量更新，每步的工作量与存储都与步数无关。
+
+其二，残差随消元一起得到：原残差与正规残差的长度都由式~\eqref{eq:ls-lsqr-estimates}的几个标量读出，不必形成近似解。
+
+\paragraph{方向与解}
+近似解是$\bm x_k=\bm V_k\bm R_k^{-1}\bm f_k$。
+
+$\bm R_k$与$\bm f_k$在下一步只是各添一行一列和一个分量，已有的元素不变，所以不必保存整个$\bm V_k$再作回代，改为在原空间中累加。把$\bm V_k\bm R_k^{-1}$的第$i$列写成$\bm w_i/\rho_i$，由$\bm R_k$的上双对角形，比较$(\bm V_k\bm R_k^{-1})\bm R_k=\bm V_k$两边的第$k+1$列，
+\[
+ \frac{\theta_{k+1}}{\rho_k}\bm w_k+\bm w_{k+1}=\bm v_{k+1},
+\]
+得到方向的递推
+\begin{equation}
+ \bm w_1=\bm v_1,\qquad \bm w_{k+1}=\bm v_{k+1}-\frac{\theta_{k+1}}{\rho_k}\bm w_k ,
+ \label{eq:ls-lsqr-direction}
+\end{equation}
+而解按
+\begin{equation}
+ \bm x_k=\bm x_{k-1}+\frac{\phi_k}{\rho_k}\bm w_k
+ \label{eq:ls-lsqr-update}
+\end{equation}
+逐步累加，与小问题的完整回代给出同一个$\bm x_k$。$\bm R_k$只有两条非零对角线，方向只需保留一个旧方向，比MINRES的两个还少。定理~\ref{thm:ls-lsqr-recursion}说明，按式~\eqref{eq:ls-lsqr-rotation}—\eqref{eq:ls-lsqr-estimates}逐步计算，正好解出小问题~\eqref{eq:ls-lsqr-subproblem}。
+
+\subsection{算法实现}
+
+每轮先作一步双对角化，得到$\bm B_k$的新一列，再作一次正交变换延续三角化，然后更新解与方向，并读出两个残差估计。算法只需计算$\bm A$乘向量与$\bm A^\top$乘向量，输出近似解$\bm x$；预先选定的参数是阈值和步数上限$K$：以最小二乘为目标时，用正规残差的绝对阈值$\tau_n\ge0$，以相容方程为目标时，用第~\ref{sec:ls-stationary-stopping}节的$\mathrm{atol},\mathrm{rtol}$，每次候选终止前都用真实残差复核。
+
+下面写出计算中用到的变量、它们怎样初始化、每轮怎样更新。每一步使用第~\ref{sec:ls-bidiagonal-iteration}节的不相容长方系统进行演示：
+\[
+ \bm A=\begin{bmatrix}1&0\\0&2\\0&0\end{bmatrix},\qquad
+ \bm b=\begin{bmatrix}1\\1\\1\end{bmatrix},
+\]
+其最小二乘解是$\hat{\bm x}=(1,1/2)^\top$，最优残差为$(0,0,1)^\top$。双对角化的中间向量已在那里逐步给出，这里只列出求解器用到的量；第~\ref{sec:ls-lsmr}节继续用这个例子。
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm u\in\mathbb R^m$、$\bm v\in\mathbb R^d$：双对角化的当前基向量，连同那里的工作向量$\bm p,\bm q$按第~\ref{sec:ls-bidiagonal-iteration}节保存与更新；不保存整组基。
+ \item $\alpha,\beta$：双对角化本轮给出的系数$\alpha_{k+1},\beta_{k+1}$，即$\bm B_k$新一列的两个非零元，$\alpha_k$留到本轮扣除时使用。
+ \item $\bar\rho,\bar\phi$：尚未定下的对角元$\bar\rho_k$与右端分量$\bar\phi_k$，由上一轮的变换留下。
+ \item $\rho_k,\theta_{k+1},\phi_k$与$c_k,s_k$：本轮正交变换定下的$\bm R_k$的元素、右端分量与变换系数，用完即可丢弃。
+ \item $\bm w\in\mathbb R^d$：当前方向$\bm w_k$。
+ \item $\bm x\in\mathbb R^d$：当前近似解$\bm x_k$。
+ \item $k$：轮次。
+\end{itemize}
+
+\paragraph{初始化}
+若$K=0$，直接输出$\bm x_0=\bm0$。否则按式~\eqref{eq:ls-golub-kahan-start}作双对角化的起步，得到$\beta_1,\bm u_1$与$\alpha_1,\bm v_1$。$\beta_1=0$时$\bm b=\bm0$，$\alpha_1=0$时$\bm A^\top\bm b=\bm0$，零向量都已满足正规方程，输出$\bm x_0$。
+
+初值的原残差是$\bm b$，正规残差$\bm A^\top\bm b=\alpha_1\beta_1\bm v_1$的长度是$\alpha_1\beta_1$，所以初值检查与起步共用同一次$\bm A^\top$乘法；已满足条件时也输出$\bm x_0$。
+
+否则把近似解初始化为零向量，方向初始化为$\bm v_1$，即式~\eqref{eq:ls-lsqr-direction}的第一个方向，两个带横线的量初始化为式~\eqref{eq:ls-lsqr-rotation}的起步值，轮次初始化为$1$：
+\[
+ \begin{gathered}
+ \bm x_0=\bm0,\qquad \bm w_1=\bm v_1,\\
+ \bar\rho_1=\alpha_1,\qquad \bar\phi_1=\beta_1,\qquad k=1 .
+ \end{gathered}
+\]
+例中$\beta_1=\sqrt3$，$\alpha_1=\sqrt{5/3}$，于是
+\[
+ \bm w_1=\bm v_1=\frac1{\sqrt5}\begin{bmatrix}1\\2\end{bmatrix},\qquad
+ \bar\rho_1=\sqrt{\frac53},\qquad \bar\phi_1=\sqrt3 .
+\]
+初始正规残差的长度$\alpha_1\beta_1=\sqrt5$，未达到最小二乘目标。
+
+\paragraph{每轮更新}
+在第$k$轮：
+\begin{enumerate}
+ \item \textbf{双对角化一步。}按递推~\eqref{eq:ls-golub-kahan-step}先作一次$\bm A$乘法，再作一次$\bm A^\top$乘法，得到
+ \[
+  \begin{gathered}
+  \beta_{k+1}\bm u_{k+1}=\bm A\bm v_k-\alpha_k\bm u_k,\\
+  \alpha_{k+1}\bm v_{k+1}=\bm A^\top\bm u_{k+1}-\beta_{k+1}\bm v_k ,
+  \end{gathered}
+ \]
+ 每个系数取右边向量的长度。$\beta_{k+1}=0$时不生成$\bm u_{k+1}$，并约定$\alpha_{k+1}=0$；$\alpha_{k+1}=0$时不生成$\bm v_{k+1}$。出现零系数时本轮后面的步骤照常完成，只跳过不存在的新基向量。
+
+ 例中第一轮
+ \[
+  \begin{gathered}
+  \beta_2=\frac{\sqrt{78}}{3\sqrt5}\approx1.3166,\qquad
+  \alpha_2=\frac{18\sqrt5}{5\sqrt{78}}\approx0.9115,\\
+  \bm v_2=\frac1{\sqrt5}\begin{bmatrix}-2\\1\end{bmatrix}.
+  \end{gathered}
+ \]
+
+ \item \textbf{正交变换。}由$(\bar\rho_k,\beta_{k+1})$算出变换，再作用于$\alpha_{k+1}$与$\bar\phi_k$，即式~\eqref{eq:ls-lsqr-rotation}：
+ \[
+  \begin{gathered}
+  \rho_k=\sqrt{\bar\rho_k^2+\beta_{k+1}^2},\qquad c_k=\frac{\bar\rho_k}{\rho_k},\qquad s_k=\frac{\beta_{k+1}}{\rho_k},\\
+  \theta_{k+1}=s_k\alpha_{k+1},\qquad \bar\rho_{k+1}=-c_k\alpha_{k+1},\\
+  \phi_k=c_k\bar\phi_k,\qquad \bar\phi_{k+1}=s_k\bar\phi_k .
+  \end{gathered}
+ \]
+ 例中第一轮
+ \[
+  \rho_1=\sqrt{\frac{17}5}\approx1.8439,\qquad c_1=\frac5{\sqrt{51}},\qquad s_1=\sqrt{\frac{26}{51}},
+ \]
+ 于是
+ \[
+  \begin{gathered}
+  \theta_2=\frac6{\sqrt{85}},\qquad \bar\rho_2=-\sqrt{\frac{90}{221}},\\
+  \phi_1=\frac5{\sqrt{17}},\qquad \bar\phi_2=\sqrt{\frac{26}{17}} .
+  \end{gathered}
+ \]
+
+ \item \textbf{更新解。}沿当前方向前进，即式~\eqref{eq:ls-lsqr-update}：
+ \[
+  \bm x_k=\bm x_{k-1}+\frac{\phi_k}{\rho_k}\bm w_k .
+ \]
+ 例中第一轮$\phi_1/\rho_1=5\sqrt5/17$，
+ \[
+  \bm x_1=\frac{5\sqrt5}{17}\cdot\frac1{\sqrt5}\begin{bmatrix}1\\2\end{bmatrix}=\frac5{17}\begin{bmatrix}1\\2\end{bmatrix}.
+ \]
+
+ \item \textbf{更新方向。}若生成了$\bm v_{k+1}$，按式~\eqref{eq:ls-lsqr-direction}计算
+ \[
+  \bm w_{k+1}=\bm v_{k+1}-\frac{\theta_{k+1}}{\rho_k}\bm w_k .
+ \]
+ 这一步排在更新解之后，因为两者都要用旧的$\bm w_k$。
+
+ 例中第一轮$\theta_2/\rho_1=6/17$，
+ \[
+  \bm w_2=\bm v_2-\frac6{17}\bm v_1=\frac1{17\sqrt5}\begin{bmatrix}-40\\5\end{bmatrix}.
+ \]
+ 然后令$k\leftarrow k+1$。
+
+ 例中第二轮双对角化给出
+ \[
+  \beta_3=\sqrt{\frac{10}{13}}\approx0.8771,\qquad \alpha_3=0 .
+ \]
+ 未知量空间只有二维，已被$\bm v_1,\bm v_2$取尽，不再生成$\bm v_3$与$\bm w_3$。正交变换得
+ \[
+  \rho_2=\sqrt{\frac{20}{17}}\approx1.0847,\qquad c_2=-\frac3{\sqrt{26}},\qquad s_2=\sqrt{\frac{17}{26}},
+ \]
+ 以及
+ \[
+  \phi_2=-\frac3{\sqrt{17}},\qquad \bar\phi_3=1,\qquad \theta_3=\bar\rho_3=0 .
+ \]
+ 由$\phi_2/\rho_2=-3/(2\sqrt5)$更新解，
+ \[
+  \bm x_2=\bm x_1+\frac{\phi_2}{\rho_2}\bm w_2
+  =\frac5{17}\begin{bmatrix}1\\2\end{bmatrix}+\begin{bmatrix}12/17\\-3/34\end{bmatrix}
+  =\begin{bmatrix}1\\1/2\end{bmatrix}.
+ \]
+
+ \item \textbf{停止。}按式~\eqref{eq:ls-lsqr-estimates}读出原残差与正规残差的估计。相应的估计达到阈值、本轮出现零系数或已做满$K$轮时，按第~\ref{sec:ls-stationary-stopping}节用真实残差$\bm r=\bm b-\bm A\bm x_k$与$\bm A^\top\bm r$按相容方程或一般最小二乘的目标复核，然后输出$\bm x_k$；否则进入下一轮。
+
+ 零系数时估计也提示结束：$\beta_{k+1}=0$使$s_k=0$，原残差估计为零；$\alpha_{k+1}=0$使正规残差估计为零。出现零$\rho_k$、明显失去正交性或残差长期不降时，分别报告相应的原因，不把估计当成无需复核的精确值。
+
+ 例中第一轮两个估计为
+ \[
+  \lvert\bar\phi_2\rvert=\sqrt{\frac{26}{17}}\approx1.2367,\qquad
+  \lvert\bar\phi_2\rvert\,\alpha_2\lvert c_1\rvert=\frac{6\sqrt5}{17}\approx0.7892 ,
+ \]
+ 直接计算
+ \[
+  \bm r_1=\bm b-\bm A\bm x_1=\frac1{17}\begin{bmatrix}12\\-3\\17\end{bmatrix},\qquad
+  \bm A^\top\bm r_1=\frac1{17}\begin{bmatrix}12\\-6\end{bmatrix},
+ \]
+ 两者的长度正是这两个值。正规残差未达到目标，继续。
+
+ 第二轮出现零系数$\alpha_3=0$，估计为$\lvert\bar\phi_3\rvert=1$与$0$。复核得
+ \[
+  \bm r_2=\begin{bmatrix}0\\0\\1\end{bmatrix},\qquad \bm A^\top\bm r_2=\bm0 ,
+ \]
+ 退出迭代。
+\end{enumerate}
+
+最终得到的近似解就是最小二乘解。例中两轮的变换给出
+\[
+ \begin{gathered}
+ \bm R_2=\begin{bmatrix}\rho_1&\theta_2\\0&\rho_2\end{bmatrix}
+ =\begin{bmatrix}\sqrt{17/5}&6/\sqrt{85}\\0&\sqrt{20/17}\end{bmatrix},\\
+ \bm f_2=\begin{bmatrix}\phi_1\\\phi_2\end{bmatrix}=\frac1{\sqrt{17}}\begin{bmatrix}5\\-3\end{bmatrix},
+ \end{gathered}
+\]
+回代得
+\[
+ \bm y_2=\bm R_2^{-1}\bm f_2=\begin{bmatrix}2/\sqrt5\\-3/(2\sqrt5)\end{bmatrix},
+\]
+于是
+\[
+ \bm x_2=\bm V_2\bm y_2=\begin{bmatrix}1\\1/2\end{bmatrix}=\hat{\bm x},
+\]
+与逐步累加的结果相同。
+
+也可以独立核对：小问题~\eqref{eq:ls-lsqr-subproblem}的正规方程为$\bm B_2^\top\bm B_2\bm y=\alpha_1\beta_1\bm e_1$，其中
+\[
+ \bm B_2^\top\bm B_2=\begin{bmatrix}17/5&6/5\\6/5&8/5\end{bmatrix},
+\]
+解出的正是同一个$\bm y_2$。最小二乘已经完成，原残差停在长度$1$上，这就是$\bm b$中无法拟合的第三个分量。
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+先说明递推确实解出了小问题~\eqref{eq:ls-lsqr-subproblem}，并给出残差估计~\eqref{eq:ls-lsqr-estimates}的来源。
+
+\begin{theorem}[LSQR递推的正确性]
+\label{thm:ls-lsqr-recursion}
+在精确算术中，设双对角化在第$k$轮之前没有终止。则按上述递推得到的$\bm x_k$等于$\bm V_k\bm y_k$，其中$\bm y_k$是小问题~\eqref{eq:ls-lsqr-subproblem}的解，即$\bm x_k$是$\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$中使$\lVert\bm b-\bm A\bm x\rVert_2$最小的点；并且
+\[
+ \lVert\bm r_k\rVert_2=\lvert\bar\phi_{k+1}\rvert,\qquad
+ \lVert\bm A^\top\bm r_k\rVert_2=\lvert\bar\phi_{k+1}\rvert\,\alpha_{k+1}\lvert c_k\rvert .
+\]
+\end{theorem}
+
+\begin{proof}
+证明分三步：先把原问题化为小问题，再说明逐列变换与短递推解出了小问题，最后推出两个残差估计。
+
+\emph{化为小问题。}由定理~\ref{thm:ls-golub-kahan-relations}，$\operatorname{range}(\bm V_k)=\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)$，且关系~\eqref{eq:ls-golub-kahan-relations}成立。对$\bm x=\bm V_k\bm y$，由其第一式与$\bm b=\bm U_{k+1}\beta_1\bm e_1$，
+\[
+ \bm b-\bm A\bm V_k\bm y=\bm U_{k+1}(\beta_1\bm e_1-\bm B_k\bm y),
+\]
+$\bm U_{k+1}$的列标准正交，所以原残差在该子空间上的最小化就是小问题~\eqref{eq:ls-lsqr-subproblem}。
+
+\emph{小问题的解。}记前$k$次正交变换之积为$\bm Q_k$。每轮的新列只在第$k$、$k+1$行非零，此前的变换都不触及它的第$k+1$行，所以一次新变换就能延续三角化，归纳得到
+\[
+ \bm Q_k\begin{bmatrix}\bm B_k&\beta_1\bm e_1\end{bmatrix}
+ =\begin{bmatrix}\bm R_k&\bm f_k\\ \bm0^\top&\bar\phi_{k+1}\end{bmatrix},
+\]
+其中
+\[
+ \bm R_k=\begin{bmatrix}
+ \rho_1&\theta_2&&\\
+ &\rho_2&\ddots&\\
+ &&\ddots&\theta_k\\
+ &&&\rho_k
+ \end{bmatrix},\qquad
+ \bm f_k=\begin{bmatrix}\phi_1\\\vdots\\\phi_k\end{bmatrix}.
+\]
+$\bm Q_k$正交，所以
+\[
+ \lVert\beta_1\bm e_1-\bm B_k\bm y\rVert_2^2=\lVert\bm f_k-\bm R_k\bm y\rVert_2^2+\bar\phi_{k+1}^2 ,
+\]
+最小点是$\bm y_k=\bm R_k^{-1}\bm f_k$，最小值的平方根$\lvert\bar\phi_{k+1}\rvert$就是$\lVert\bm r_k\rVert_2$。
+
+把$\bm V_k\bm R_k^{-1}$的第$i$列记作$\bm w_i/\rho_i$，比较$(\bm V_k\bm R_k^{-1})\bm R_k=\bm V_k$两边的第$i+1$列，
+\[
+ \frac{\theta_{i+1}}{\rho_i}\bm w_i+\bm w_{i+1}=\bm v_{i+1},
+\]
+第一列给出$\bm w_1=\bm v_1$，这就是方向递推~\eqref{eq:ls-lsqr-direction}。于是
+\[
+ \bm x_k=\bm V_k\bm R_k^{-1}\bm f_k=\sum_{i=1}^k\frac{\phi_i}{\rho_i}\bm w_i ;
+\]
+$\phi_i,\rho_i,\bm w_i$在后续轮次中不再改动，回代化为逐步累加~\eqref{eq:ls-lsqr-update}。
+
+\emph{正规残差。}记小问题的残差为$\bm g_k=\beta_1\bm e_1-\bm B_k\bm y_k$，最优性给出$\bm B_k^\top\bm g_k=\bm0$。由关系~\eqref{eq:ls-golub-kahan-relations}的第二式，
+\[
+ \bm A^\top\bm r_k=\bm A^\top\bm U_{k+1}\bm g_k=\alpha_{k+1}(\bm e_{k+1}^\top\bm g_k)\bm v_{k+1}.
+\]
+又$\bm g_k=\bm Q_k^\top(0,\ldots,0,\bar\phi_{k+1})^\top$，只有最后一次变换触及第$k+1$个分量，所以
+\[
+ \bm e_{k+1}^\top\bm g_k=-c_k\bar\phi_{k+1} ,
+\]
+代入上式即得正规残差的估计。
+\end{proof}
+
+正常步骤中各分母$\rho_k$都为正：$\bar\rho_1=\alpha_1>0$；若$\bar\rho_k\neq0$，则$\rho_k\ge\lvert\bar\rho_k\rvert>0$且$c_k\neq0$，而只要继续迭代就有$\alpha_{k+1}>0$，于是$\bar\rho_{k+1}=-c_k\alpha_{k+1}\neq0$。归纳可知，除非双对角化已经给出零系数而结束，递推中不会出现零除数。
+
+\paragraph{残差的单调性与选出的解}
+候选空间逐轮嵌套，所以精确算术中原残差不增；正规残差没有这样的保证，可能某一步上升。每个$\bm v_i$都由$\bm A^\top$作用后再作组合得到，零初值使各步近似都留在$\operatorname{range}(\bm A^\top)$中。一旦达到正规方程，$\bm x_k$就是与$\operatorname{null}(\bm A)$正交的最小二乘解，即第~\ref{sec:ls-pseudoinverse}节的$\bm A^\dagger\bm b$；$\alpha_{k+1}=0$正是这种情形。
+
+\paragraph{与正规方程上CG的关系}
+LSQR的候选空间正是正规方程上CG的Krylov空间，两者的近似也相同。
+
+\begin{theorem}[LSQR与正规方程上的CG]
+\label{thm:ls-lsqr-cg-equivalence}
+在精确算术中，只要两种方法都尚未终止，LSQR的第$k$步近似就等于对正规方程$\bm A^\top\bm A\bm x=\bm A^\top\bm b$从$\bm x_0=\bm0$施行第~\ref{sec:ls-conjugate-gradient}节CG的第$k$步近似。
+\end{theorem}
+
+\begin{proof}
+只需说明两种方法在同一个子空间中最小化同一个函数，且最小点唯一。记$\hat{\bm x}=\bm A^\dagger\bm b$，$\hat{\bm r}=\bm b-\bm A\hat{\bm x}$。
+
+\emph{CG的准则。}CG的各步都在$\mathcal K_k(\bm A^\top\bm A,\bm A^\top\bm b)\subseteq\operatorname{range}(\bm A^\top)$中，$\bm A^\top\bm A$在这个子空间上正定，所以由定理~\ref{thm:ls-cg-convergence}，CG的第$k$步是该空间中使
+\[
+ \lVert\bm x-\hat{\bm x}\rVert_{\bm A^\top\bm A}^2=\lVert\bm A(\bm x-\hat{\bm x})\rVert_2^2
+\]
+最小的点。
+
+\emph{LSQR的准则。}$\hat{\bm r}$与$\operatorname{range}(\bm A)$正交，由勾股定理
+\[
+ \lVert\bm b-\bm A\bm x\rVert_2^2=\lVert\hat{\bm r}\rVert_2^2+\lVert\bm A(\bm x-\hat{\bm x})\rVert_2^2 ,
+\]
+右边第一项与$\bm x$无关，所以LSQR在同一空间中最小化的也是$\lVert\bm A(\bm x-\hat{\bm x})\rVert_2$。
+
+\emph{唯一性。}$\bm A$在$\operatorname{range}(\bm A^\top)$上是单射，这个函数在该子空间上的最小点唯一，所以两者相等。
+\end{proof}
+
+\paragraph{收敛速度与数值敏感度}
+由这一等价，CG的收敛界可以直接搬到LSQR：迭代面对的是$\bm A^\top\bm A$，收敛快慢由$\bm A$的非零奇异值的平方的分布决定。$\bm A$满列秩时$\kappa_2(\bm A^\top\bm A)=\kappa_2(\bm A)^2$，CG界中的$\sqrt\kappa$正好是$\kappa_2(\bm A)$，于是
+\begin{equation}
+ \lVert\bm A(\bm x_k-\hat{\bm x})\rVert_2\le2\Bigl(\frac{\kappa_2(\bm A)-1}{\kappa_2(\bm A)+1}\Bigr)^k\lVert\bm A\hat{\bm x}\rVert_2 .
+ \label{eq:ls-lsqr-convergence-bound}
+\end{equation}
+
+LSQR不形成Gram矩阵，避免了第~\ref{sec:ls-normal-equations-method}节在形成$\bm A^\top\bm A$时丢失信息，但这并不消除原问题的病态性：$\kappa_2(\bm A)$很大时上式的因子仍接近$1$，问题对数据的敏感度也不因算法改变。有限精度下基的正交性和两个残差估计都会偏离精确值，仍须用真实残差复核。
+
+\paragraph{计算代价}
+每轮的核心工作是一次$\bm A$乘向量和一次$\bm A^\top$乘向量，另加十几次标量运算、一次正交变换和两次长度为$d$的向量更新；需要保存的是$\bm u$和$\bm v,\bm w,\bm x$，工作存储为$O(m+d)$。LSQR也能求解相容方程，但每轮多一次转置作用，是否比方阵专用的方法划算，要结合矩阵结构与精度目标比较。

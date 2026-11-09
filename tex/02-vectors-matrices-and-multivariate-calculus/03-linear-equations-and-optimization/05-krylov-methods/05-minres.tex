@@ -1,0 +1,409 @@
+\section{最小残差法}
+\label{sec:ls-minres}
+
+设$\bm A$实对称非奇异，允许不定。这时$\bm u^\top\bm A\bm u$可以为负，误差的能量范数没有定义，原残差长度却始终有意义。\term{最小残差法}（minimal residual method，MINRES）在第$k$步取$\bm x_0+\mathcal K_k$中使$\lVert\bm b-\bm A\bm x\rVert_2$最小的近似，即第~\ref{sec:ls-krylov-selection-criteria}节的极小残差条件。
+
+它紧接第~\ref{sec:ls-lanczos-application}节的应用：Lanczos过程（递推~\eqref{eq:ls-lanczos-step}）已经给出$\mathcal K_k$的标准正交基$\bm V_k$与三对角矩阵$\overline{\bm T}_k$，并把问题化为$(k+1)\times k$的小型最小二乘问题；对称不定时$\bm T_k$可能奇异，所以不解Galerkin方程~\eqref{eq:ls-lanczos-projected-system}，而在这个小问题上求残差最小的坐标。本节说明怎样随Lanczos过程逐列求解它，使每轮的工作量与存储都不随步数增长。
+
+\subsection{主要思想}
+
+\paragraph{逐步长大的小问题}
+把候选写成$\bm x=\bm x_0+\bm V_k\bm y$，$\bm y\in\mathbb R^k$是子空间中的坐标。记$\beta=\lVert\bm r_0\rVert_2$，则$\bm r_0=\beta\bm V_{k+1}\bm e_1$，由关系~\eqref{eq:ls-arnoldi-tridiagonal}，
+\[
+ \bm b-\bm A\bm x=\bm r_0-\bm A\bm V_k\bm y=\bm V_{k+1}(\beta\bm e_1-\overline{\bm T}_k\bm y).
+\]
+定理~\ref{thm:ls-arnoldi-lanczos}保证$\bm V_{k+1}$的列标准正交，不改变长度，于是
+\begin{equation}
+ \lVert\bm b-\bm A\bm x\rVert_2=\lVert\beta\bm e_1-\overline{\bm T}_k\bm y\rVert_2 .
+ \label{eq:ls-minres-small-problem}
+\end{equation}
+MINRES在每一步都要求出使右端最小的$\bm y$。
+
+这个小问题随步数长大。第$k$步的$(k+1)\times k$矩阵是
+\[
+ \overline{\bm T}_k=
+ \begin{bmatrix}
+ a_1&\gamma_1&&&\\
+ \gamma_1&a_2&\gamma_2&&\\
+ &\gamma_2&a_3&\ddots&\\
+ &&\ddots&\ddots&\gamma_{k-1}\\
+ &&&\gamma_{k-1}&a_k\\
+ &&&&\gamma_k
+ \end{bmatrix}.
+\]
+从第$k-1$步到第$k$步，Lanczos过程只多算出一对系数$a_k,\gamma_k$，矩阵只在右侧添了一列、在下方添了一行：新的一列是$(0,\ldots,0,\gamma_{k-1},a_k,\gamma_k)^\top$，只有最后三个元素非零；新的一行只有末元素$\gamma_k$。
+
+如果每一步都对整个$\overline{\bm T}_k$重新作一次QR分解，工作量会随$k$增长，而且要保存全部基向量才能还原解。但矩阵每步只变了这么一点，前一步的分解结果完全可以沿用，只需处理新增的部分。下面说明这种增量求解怎样进行。
+
+\paragraph{沿用前一步的消元结果}
+小问题按第~\ref{sec:ls-qr-method}节的思路用Givens旋转化为上三角。第$j$个旋转$\bm G_j$只作用于第$j$、$j+1$两行，在这两行上的形式为
+\begin{equation}
+ \begin{bmatrix}c_j&s_j\\-s_j&c_j\end{bmatrix},\qquad c_j^2+s_j^2=1 .
+ \label{eq:ls-minres-givens}
+\end{equation}
+设前$k-1$步已经用$\bm G_1,\ldots,\bm G_{k-1}$把$\overline{\bm T}_{k-1}$消成了上三角。由于$\overline{\bm T}_{k-1}$是三对角的，所得上三角矩阵每列至多三个非零元，记第$j$列为$\epsilon_j,\delta_j,\rho_j$，位于第$j-2,j-1,j$行。以$k=4$为例，前三列经过$\bm G_1,\bm G_2,\bm G_3$后成为
+\[
+ \begin{bmatrix}
+ \rho_1&\delta_2&\epsilon_3\\
+ 0&\rho_2&\delta_3\\
+ 0&0&\rho_3\\
+ 0&0&0
+ \end{bmatrix}.
+\]
+以后的旋转只作用于第$4$行及以下，这三列不再改变。
+
+\paragraph{新列只需三次旋转}
+第$k$步添入的新列只在第$k-1$、$k$、$k+1$行非零。依次把旧旋转作用上去：$\bm G_1,\ldots,\bm G_{k-3}$作用的行在新列中都是零，不起作用；真正改变新列的只有最后两个旧旋转$\bm G_{k-2}$与$\bm G_{k-1}$。之后，新列最下方还剩一个非零元$\gamma_k$，再构造一个新旋转$\bm G_k$把它消去。
+
+仍以$k=4$为例，新列是$(0,0,\gamma_3,a_4,\gamma_4)^\top$，逐次旋转的变化为
+\[
+ \begin{bmatrix}0\\0\\\gamma_3\\a_4\\\gamma_4\end{bmatrix}
+ \xrightarrow{\ \bm G_2\ }
+ \begin{bmatrix}0\\\epsilon_4\\\theta\\a_4\\\gamma_4\end{bmatrix}
+ \xrightarrow{\ \bm G_3\ }
+ \begin{bmatrix}0\\\epsilon_4\\\delta_4\\\bar\delta\\\gamma_4\end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}0\\\epsilon_4\\\delta_4\\\rho_4\\0\end{bmatrix}.
+\]
+$\bm G_1$作用于第$1$、$2$行，那里都是零，所以没有画出。整个矩阵在新旋转之前与之后分别是
+\[
+ \begin{bmatrix}
+ \rho_1&\delta_2&\epsilon_3&0\\
+ 0&\rho_2&\delta_3&\epsilon_4\\
+ 0&0&\rho_3&\delta_4\\
+ 0&0&0&\bar\delta\\
+ 0&0&0&\gamma_4
+ \end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}
+ \rho_1&\delta_2&\epsilon_3&0\\
+ 0&\rho_2&\delta_3&\epsilon_4\\
+ 0&0&\rho_3&\delta_4\\
+ 0&0&0&\rho_4\\
+ 0&0&0&0
+ \end{bmatrix}.
+\]
+只有右下角的$\bar\delta$与$\gamma_4$需要新旋转处理，其余元素都沿用上一步的结果。
+
+一般地，把每个$2\times2$旋转分别作用于新列的相应两个分量，就得到第$j$步的计算公式：
+\begin{equation}
+ \begin{gathered}
+ \epsilon_j=s_{j-2}\gamma_{j-1},\qquad \theta=c_{j-2}\gamma_{j-1},\\
+ \delta_j=c_{j-1}\theta+s_{j-1}a_j,\qquad
+ \bar\delta=-s_{j-1}\theta+c_{j-1}a_j,\\
+ \rho_j=\sqrt{\bar\delta^2+\gamma_j^2},\qquad
+ c_j=\bar\delta/\rho_j,\qquad s_j=\gamma_j/\rho_j .
+ \end{gathered}
+ \label{eq:ls-minres-rotation}
+\end{equation}
+第一行是$\bm G_{j-2}$作用于$(0,\gamma_{j-1})$，第二行是$\bm G_{j-1}$作用于$(\theta,a_j)$，第三行选取$c_j,s_j$使$\bm G_j$把$(\bar\delta,\gamma_j)$变成$(\rho_j,0)$。前两步尚不存在的旧旋转取单位变换$(c,s)=(1,0)$。
+
+\paragraph{右端与残差}
+同一组旋转也作用于右端$\beta\bm e_1$。它的第$j+1$个分量起初为零，只有第$j$个旋转才把非零值带下来。把第$j$个分量在$\bm G_j$作用之前的值记为$\bar g_j$，$\bar g_1=\beta$，则
+\begin{equation}
+ g_j=c_j\bar g_j,\qquad \bar g_{j+1}=-s_j\bar g_j .
+ \label{eq:ls-minres-rhs}
+\end{equation}
+以$k=4$为例，右端在$\bm G_4$前后分别是
+\[
+ \begin{bmatrix}g_1\\g_2\\g_3\\\bar g_4\\0\end{bmatrix}
+ \xrightarrow{\ \bm G_4\ }
+ \begin{bmatrix}g_1\\g_2\\g_3\\g_4\\\bar g_5\end{bmatrix}.
+\]
+旋转不改变长度，旋转后的小问题是使
+\[
+ \bigl\lVert(g_1,\ldots,g_k,\bar g_{k+1})^\top-[\bm R_k;\bm 0]\bm y\bigr\rVert_2
+\]
+最小。前$k$个方程可由上三角的$\bm R_k$精确满足，最后一个分量$\bar g_{k+1}$无论$\bm y$取什么都无法消去，所以最小残差长度就是
+\begin{equation}
+ \min_{\bm y}\lVert\beta\bm e_1-\overline{\bm T}_k\bm y\rVert_2=\lvert\bar g_{k+1}\rvert .
+ \label{eq:ls-minres-residual-estimate}
+\end{equation}
+
+\paragraph{增量求解的两个好处}
+其一，每步的工作量固定。第$j$步只作用两个旧旋转、构造一个新旋转、更新右端的两个分量，都是几个标量运算，不随$j$增长；加上一次Lanczos递推与下面的向量更新，每步的工作量与存储都与步数无关。
+
+其二，残差长度随消元一起得到。精确算术下$\lvert\bar g_{k+1}\rvert$就是第$k$步近似的原残差长度$\lVert\bm b-\bm A\bm x_k\rVert_2$，每步只需一次乘法即可读出，不必形成近似解；又因$\lvert s_j\rvert\le1$，它随步数不增。浮点计算中它会逐渐偏离真实残差，所以最终仍要用$\bm b-\bm A\bm x$复核。
+
+\paragraph{方向与解的短递推}
+最小点满足$\bm R_k\bm y=(g_1,\ldots,g_k)^\top$，直接回代需要保存全部基向量才能还原$\bm x$。改为在原空间中累加：令$\bm D_k=\bm V_k\bm R_k^{-1}$，比较$\bm D_k\bm R_k=\bm V_k$的第$j$列，
+\[
+ \bm v_j=\epsilon_j\bm d_{j-2}+\delta_j\bm d_{j-1}+\rho_j\bm d_j ,
+\]
+解出
+\begin{equation}
+ \bm d_j=\frac{\bm v_j-\delta_j\bm d_{j-1}-\epsilon_j\bm d_{j-2}}{\rho_j} ,
+ \label{eq:ls-minres-direction}
+\end{equation}
+约定$\bm d_{-1}=\bm d_0=\bm 0$。由于$\bm R_k$的旧列与已确定的$g_j$以后都不再改变，近似解可以逐项累加：
+\begin{equation}
+ \bm x_j=\bm x_{j-1}+g_j\bm d_j .
+ \label{eq:ls-minres-update}
+\end{equation}
+每步只需保留两个旧方向和两个旧旋转。定理~\ref{thm:ls-minres-optimality}说明，这样累加得到的$\bm x_k$正是小问题~\eqref{eq:ls-minres-small-problem}的解所对应的近似。
+
+\subsection{算法实现}
+
+每轮作一步Lanczos递推得到$\overline{\bm T}_k$的新列，用两个旧旋转与一个新旋转消元，再更新右端、方向与解。输入为实对称非奇异矩阵$\bm A$与右端$\bm b$，算法只需计算$\bm A$乘向量；预先选定的参数与第~\ref{sec:ls-matrix-splitting}节执行流程相同：初值$\bm x_0$、容差$\mathrm{atol},\mathrm{rtol}$与最大轮数$K$，停止检查沿用该流程的阈值$\tau$。下面写出计算中用到的变量、它们怎样初始化、每轮怎样更新。下面用例~\ref{ex:ls-stationary-running-example}的以下数据逐步演示：
+\[
+ \bm A=\begin{bmatrix}4&1\\1&3\end{bmatrix},\qquad \bm b=\begin{bmatrix}1\\2\end{bmatrix}.
+\]
+取$\bm x_0=\bm 0$，精确解为$\bm x_\star=(1/11,7/11)^\top$。Lanczos部分的数值与第~\ref{sec:ls-lanczos}节相同。
+
+\paragraph{变量}
+\begin{itemize}
+ \item $\bm v_{j-1},\bm v_j\in\mathbb R^d$：上一个与当前Lanczos基向量；$\bm w\in\mathbb R^d$：工作向量，存放扣除后的余项。
+ \item $a_j,\gamma_j$：$\overline{\bm T}_k$第$j$列的对角元与次对角元；$\gamma_{j-1}$留到本轮使用。
+ \item $(c_{j-2},s_{j-2}),(c_{j-1},s_{j-1})$：两个旧旋转；$(c_j,s_j)$：本轮的新旋转。
+ \item $\epsilon_j,\delta_j,\rho_j$：$\bm R_k$第$j$列的三个非零元；$\theta,\bar\delta$：旋转过程中的临时量。
+ \item $\bar g_j$：右端第$j$个分量旋转前的值，旋转后得到$g_j$与$\bar g_{j+1}$；$\lvert\bar g_{j+1}\rvert$是第$j$步的残差长度。
+ \item $\bm d_{j-2},\bm d_{j-1},\bm d_j\in\mathbb R^d$：两个旧方向与当前方向。
+ \item $\bm x_j\in\mathbb R^d$：当前近似解，在原处更新。
+ \item $j$：轮次。
+\end{itemize}
+
+\paragraph{初始化}
+先计算$\bm r_0=\bm b-\bm A\bm x_0$并作停止检查，已达标则直接输出$\bm x_0$。否则按Lanczos过程初始化基向量，把方向初始化为零向量，右端初始化为$\beta$，两个尚不存在的旧旋转初始化为单位变换，轮次初始化为$1$：
+\[
+ \begin{gathered}
+ \beta=\lVert\bm r_0\rVert_2,\qquad \bm v_0=\bm 0,\qquad \bm v_1=\frac{\bm r_0}{\beta},\qquad \gamma_0=0,\\
+ \bm d_{-1}=\bm d_0=\bm 0,\qquad \bar g_1=\beta,\\
+ (c_{-1},s_{-1})=(c_0,s_0)=(1,0),\qquad j=1 .
+ \end{gathered}
+\]
+例中$\bm r_0=\bm b$，
+\[
+ \beta=\sqrt5,\qquad \bm v_1=\frac1{\sqrt5}\begin{bmatrix}1\\2\end{bmatrix},\qquad \bar g_1=\sqrt5 .
+\]
+
+\paragraph{每轮更新}
+在第$j$轮：
+\begin{enumerate}
+ \item \textbf{Lanczos递推。}按式~\eqref{eq:ls-lanczos-step}计算
+ \[
+  \begin{gathered}
+  a_j=\bm v_j^\top\bm A\bm v_j,\\
+  \bm w=\bm A\bm v_j-a_j\bm v_j-\gamma_{j-1}\bm v_{j-1},\qquad \gamma_j=\lVert\bm w\rVert_2 ,
+  \end{gathered}
+ \]
+ 得到$\overline{\bm T}_k$的第$j$列$(\gamma_{j-1},a_j,\gamma_j)^\top$；归一化留到第5步。
+ 例中第一轮
+ \[
+  a_1=4,\qquad \bm w=\frac1{\sqrt5}\begin{bmatrix}2\\-1\end{bmatrix},\qquad \gamma_1=1 ,
+ \]
+ 第一列为$(0,4,1)^\top$。
+
+ \item \textbf{旋转消元。}按式~\eqref{eq:ls-minres-rotation}依次用第$j-2$、$j-1$个旋转处理这一列，再构造新旋转，得到$\epsilon_j,\delta_j,\rho_j$与$c_j,s_j$。$\bm A$非奇异时$\overline{\bm T}_k$满列秩，正常步骤中$\rho_j>0$；若出现$\rho_j=0$，不执行除法，先检查小问题的秩与相容性。
+ 例中第一轮两个旧旋转都是单位变换，$\epsilon_1=\delta_1=0$，$\bar\delta=a_1=4$，
+ \[
+  \rho_1=\sqrt{17},\qquad c_1=\frac4{\sqrt{17}},\qquad s_1=\frac1{\sqrt{17}} .
+ \]
+
+ \item \textbf{更新右端。}按式~\eqref{eq:ls-minres-rhs}计算
+ \[
+  g_j=c_j\bar g_j,\qquad \bar g_{j+1}=-s_j\bar g_j .
+ \]
+ 例中第一轮
+ \[
+  g_1=\frac{4\sqrt5}{\sqrt{17}},\qquad \bar g_2=-\frac{\sqrt5}{\sqrt{17}},\qquad \lvert\bar g_2\rvert=\sqrt{\frac5{17}}\approx0.542 .
+ \]
+
+ \item \textbf{更新方向与解。}按式~\eqref{eq:ls-minres-direction}与式~\eqref{eq:ls-minres-update}计算
+ \[
+  \bm d_j=\frac{\bm v_j-\delta_j\bm d_{j-1}-\epsilon_j\bm d_{j-2}}{\rho_j},\qquad
+  \bm x_j=\bm x_{j-1}+g_j\bm d_j ,
+ \]
+ 然后舍去$\bm d_{j-2}$与第$j-2$个旋转。
+ 例中第一轮
+ \[
+  \bm d_1=\frac{\bm v_1}{\rho_1}=\frac1{\sqrt{85}}\begin{bmatrix}1\\2\end{bmatrix},\qquad
+  \bm x_1=g_1\bm d_1=\frac1{17}\begin{bmatrix}4\\8\end{bmatrix}.
+ \]
+ 可以核对$\bm b-\bm A\bm x_1=(-7,6)^\top/17$，长度正是$\lvert\bar g_2\rvert=\sqrt{5/17}$。
+
+ 第一轮不满足第5步的停止条件，令$\bm v_2=\bm w/\gamma_1=(2,-1)^\top/\sqrt5$，进入第二轮。由第1步，
+ \[
+  a_2=3,\qquad \bm w=\bm 0,\qquad \gamma_2=0 ,
+ \]
+ 第二列为$(1,3,0)^\top$。由第2步，先用第$0$个旋转得
+ \[
+  \epsilon_2=s_0\gamma_1=0,\qquad \theta=c_0\gamma_1=1 ,
+ \]
+ 再用第$1$个旋转并构造新旋转，得
+ \[
+  \begin{gathered}
+  \delta_2=\frac7{\sqrt{17}},\qquad \bar\delta=\frac{11}{\sqrt{17}},\qquad \rho_2=\frac{11}{\sqrt{17}},\\
+  c_2=1,\qquad s_2=0 .
+  \end{gathered}
+ \]
+ 由第3步，
+ \[
+  g_2=-\frac{\sqrt5}{\sqrt{17}},\qquad \bar g_3=0 .
+ \]
+ 由第4步，新方向为
+ \[
+  \bm d_2=\frac1{11\sqrt{85}}\begin{bmatrix}27\\-31\end{bmatrix},
+ \]
+ 近似解更新为
+ \[
+  \bm x_2=\frac1{17}\begin{bmatrix}4\\8\end{bmatrix}-\frac1{187}\begin{bmatrix}27\\-31\end{bmatrix}=\frac1{11}\begin{bmatrix}1\\7\end{bmatrix}.
+ \]
+
+ \item \textbf{停止。}若残差估计$\lvert\bar g_{j+1}\rvert\le\tau$，或$\gamma_j=0$（子空间不再扩张，此时$s_j=0$，$\bar g_{j+1}=0$），或$j=K$，就用$\bm b-\bm A\bm x_j$复核真实残差后输出$\bm x_j$，并按第~\ref{sec:ls-stationary-stopping}节报告结束原因；否则令$\bm v_{j+1}=\bm w/\gamma_j$、$j\leftarrow j+1$，回到第1步。
+ 例中第一轮$\lvert\bar g_2\rvert\approx0.542$未达标，且$\gamma_1\ne0$，继续迭代；第二轮$\bar g_3=0$且$\gamma_2=0$，复核得真实残差为零，以“达到容差”退出迭代。
+\end{enumerate}
+
+最终得到近似解$\bm x_2$，它就是小问题~\eqref{eq:ls-minres-small-problem}的最小点所对应的近似。例中两个旋转把$\overline{\bm T}_2$化为
+\[
+ \bm R_2=\frac1{\sqrt{17}}\begin{bmatrix}17&7\\0&11\end{bmatrix},
+\]
+回代$\bm R_2\bm y=(g_1,g_2)^\top$得
+\[
+ \bm y=(3\sqrt5,-\sqrt5)^\top/11 ,
+\]
+于是
+\[
+ \bm x_2=\bm x_0+\bm V_2\bm y=\frac1{11}\begin{bmatrix}1\\7\end{bmatrix}=\bm x_\star ,
+\]
+与短递推的结果一致；代回得$\bm A\bm x_2=(11,22)^\top/11=\bm b$。
+
+二维问题在第二轮子空间用尽，最小残差为零，MINRES给出精确解。
+
+贯穿例是正定的。下面换用对称不定矩阵，这时能量范数没有定义，下一节的CG也因此不适用，MINRES仍然可用。
+
+\begin{example}[对称不定矩阵上的MINRES]
+\label{ex:ls-minres-indefinite}
+取$\bm A=\operatorname{diag}(1,-2)$，$\bm b=(1,1)^\top$，$\bm x_0=\bm0$。$\bm A$有一个正特征值和一个负特征值；例如$\bm b^\top\bm A\bm b=1-2=-1<0$，$\bm u^\top\bm A\bm u$不能作为范数的平方。MINRES只需要对称性。
+
+初始化得$\beta=\sqrt2$，$\bm v_1=(1,1)^\top/\sqrt2$。
+
+第一轮由式~\eqref{eq:ls-lanczos-step}，先算出
+\[
+ \bm A\bm v_1=(1,-2)^\top/\sqrt2 ,
+\]
+再得
+\[
+ a_1=-\frac12,\qquad \gamma_1=\frac32,\qquad \bm v_2=\frac1{\sqrt2}\begin{bmatrix}1\\-1\end{bmatrix}.
+\]
+没有旧旋转，由式~\eqref{eq:ls-minres-rotation}与\eqref{eq:ls-minres-rhs}，
+\[
+ \begin{gathered}
+ \rho_1=\frac{\sqrt{10}}2,\qquad c_1=-\frac1{\sqrt{10}},\qquad s_1=\frac3{\sqrt{10}},\\
+ g_1=-\frac1{\sqrt5},\qquad \bar g_2=-\frac3{\sqrt5} .
+ \end{gathered}
+\]
+于是
+\[
+ \bm d_1=\bm v_1/\rho_1=(1,1)^\top/\sqrt5,\qquad \bm x_1=g_1\bm d_1=(-1/5,-1/5)^\top .
+\]
+直接计算
+\[
+ \bm r_1=\bm b-\bm A\bm x_1=(6/5,3/5)^\top ,
+\]
+长度$3/\sqrt5=\lvert\bar g_2\rvert$。
+
+第二轮先作Lanczos递推，
+\[
+ \bm w=\bm A\bm v_2-\gamma_1\bm v_1=(-1/2,1/2)^\top/\sqrt2,\qquad a_2=-1/2 ,
+\]
+扣除后余项为零，$\gamma_2=0$，第二列为$(3/2,-1/2,0)^\top$。
+
+旋转给出$\epsilon_2=0$、$\theta=3/2$，以及
+\[
+ \begin{gathered}
+ \delta_2=-\frac3{\sqrt{10}},\qquad \bar\delta=-\frac4{\sqrt{10}},\qquad \rho_2=\frac4{\sqrt{10}},\\
+ c_2=-1,\qquad s_2=0 ,
+ \end{gathered}
+\]
+于是
+\[
+ g_2=c_2\bar g_2=3/\sqrt5,\qquad \bar g_3=0 .
+\]
+由式~\eqref{eq:ls-minres-direction}与\eqref{eq:ls-minres-update}，
+\[
+ \bm d_2=\frac1{\sqrt5}\begin{bmatrix}2\\-\tfrac12\end{bmatrix},\qquad
+ \bm x_2=\bm x_1+g_2\bm d_2=\begin{bmatrix}1\\-\tfrac12\end{bmatrix},
+\]
+代回得$\bm A\bm x_2=(1,1)^\top=\bm b$。
+
+再独立核验。两轮的系数组成
+\[
+ \bm T_2=\begin{bmatrix}-1/2&3/2\\3/2&-1/2\end{bmatrix},
+\]
+直接解小问题$\bm T_2\bm y=\beta\bm e_1$得
+\[
+ \bm y=(\sqrt2/4,3\sqrt2/4)^\top ,
+\]
+而$\bm V_2\bm y=(1,-1/2)^\top$，与短递推的结果一致。
+\end{example}
+
+\subsection{算法分析}
+
+\paragraph{正确性}
+正确性归结为两点：小问题~\eqref{eq:ls-minres-small-problem}与原问题等价，旋转与短递推给出小问题的解。
+
+\begin{theorem}[MINRES的最小残差性]
+\label{thm:ls-minres-optimality}
+设$\bm A$实对称非奇异，在精确算术下执行MINRES至第$k$步，且此前的$\gamma_1,\ldots,\gamma_{k-1}$均非零。则$\bm x_k$是残差长度在$\bm x_0+\mathcal K_k$上的唯一最小点；$\lVert\bm r_k\rVert_2=\lvert\bar g_{k+1}\rvert$随$k$不增，MINRES至多$d$步得到精确解，并且
+\begin{equation}
+ \lVert\bm r_k\rVert_2\le\min_{p\in\mathcal P_k}\max_{\lambda\in\sigma(\bm A)}\lvert p(\lambda)\rvert\,\lVert\bm r_0\rVert_2 ,
+ \label{eq:ls-minres-residual-bound}
+\end{equation}
+其中$\mathcal P_k$同引理~\ref{lem:ls-krylov-residual-polynomial}。
+\end{theorem}
+
+\begin{proof}
+证明分三步：先把原问题化为小问题，再说明旋转与短递推给出小问题的解，最后由残差多项式得到界。
+
+\emph{化为小问题。}由Lanczos关系（定理~\ref{thm:ls-arnoldi-lanczos}），递推~\eqref{eq:ls-lanczos-step}给出的$\bm V_{k+1}$列标准正交，$\bm V_k$张成$\mathcal K_k$，并且关系~\eqref{eq:ls-arnoldi-tridiagonal}成立；$\gamma_k=0$时$\overline{\bm T}_k$的末行为零，略去它与$\bm v_{k+1}$后下面的推导照样成立。由$\bm r_0=\beta\bm V_{k+1}\bm e_1$，
+\[
+ \bm b-\bm A(\bm x_0+\bm V_k\bm y)=\bm r_0-\bm A\bm V_k\bm y=\bm V_{k+1}(\beta\bm e_1-\overline{\bm T}_k\bm y),
+\]
+$\bm V_{k+1}$的列标准正交，不改变长度，即得式~\eqref{eq:ls-minres-small-problem}。$\bm V_k$满列秩，$\bm y\mapsto\bm x_0+\bm V_k\bm y$是$\mathbb R^k$到$\bm x_0+\mathcal K_k$的双射，两个最小化问题的解一一对应。
+
+\emph{旋转与短递推。}$\overline{\bm T}_k$第$j$列的非零元在第$j-1,j,j+1$行，第$i$个旋转只作用于第$i,i+1$行，所以$i<j-2$的旋转碰到的都是零，只有第$j-2$、$j-1$个起作用，乘出来就是式~\eqref{eq:ls-minres-rotation}，$\bm R_k$的上带宽为$2$。记$k$个旋转之积为正交矩阵$\bm\Omega_k$，则
+\[
+ \bm\Omega_k\overline{\bm T}_k=\begin{bmatrix}\bm R_k\\\bm 0^\top\end{bmatrix},\qquad
+ \bm\Omega_k\beta\bm e_1=(g_1,\ldots,g_k,\bar g_{k+1})^\top ,
+\]
+从而
+\[
+ \lVert\beta\bm e_1-\overline{\bm T}_k\bm y\rVert_2^2=\lVert(g_1,\ldots,g_k)^\top-\bm R_k\bm y\rVert_2^2+\bar g_{k+1}^2 .
+\]
+$\bm A$非奇异且$\bm V_k$满列秩，$\bm A\bm V_k=\bm V_{k+1}\overline{\bm T}_k$满列秩，故$\overline{\bm T}_k$与$\bm R_k$满秩，$\bm R_k$可逆。唯一最小点是$\bm y=\bm R_k^{-1}(g_1,\ldots,g_k)^\top$，最小值为$\lvert\bar g_{k+1}\rvert$。令$\bm D_k=\bm V_k\bm R_k^{-1}$，比较$\bm D_k\bm R_k=\bm V_k$的第$j$列，
+\[
+ \bm v_j=\epsilon_j\bm d_{j-2}+\delta_j\bm d_{j-1}+\rho_j\bm d_j ,
+\]
+解出即式~\eqref{eq:ls-minres-direction}。于是
+\[
+ \bm x_k=\bm x_0+\bm V_k\bm R_k^{-1}(g_1,\ldots,g_k)^\top=\bm x_0+\sum_{j\le k}g_j\bm d_j .
+\]
+后来的旋转只作用于更靠后的行，已确定的$g_j$与$\bm R_k$已有的列不再改变，所以逐步累加~\eqref{eq:ls-minres-update}得到的正是这个最小点。
+
+\emph{单调性与有限步终止。}由式~\eqref{eq:ls-minres-rhs}，
+\[
+ \lvert\bar g_{k+1}\rvert=\lvert s_k\rvert\,\lvert\bar g_k\rvert\le\lvert\bar g_k\rvert ,
+\]
+残差长度不增。若$\gamma_k=0$，则$s_k=0$，$\bar g_{k+1}=0$，残差为零；子空间维数不超过$d$，所以至多$d$步出现这一情形或零残差。
+
+\emph{残差界。}由引理~\ref{lem:ls-krylov-residual-polynomial}与最小残差性，
+\[
+ \lVert\bm r_k\rVert_2=\min_{p\in\mathcal P_k}\lVert p(\bm A)\bm r_0\rVert_2 .
+\]
+由谱定理（定理~\ref{thm:ls-real-symmetric-spectral}），$\bm A=\bm Q\bm\Lambda\bm Q^\top$，$\bm Q$正交，于是$p(\bm A)=\bm Q\,p(\bm\Lambda)\bm Q^\top$，
+\[
+ \lVert p(\bm A)\bm r_0\rVert_2\le\lVert p(\bm\Lambda)\rVert_2\lVert\bm r_0\rVert_2=\max_{\lambda\in\sigma(\bm A)}\lvert p(\lambda)\rvert\,\lVert\bm r_0\rVert_2 ,
+\]
+对$p$取最小即得所述界。
+\end{proof}
+
+第~\ref{sec:ls-gmres}节的GMRES对一般方阵采用同一准则；$\bm A$对称时两者的近似相同，MINRES只是借助对称性改用短递推。
+
+\paragraph{收敛速度}
+界中只剩特征值，收敛快慢完全由谱决定。不定时特征值分布在原点两侧，而多项式在原点必须取$1$，要同时压低两侧谱上的值，比只压低一侧更难。
+
+\paragraph{奇异系统的边界}
+本节的结论假定$\bm A$非奇异。若把MINRES用于奇异对称矩阵，不相容时最小残差不为零，判断是否到达最小二乘解要看$\lVert\bm A\bm r_k\rVert_2$是否足够小，而不是看$\lVert\bm r_k\rVert_2$；即使到达，普通MINRES给出的最小残差解也不自动具有最小欧氏范数。这里不展开奇异对称系统的专门算法（如MINRES-QLP）。
+
+\paragraph{数值敏感度与计算代价}
+浮点计算中，Lanczos向量会逐渐失去正交性，原因见第~\ref{sec:ls-lanczos}节。因此残差估计$\lvert\bar g_{j+1}\rvert$须用真实残差复核。每轮核心递推需要一次$\bm A$乘向量，只保存$\bm v_{j-1},\bm v_j,\bm w,\bm d_{j-2},\bm d_{j-1},\bm x$等固定数量的向量，存储不随步数增长，而保存全部基的GMRES执行$k$步需要约$kd$个数；若为保持正交性作完整的再正交化，就要保存全部基，存储同样随步数增长。

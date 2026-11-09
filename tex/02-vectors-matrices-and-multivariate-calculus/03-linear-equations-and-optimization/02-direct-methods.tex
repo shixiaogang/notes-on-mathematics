@@ -1,22 +1,20 @@
-\chapter{直接求解方法}
+\chapter{线性方程的直接求解}
 \label{sec:ls-direct-methods}
 \label{chap:direct-linear-solvers}
 
-第~\ref{chap:linear-solution-selection}章回答了“要求哪一个解”：方程相容且解唯一时求精确解，不相容时求最小二乘解，解不唯一时取范数最小的代表；该章还给出了检验这些目标的条件（第~\ref{sec:ls-least-squares-verification}节）。但目标确定以后，解并不会自动出现。$\bm x_\star=\bm A^{-1}\bm b$与$\hat{\bm x}=(\bm A^\top\bm A)^{-1}\bm A^\top\bm b$只是解的表达式：先求逆再相乘要多做运算，显式形成$\bm A^\top\bm A$还可能在有限精度下丢失信息。本章研究怎样不求逆，在有限步内把选定的解算出来，并让同一次分解服务于多个右端。
+第~\ref{chap:linear-solution-selection}章回答了“要求哪一个解”。对非奇异方阵，所求的是唯一的精确解$\bm x_\star=\bm A^{-1}\bm b$。但这只是解的表达式：先求逆再相乘要多做运算，也不必要。本章研究怎样不求逆，在有限步内把精确解算出来，并让同一次分解服务于多个右端。最小二乘问题的直接求解在第~\ref{chap:direct-least-squares-solvers}章讨论。
 
-本章的共同做法是把原问题化为容易求解的问题。消元把一般方阵化为三角方程，三角方程可以逐个分量代入求解；正交变换保持欧氏长度，把最小二乘化为三角方程；奇异值分解则把问题拆成互不耦合的标量问题。这类在精确算术下经有限步给出答案的方法称为直接法，它们与第~\ref{chap:stationary-iterations}章起的迭代法相对。
+本章的共同做法是用消元把一般方阵化为三角方程，三角方程可以逐个分量代入求解。这类在精确算术下经有限步给出答案的方法称为直接法，它们与第~\ref{chap:stationary-iterations}章起的迭代法相对。
 
-各节按两条线索组织。第一条线索是矩阵结构，对应前五节：一般非奇异方阵用带部分选主元的LU分解，对称正定矩阵用Cholesky分解，对称不定矩阵用分块LDL分解。分块消元与低秩更新不是新的分解，而是说明怎样在块结构或低秩修改下复用前三种分解，只求解一个较小的方程。
+第~\ref{sec:ls-gaussian-elimination}节先用初等行变换说明消元的手算过程：化为阶梯形，读出主元与自由变量，并用同样的过程求逆。随后三节按矩阵结构选择分解：一般非奇异方阵用带部分选主元的LU分解，对称正定矩阵用Cholesky分解，对称不定矩阵用分块LDL分解。第~\ref{sec:ls-woodbury}节说明矩阵只作低秩修改时，怎样复用已有的分解，只多解一个低阶方程。最后一节按矩阵结构归纳方法选择，并用原始数据核验结果。
 
-第二条线索是求解目标，对应后三节：满列秩最小二乘可以化为正规方程再用Cholesky分解；QR求解直接对$\bm A$作正交三角化，并用修正Gram--Schmidt正交化、Householder反射和Givens旋转三种方式计算因子；SVD求解处理任意形状与秩的最小范数最小二乘，并推广到加权与齐次目标。最后一节按目标和结构归纳方法选择，并用原始数据核验结果。
+本章依赖前文的两类结果：三角分解的存在性要用到行列式，Cholesky分解要用到正定矩阵（第~\ref{sec:ls-positive-definite}节）。各算法的正确性在本章证明，稳定性只给出算法层面的结论，例如主元增长；前向误差、后向误差的系统分析在第~\ref{chap:solution-error-regularization}章展开。
 
-本章依赖前文的三类结果。三角分解的存在性和Schur补的性质要用到行列式与正定矩阵（第~\ref{sec:ls-positive-definite}节）；QR求解用到第~\ref{chap:normed-inner-product-spaces}章的Gram--Schmidt正交化、QR分解（第~\ref{sec:ls-orthonormal-basis-construction}节）与正交投影（第~\ref{sec:ls-orthogonal-projection}节）；SVD求解与条件数平方关系用到第~\ref{chap:singular-value-decomposition}章的奇异值分解。各算法的正确性在本章证明，稳定性只给出算法层面的结论，例如主元增长和条件数平方的影响；前向误差、后向误差与正则化的系统分析在第~\ref{chap:solution-error-regularization}章展开。
+记号沿用第~\ref{chap:linear-solution-selection}章：已知非奇异方阵$\bm A\in\mathbb R^{d\times d}$与$\bm b\in\mathbb R^d$，未知量为$\bm x\in\mathbb R^d$，精确解记作$\bm x_\star$。每个算法都以$\bm A$、$\bm b$为输入，以$\bm x$为输出；分解因子、置换和中间向量只是中间量，主元策略等需要预先选定的规则单独说明。若干右端排成$\bm B=[\bm b_1\;\cdots\;\bm b_s]$时，方程写成$\bm A\bm X=\bm B$，各列分别求解并共用同一次分解。
 
-记号沿用第~\ref{chap:linear-solution-selection}章：已知$\bm A\in\mathbb R^{m\times d}$与$\bm b\in\mathbb R^m$，未知量为$\bm x\in\mathbb R^d$，方阵情形取$m=d$；精确解或选定的最小范数解记作$\bm x_\star$，满列秩最小二乘的唯一解记作$\hat{\bm x}$。每个算法都以$\bm A$、$\bm b$为输入，以所求的$\bm x$为输出；分解因子、置换、变换后的右端和残差只是中间量，主元或选块策略、权矩阵等需要预先选定的规则单独说明。若干右端排成$\bm B=[\bm b_1\;\cdots\;\bm b_s]$时，方程写成$\bm A\bm X=\bm B$，各列分别求解并共用同一次分解。
+除第~\ref{sec:ls-gaussian-elimination}节外，每种算法都分三部分讲解：主要思想从需要满足的等式推导计算公式；算法实现按计算次序写出步骤，并给出可以逐步复算的算例；算法分析说明结果为什么正确、在什么条件下可以进行，以及计算代价与数值上的注意事项。
 
-每种算法都分三部分讲解：主要思想从需要满足的等式推导计算公式；算法实现按计算次序写出步骤，并给出可以逐步复算的算例；算法分析说明结果为什么正确、在什么条件下可以进行，以及计算代价与数值上的注意事项。
-
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/00-gaussian-elimination}
 \input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/01-factorizations}
-\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/02-orthogonal-methods}
-\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/03-method-selection}
-\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/04-summary}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/02-method-selection}
+\input{tex/02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization/02-direct-methods/03-summary}

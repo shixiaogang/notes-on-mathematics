@@ -44,6 +44,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -81,20 +86,17 @@ for ax, (title, kind, t_hit, label) in zip(axes, panels):
                              facecolor=BLUE_FILL, edgecolor=BLUE, lw=1.1))
     # 公共射线
     ax.plot([0, 1.5 * RAY[0]], [0, 1.5 * RAY[1]], color=MUTED, lw=.6, ls="--")
-    p = t_hit * RAY
+    p = t_hit * np.array([1., 1.])
     ax.plot(*p, "o", ms=5, mfc=YELLOW, mec=INK, mew=.5, zorder=5)
-    ax.annotate(label, xy=tuple(p), xytext=(p[0] + .12, p[1] - .28),
-                fontsize=7, color=INK)
-    ax.set_title(title, fontsize=8)
-    ax.set(xlim=(-1.7, 1.7), ylim=(-1.7, 1.7),
+    ax.set_title(title[:3], fontsize=8)
+    ax.set(xlim=(-2.15, 2.15), ylim=(-1.55, 1.55),
            xticks=[-1, 0, 1], yticks=[-1, 0, 1])
     ax.set_aspect("equal")
-    ax.grid(True)
+    ax.grid(False)
 
-fig.suptitle("同一条射线 (1,1) 方向上，“单位向量”的位置随范数改变",
-             fontsize=8, y=0.98)
-finalize(fig)
-fig.tight_layout(rect=(0, 0, 1, .88))
+pass
+prepare_figure(fig)
+fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:
         fig.savefig(HERE / f"{NAME}.{ext}", dpi=300)
@@ -103,7 +105,7 @@ plt.close(fig)
 record = {
     "kind": "analytical teaching construction, not observed experimental data",
     "reader_question": "“x 是单位向量”这句话为什么必须先说明用的是哪一种范数？",
-    "formula": "沿方向 (1,1) 取射线 t*(1,1)/sqrt(2)；四种范数的单位球交点分别为："
+    "formula": "沿方向 (1,1) 取射线 t*(1,1)；四种范数的单位球交点分别为："
                "ell1: t=0.5; ell2: t=1/sqrt(2); ell_inf: t=1; M-ellipse x^2/4+y^2/0.64=1: t≈0.743.",
     "parameters": {
         "ray_direction": list(RAY),
@@ -116,7 +118,7 @@ record = {
         "M_ellipse_hit": [1 / np.sqrt(0.25 + 1 / 0.64)] * 2,
     },
     "processing": "解析式直接求交点；无随机采样。",
-    "width_mm": 169, "height_mm": 60, "png_dpi": 300,
+    "width_mm": 169, "height_mm": fig.get_figheight()*25.4, "png_dpi": 300,
     "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
 }
 (HERE / "sources.json").write_text(

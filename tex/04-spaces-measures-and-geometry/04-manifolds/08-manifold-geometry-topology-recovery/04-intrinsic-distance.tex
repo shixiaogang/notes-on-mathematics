@@ -1,0 +1,112 @@
+\section{内在距离逼近}
+\label{sec:mrec-intrinsic-distance}
+
+沿流形从一点走到另一点有多远，即内在距离$d_M$，不能由两点的环境距离读出。卷成螺旋的纸面上，相邻两层的点环境距离很小，沿纸面却要绕很远，如图~\ref{fig:mrec-graph}(c)。但在很小的尺度上，环境距离与内在距离几乎相同。
+
+这提示一种做法：只相信短距离，用短边连接相邻的样本，再沿图上的路径把短距离一段段累加起来。这与用折线近似曲线长度是同一个想法，只是折线的顶点只能取在样本上。本节只在同一连通分支内比较，不同分支之间的内在距离为无穷，图上相应的距离也应为无穷。
+
+\subsection{邻接图的构造}
+\label{sec:mrec-neighborhood-graph}
+
+先讨论按固定半径连边的图，它对应一个明确的几何尺度。
+
+\begin{definition}[半径邻域图与图距离]
+\label{def:mrec-neighborhood-graph}
+给定样本$P=\{\bm p_1,\ldots,\bm p_n\}$和半径$r>0$，\term{邻域图}（neighborhood graph）$\mathcal G_r$以样本为顶点，$\lVert\bm p_i-\bm p_j\rVert_2\leq r$时连边$\{i,j\}$，边权为$\lVert\bm p_i-\bm p_j\rVert_2$。顶点$i,j$之间的\term{图距离}（graph distance）$d_{\mathcal G}(i,j)$是连接它们的路径的边权和的最小值，没有路径时为$+\infty$。
+\end{definition}
+
+图距离可以用最短路算法计算，边权非负时Dijkstra算法适用，可参考\BookChapterRef{chap:shortest-paths}{卷三第3章“最短路”}。这里的输入只有样本之间的环境距离，与直接使用流形上的测地距离不同：边权是弦长，不是弧长，并且只有不超过$r$的弦才被使用。
+
+每条边的弦长都不超过两端点的内在距离，这是低估的来源；路径只能经过样本，不能走真实的最短曲线，这是高估的来源。下一小节说明两者怎样平衡。
+
+\paragraph{其他连边规则}
+
+另一种常用规则是近邻图：每个样本连向离它最近的$k$个样本。这个关系不对称，$\bm p_j$是$\bm p_i$的近邻，$\bm p_i$未必是$\bm p_j$的近邻，需要声明用“或”还是用“且”把它对称化。更重要的是，固定$k$并不固定几何尺度：稀疏处第$k$个近邻可能很远，稠密处则很近。
+
+所以近邻图要按它实际产生的边来核对条件：最长的边是否小于可达半径给出的界，最短的那些边是否足以跨过采样的空隙。下面的结论只依赖“所有边都不超过某个长度”与“所有足够短的点对都连了边”这两条性质，对近邻图需要分别验证。
+
+\paragraph{连通不等于可靠}
+
+图是否连通与图距离是否可靠是两回事。一条错误地连接了两个远处部分的边，会使图更加连通，同时让大量点对的图距离严重偏小。反过来，图不连通时，同一分支内的点对会得到无穷的图距离，这也是错的。连通性只是一个必要的检查，不能代替下面的误差分析。
+
+\subsection{图距离的误差}
+\label{sec:mrec-graph-distance-error}
+
+下面假定样本在$M$上、无噪声，用覆盖精度$\delta$与可达半径$\tau$控制图距离与内在距离之比。
+
+\begin{theorem}[图距离逼近内在距离]
+\label{thm:mrec-graph-distance}
+设$P\subseteq M$，$M$上每一点到最近样本的环境距离不超过$\delta$，邻域图半径满足$2\delta<r<2\tau$。则$\mathcal G_r$的边只连接同一分支的样本；对同一分支中的任意两个样本$\bm p,\bm q$，
+\begin{equation}
+ \frac{r/(2\tau)}{\arcsin\bigl(r/(2\tau)\bigr)}\,d_M(\bm p,\bm q)\leq d_{\mathcal G}(\bm p,\bm q),
+ \label{eq:mrec-graph-lower}
+\end{equation}
+\begin{equation}
+ d_{\mathcal G}(\bm p,\bm q)\leq\frac r{r-2\delta}\,d_M(\bm p,\bm q).
+ \label{eq:mrec-graph-upper}
+\end{equation}
+\end{theorem}
+\begin{proof}
+边长不超过$r<2\tau$，由定理~\ref{thm:mrec-reach-consequences}，两端属于同一分支。
+
+先证上界。记$\ell=r-2\delta>0$。任取$\varepsilon>0$和一条连接$\bm p,\bm q$、长度$L<d_M(\bm p,\bm q)+\varepsilon$的曲线$\gamma$，按弧长参数化。令$K=\lceil L/\ell\rceil$，$t_k=k\ell$（$k<K$），$t_K=L$。取$\bm s_0=\bm p$、$\bm s_K=\bm q$，其余$\bm s_k$取为离$\gamma(t_k)$不超过$\delta$的样本，如图~\ref{fig:mrec-graph}(a)。
+
+相邻两点的距离分三段估计：从$\bm s_k$到$\gamma(t_k)$，沿$\gamma$走到$\gamma(t_{k+1})$，再到$\bm s_{k+1}$。沿曲线走的这一段，环境距离不超过弧长，所以
+\[
+ \lVert\bm s_k-\bm s_{k+1}\rVert_2\leq\delta+(t_{k+1}-t_k)+\delta\leq r ,
+\]
+相邻点之间都有边。
+
+把上式对$k$求和，两端的$\bm s_0,\bm s_K$与曲线上的点重合，只有$K-1$个中间点各贡献两次$\delta$，于是路径长度不超过$L+2\delta(K-1)$。由$K-1<L/\ell$，
+\[
+ d_{\mathcal G}(\bm p,\bm q)\leq L\Bigl(1+\frac{2\delta}\ell\Bigr)=\frac{r}{r-2\delta}L .
+\]
+令$\varepsilon\to0$即得式~\eqref{eq:mrec-graph-upper}。
+
+再证下界。每条边长$a\leq r<2\tau$，由式~\eqref{eq:mrec-reach-arc}，其内在距离不超过$2\tau\arcsin(a/2\tau)$。函数$x\mapsto\arcsin(x)/x$在$(0,1]$上递增，所以
+\[
+ 2\tau\arcsin\frac a{2\tau}\leq a\cdot\frac{2\tau}r\arcsin\frac r{2\tau}.
+\]
+对图上任一条从$\bm p$到$\bm q$的路径，由$d_M$的三角不等式，$d_M(\bm p,\bm q)$不超过各边内在距离之和，从而不超过路径长度乘以$\frac{2\tau}r\arcsin\frac r{2\tau}$。对全部路径取最小，即得式~\eqref{eq:mrec-graph-lower}。
+\end{proof}
+
+两个比例因子分别说明误差从哪里来。下界的因子只依赖$r/\tau$：边越短、流形越不弯，弦与弧越接近，例如$r=\tau/2$时因子为$0.25/\arcsin0.25\approx0.989$。上界的因子只依赖$\delta/r$：样本越密，路径越不必绕行，例如$\delta=r/10$时因子为$1.25$。两者同时趋于$1$，需要$\delta\ll r\ll\tau$，与式~\eqref{eq:mrec-scale-range}的要求一致。
+
+\paragraph{单位圆上的核对}
+
+单位圆上取$24$个等距样本，相邻样本的弦长和覆盖精度分别是
+\[
+ 2\sin7.5^\circ\approx0.2611,\qquad\delta=2\sin3.75^\circ\approx0.1308 ,
+\]
+所以$2\delta\approx0.2616$。比较对径的两个样本，真实内在距离是$\pi\approx3.1416$。
+
+取$r=0.3$，只有相邻样本连边，最短路走$12$条边：
+\[
+ d_{\mathcal G}=12\times0.2611\approx3.133,\qquad\frac{d_{\mathcal G}}{d_M}\approx0.9972.
+\]
+此时下界因子为$0.15/\arcsin0.15\approx0.9962$，上界因子为$0.3/(0.3-0.2616)\approx7.8$。
+
+取$r=0.6$，隔一个样本的弦长$2\sin15^\circ\approx0.5176$也连边，而隔两个的弦长$0.7654$不连。最短路走$6$条这样的长边：
+\[
+ d_{\mathcal G}=6\times0.5176\approx3.106,\qquad\frac{d_{\mathcal G}}{d_M}\approx0.9886.
+\]
+此时下界因子约为$0.9846$，上界因子约为$1.77$。两次都夹在界内，下界很紧，上界偏松。边越长，弦与弧的差越明显，图距离低估得越多。
+
+\paragraph{两类失效}
+
+条件不满足时，误差可以任意大，而且方向相反。第一类是缺采样。在单位圆上，若某段圆心角为$\alpha$的弧内没有样本，而弦长$2\sin(\alpha/2)$大于$r$，跨越空缺的边就不存在，如图~\ref{fig:mrec-graph}(b)。空缺两端的样本只能绕另一侧相连，图距离约为$2\pi-\alpha$，而真实内在距离只有$\alpha$。若圆上有两处这样的空缺，图会断成两段，同一分支内的点对得到无穷的图距离。这违反了定理中的覆盖条件$2\delta<r$。
+
+第二类是邻接过大。卷成螺旋的曲线上，相邻两层相距约$2b$，当$r\geq2b$时两层之间就会连上边，如图~\ref{fig:mrec-graph}(c)的红色短边。原本沿曲线相距很远的两点，图距离只有约$2b$。这时$\tau\leq b$，所以$r\geq2\tau$，违反了定理中的另一个条件。两类失效分别对应上界和下界的条件，一个让图距离过大，一个让它过小。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/mrec-graph/figure.pdf}
+  \caption{图距离的上界与两类失效。(a) 沿曲线$\gamma$等间距取点（空心），各换成不超过$\delta$的样本（黑点），得到的绿色折线每段长度不超过$r$。(b) 单位圆上圆心角$\alpha$的弧内没有样本，弦（红虚线）长于$r$时不连边，图距离绕另一侧。(c) 螺旋相邻两层的点之间连上红色短边，抄近路跳过了绿色的一整圈。}
+  \label{fig:mrec-graph}
+\end{BookInlineFigure}
+
+\paragraph{离开流形的噪声}
+
+观测带有扰动$\lVert\bm x_i-\bm p_i\rVert_2\leq\sigma$时，邻域图按观测之间的距离构造，定理的条件需要重新建立。由三角不等式，每条边两端真实位置的距离不超过边长加$2\sigma$，所以要保证不跨接分支，应要求$r+2\sigma<2\tau$；而边长本身与真实弦长之差可达$2\sigma$。
+
+一条有$K$条边的路径，累积的边长误差可达$2\sigma K$。沿长度为$L$的曲线，所需边数约为$L/r$，于是相对误差约为$2\sigma/r$。所以噪声要求$\sigma\ll r$，并且覆盖条件要用观测的覆盖精度，即真实覆盖精度加上$\sigma$。这些是新增的条件，无噪声情形的定理不能直接沿用。

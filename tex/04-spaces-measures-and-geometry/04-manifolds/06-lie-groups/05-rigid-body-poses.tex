@@ -1,0 +1,119 @@
+\section{刚体位姿}
+\label{sec:lie-rigid-poses}
+
+一个刚体在空间中的状态由两部分决定：它朝向哪里，以及它的参考点在哪里。前者是上一节的旋转，后者是一个平移。保持任意两点距离与空间定向的变换恰好是先旋转、再平移的复合，这称为\term{刚体变换}（rigid transformation），它描述的状态称为\term{位姿}（pose）。这个结论的证明需要先说明保距映射一定是仿射映射，再考察它的线性部分，本章只使用结论。
+
+本节建立刚体变换的复合与求逆，说明它在点与方向上的不同作用，最后用它表达坐标系之间的换算。
+
+\paragraph{齐次矩阵}
+刚体变换把$\bm x$变成$\bm R\bm x+\bm t$，其中$\bm R\in\mathrm{SO}(3)$、$\bm t\in\mathbb R^3$。它不是线性映射，因为原点被移到$\bm t$。在每个点后面补一个坐标$1$，就能把它写成一次矩阵乘法：
+\begin{equation}
+ \begin{bmatrix}\bm R\bm x+\bm t\\1\end{bmatrix}=\bm T\begin{bmatrix}\bm x\\1\end{bmatrix},\qquad
+ \bm T=\begin{bmatrix}\bm R&\bm t\\\bm0^\top&1\end{bmatrix}.
+ \label{eq:lie-homogeneous-pose}
+\end{equation}
+这样的$4\times4$矩阵全体记为$\mathrm{SE}(3)$，称为\term{三维刚体运动群}（three-dimensional rigid-motion group）。
+
+\paragraph{复合与求逆}
+按分块乘法，先作用$\bm T_1$、再作用$\bm T_2$得到
+\begin{equation}
+ \bm T_2\bm T_1=\begin{bmatrix}\bm R_2\bm R_1&\bm R_2\bm t_1+\bm t_2\\\bm0^\top&1\end{bmatrix}.
+ \label{eq:lie-pose-composition}
+\end{equation}
+求逆可以直接从方程解出：由$\bm y=\bm R\bm x+\bm t$得$\bm x=\bm R^\top(\bm y-\bm t)$，所以
+\begin{equation}
+ \bm T^{-1}=\begin{bmatrix}\bm R^\top&-\bm R^\top\bm t\\\bm0^\top&1\end{bmatrix}.
+ \label{eq:lie-pose-inverse}
+\end{equation}
+乘积和逆矩阵都仍是同样形状的矩阵，单位元是$\bm I_4$，所以$\mathrm{SE}(3)$是$\mathrm{GL}(4,\mathbb R)$的子群。
+
+复合的平移部分是$\bm R_2\bm t_1+\bm t_2$，而不是$\bm t_1+\bm t_2$：第一次的平移要随第二次的旋转一起转动。用平面上的数值走一遍，两次都绕$\bm e_3$转$\pi/2$，平移分别为$\bm t_1=(1,0,0)^\top$与$\bm t_2=(0,1,0)^\top$，由式~\eqref{eq:lie-pose-composition}，
+\[
+\bm R_2\bm t_1+\bm t_2=(0,1,0)^\top+(0,1,0)^\top=(0,2,0)^\top,
+\]
+复合的旋转是绕$\bm e_3$转$\pi$。
+
+按另一次序复合，先$\bm T_2$、再$\bm T_1$，平移变成
+\[
+\bm R_1\bm t_2+\bm t_1=(-1,0,0)^\top+(1,0,0)^\top=\bm0 .
+\]
+两种次序的旋转相同，平移却不同，图~\ref{fig:lie-pose-composition}(a)画出了这三个位姿。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/lie-pose-composition/figure.pdf}
+  \caption{位姿的复合与坐标系换算（画在平面上，$\bm R$都绕$\bm e_3$）。每个位姿画成长短两根轴。(a)灰色是单位元，蓝色$\bm T_1$转$90^\circ$并平移$(1,0)$，红色$\bm T_2\bm T_1$转$180^\circ$并平移$(0,2)$，绿色$\bm T_1\bm T_2$转$180^\circ$且平移为$\bm0$。(b)坐标系$A$（蓝）与$B$（绿），$B$的原点在$A$中是$(2,1)$，$B$的第一轴沿$A$的第二轴。点$x$在$B$中为$(1,0)$，在$A$中为$(2,2)$；红箭头是方向$\bm d$，平移不影响它。}
+  \label{fig:lie-pose-composition}
+\end{BookInlineFigure}
+
+\paragraph{作为Lie群}
+$\mathrm{SE}(3)$在$\mathrm{GL}(4,\mathbb R)$中由“左上块在$\mathrm{SO}(3)$中、末行为$(0,0,0,1)$”这些闭条件给出，是闭子群，因而是矩阵Lie群。$(\bm R,\bm t)\mapsto\bm T$是从$\mathrm{SO}(3)\times\mathbb R^3$到$\mathrm{SE}(3)$的微分同胚，所以$\mathrm{SE}(3)$是六维流形：三个旋转自由度加三个平移自由度。
+
+作为群，它却不是$\mathrm{SO}(3)$与$\mathbb R^3$的直积。直积的运算会给出$(\bm R_2\bm R_1,\bm t_1+\bm t_2)$，而式~\eqref{eq:lie-pose-composition}中旋转作用到了前一次的平移上。
+
+对经过$\bm I_4$的曲线求导，末行恒为零，左上块的导数在$\mathfrak{so}(3)$中，所以Lie代数是
+\begin{equation}
+ \mathfrak{se}(3)=\left\{\begin{bmatrix}[\bm\omega]_\times&\bm v\\\bm0^\top&0\end{bmatrix}:\bm\omega,\bm v\in\mathbb R^3\right\}.
+ \label{eq:lie-se3-algebra}
+\end{equation}
+用归纳法可得，对$k\geq1$，这类矩阵的$k$次幂是
+\[
+\begin{bmatrix}[\bm\omega]_\times&\bm v\\\bm0^\top&0\end{bmatrix}^k
+=\begin{bmatrix}[\bm\omega]_\times^k&[\bm\omega]_\times^{k-1}\bm v\\\bm0^\top&0\end{bmatrix}.
+\]
+
+把各次幂代入指数级数，得到
+\begin{equation}
+ \exp\begin{bmatrix}[\bm\omega]_\times&\bm v\\\bm0^\top&0\end{bmatrix}
+ =\begin{bmatrix}\exp([\bm\omega]_\times)&\bm V\bm v\\\bm0^\top&1\end{bmatrix},\quad
+ \bm V=\sum_{k\geq0}\frac{[\bm\omega]_\times^k}{(k+1)!}.
+ \label{eq:lie-se3-exp}
+\end{equation}
+$\bm\omega=\bm0$时$\bm V=\bm I$，指数就是平移$\bm v$。$\bm\omega\neq\bm0$时，平移部分是$\bm V\bm v$而不是$\bm v$：物体一边转动一边沿自身方向前进，走出的是圆弧，终点相对起点的位移比$\bm v$短，也换了方向。
+
+手算一次。取$\bm\omega=\frac\pi2\bm e_3$，$\bm v=(1,0,0)^\top$，把$\bm V$的级数按奇偶项汇总，得到
+\[
+\bm V=\bm I+\frac{1-\cos\theta}{\theta}[\bm u]_\times+\frac{\theta-\sin\theta}{\theta}[\bm u]_\times^2,
+\]
+其中$\theta=\pi/2$，$\bm u=\bm e_3$。于是$\frac{1-\cos\theta}{\theta}=\frac2\pi$，$\frac{\theta-\sin\theta}{\theta}=1-\frac2\pi$。
+
+由$[\bm u]_\times\bm v=\bm e_2$与$[\bm u]_\times^2\bm v=-\bm e_1$，得到
+\[
+\bm V\bm v=\bm e_1+\frac2\pi\bm e_2-\Bigl(1-\frac2\pi\Bigr)\bm e_1
+=\Bigl(\frac2\pi,\frac2\pi,0\Bigr)^\top.
+\]
+它不是$(1,0,0)^\top$。一般情形下单参数子群绕某条轴转动，同时沿该轴推进，这是一种螺旋运动。所以$\mathrm{SE}(3)$上的指数坐标不等于“旋转向量加平移向量”这种分开的记录，使用时须说明采用哪一种参数化。
+
+\paragraph{点与方向}
+位姿对点和方向的作用不同。点有位置，平移会移动它；方向只有朝向，例如速度、表面法向或两点之差，平移不应改变它。设$\bm x,\bm y$是两个点，它们的差在变换后为
+\[
+(\bm R\bm x+\bm t)-(\bm R\bm y+\bm t)=\bm R(\bm x-\bm y),
+\]
+平移抵消了。在齐次写法中，把点记为$(\bm x,1)$，把方向记为$(\bm d,0)$，则
+\[
+\bm T\begin{bmatrix}\bm d\\0\end{bmatrix}=\begin{bmatrix}\bm R\bm d\\0\end{bmatrix},
+\]
+末坐标$0$恰好让平移列不起作用，两个点之差的末坐标也自然是$1-1=0$。
+
+把方向向量当成点，用$\bm R\bm d+\bm t$变换，会给方向加上一个与位姿有关的偏移；把点当成方向，则会丢掉平移。若变换是一般的可逆线性映射$\bm A$而不是旋转，法向量要按$\bm A^{-\top}$变换才能保持与切向量的正交；对旋转，$\bm R^{-\top}=\bm R$，法向与其他方向按同一规则变换。
+
+\paragraph{坐标系变换}
+同一个点在不同坐标系中有不同的坐标，刚体变换也负责这种换算。设坐标系$B$的原点在坐标系$A$中的坐标为$\bm t_{AB}$，$B$的三个坐标轴在$A$中的方向依次是$\bm R_{AB}$的三列。若一点在$B$中的坐标为$\bm x_B$，它在$A$中的位置是$B$的原点加上沿$B$各轴的位移，即
+\begin{equation}
+ \bm x_A=\bm R_{AB}\bm x_B+\bm t_{AB},\qquad
+ \bm T_{AB}=\begin{bmatrix}\bm R_{AB}&\bm t_{AB}\\\bm0^\top&1\end{bmatrix}.
+ \label{eq:lie-coordinate-change}
+\end{equation}
+这里$\bm T_{AB}$读作“从$B$的坐标到$A$的坐标”。
+
+用图~\ref{fig:lie-pose-composition}(b)的数据验算。$B$的原点在$A$中是$(2,1,0)$，$\bm R_{AB}$绕$\bm e_3$转$90^\circ$。点$\bm x_B=(1,0,0)$在$A$中的坐标是
+\[
+\bm x_A=\bm R_{AB}\bm x_B+\bm t_{AB}=(0,1,0)^\top+(2,1,0)^\top=(2,2,0)^\top.
+\]
+方向$\bm d_B=(1,0,0)$按$\bm R_{AB}$变换，成为$(0,1,0)$，没有加上$\bm t_{AB}$。
+
+由式~\eqref{eq:lie-coordinate-change}得到两条规则：经过中间坐标系$B$换算，$\bm T_{AC}=\bm T_{AB}\bm T_{BC}$，相邻下标相同才能相乘；反向换算是求逆，$\bm T_{BA}=\bm T_{AB}^{-1}$。
+
+同一个矩阵$\bm T_{AB}$有两种读法：它可以看作把点从一个位置移到另一个位置的主动变换，也可以看作同一个点在两个坐标系之间的坐标换算。两种读法使用同一套矩阵运算，但描述的对象不同；混淆二者，最常见的后果是该用$\bm T$的地方用了$\bm T^{-1}$，或者乘积次序颠倒。
+
+给定一组点在两个坐标系中的对应坐标，要反求$\bm R_{AB}$与$\bm t_{AB}$，这就是由点对应估计刚体变换的问题。它需要拟合目标、正交约束下的求解与可辨识性分析，在第~\ref{chap:spatial-map-estimation}章研究。

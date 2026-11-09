@@ -31,8 +31,10 @@ def save(name,body,facts,height=48):
 
 def covers():
     body=r'''
-\node[anchor=west] at (3,46) {(a)};
-\node[anchor=west] at (61,46) {(b)};
+% Bottom panel labels; the 5 mm translation reuses the former title band.
+\node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (25,4) {(a)};
+\node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (85,4) {(b)};
+\begin{scope}[yshift=5mm]
 \draw[Stroke] (5,7)--(45,7);
 \fill[Ink] (5,7) circle (.5); \fill[Ink] (45,7) circle (.5);
 \node[below] at (5,6) {$0$}; \node[below] at (45,6) {$1$};
@@ -55,6 +57,7 @@ def covers():
  \draw[Blue,fill=white] (105,\yy) circle (.6);
  \node[above] at (95,\yy) {$U_{\nn}$};
 }
+\end{scope}
 '''
     save('finite-open-cover',body,{'left':'K=[0,1], open U1=(-0.1,0.4), U2=(0.25,0.75), U3=(0.6,1.1)',
         'right':'X=(0,1), U_n=(1/n,1), n>=2; shown n=2,4,8',
@@ -110,9 +113,12 @@ def product():
 
 def line_work():
     save('line-density-work',r'''
-\node[anchor=east] at (44,46) {(a)}; \node[anchor=east] at (101,46) {(b)};
+% Reserve the bottom label band within the unchanged canvas.
+\node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (26,3) {(a)};
+\node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (83,3) {(b)};
+\begin{scope}[yshift=3mm]
 \draw[->,Stroke] (7,7)--(44,7) node[right] {$x$};
-\draw[->,Stroke] (7,7)--(7,42) node[above] {$y$};
+\draw[->,Stroke] (7,7)--(7,42) node[right] {$y$};
 \draw[Blue,line width=1.1pt] (7,7)--(39,39);
 \foreach \t in {0.2,0.4,0.6,0.8}
   \fill[Blue] ({7+32*\t},{7+32*\t}) circle (.65);
@@ -121,13 +127,14 @@ def line_work():
 \draw[densely dotted,Grid] (39,39)--(39,7);
 \draw[densely dotted,Grid] (39,39)--(7,39);
 \draw[->,Stroke] (64,7)--(101,7) node[right] {$x$};
-\draw[->,Stroke] (64,7)--(64,42) node[above] {$y$};
+\draw[->,Stroke] (64,7)--(64,42) node[right] {$y$};
 \draw[Blue,line width=1.1pt] (64,7)--(96,39);
 \draw[->,Green,line width=1pt] (78,21)--(86,29) node[above left] {$\mathrm dr$};
 \draw[->,Blue,line width=1pt] (78,21)--(97,21) node[right] {$F$};
 \draw[densely dotted,Stroke] (86,29)--(86,21);
 \draw[Stroke] (78,18)--(86,18);
 \node[below] at (82,18) {$\mathrm dx$};
+\end{scope}
 ''',{'path':'gamma(t)=(t,t), 0<=t<=1','scalar_density':1,
         'scalar_integral':'sqrt(2)','field':[1,0],'work_integral':1,
         'local_relation':'ds=sqrt(2)dt, F dot dr=dx=dt',
@@ -153,7 +160,7 @@ def flux():
 
 def boundary():
     save('boundary-orientation-cancellation',r'''
-\node[anchor=west] at (3,46) {(a)}; \node[anchor=west] at (61,46) {(b)};
+\node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (25,3.7) {(a)}; \node[anchor=north,inner sep=0pt,font=\fontsize{8}{10}\selectfont] at (83,3.7) {(b)};
 \draw[Blue,line width=1pt] (7,7) rectangle (43,43);
 \draw[Grid] (25,7)--(25,43); \draw[Grid] (7,25)--(43,25);
 \draw[->,Blue] (16,7)--(22,7); \draw[->,Blue] (43,16)--(43,22);

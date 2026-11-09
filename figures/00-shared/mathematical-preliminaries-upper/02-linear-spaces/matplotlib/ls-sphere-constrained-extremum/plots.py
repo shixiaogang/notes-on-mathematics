@@ -44,6 +44,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -97,16 +102,15 @@ ax.plot([-1.3 * d[0], 1.3 * d[0]], [-1.3 * d[1], 1.3 * d[1]],
 for sgn in (1, -1):
     p = sgn * d
     ax.plot(*p, "o", ms=4, mfc=YELLOW, mec=INK, mew=.4, zorder=5)
-ax.text(-1.95, 0.95, "约束直线上的\n两个极值点", fontsize=7.5, color=YELLOW)
 
-ax.text(-1.95, 1.55, "$\\max x^\\top A x=\\lambda_1\\approx2.21$", fontsize=8, color=BLUE)
-ax.text(-1.95, -1.68, "$\\min x^\\top A x=\\lambda_2\\approx0.79$", fontsize=8, color=GREEN)
-ax.set_title("单位圆约束下的极值落在特征方向", fontsize=8)
+
+
+ax.set_title("")
 ax.set(xlim=(-2.1, 2.1), ylim=(-1.85, 1.85), xticks=range(-2, 3), yticks=range(-1, 2))
 ax.set_aspect("equal")
-ax.grid(True)
+ax.grid(False, which="both")
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 if selection == NAME:
     for ext in ("pdf", "svg", "png"):

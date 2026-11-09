@@ -43,6 +43,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -66,17 +71,17 @@ def finalize(fig):
 
 fig, ax = plt.subplots(figsize=(112 / 25.4, 58 / 25.4))
 ax.semilogy(NS, BOUND, color=RED, lw=1.0, ls="--", marker="s", ms=3,
-            label="尾界 $q^{n+1}/(1-q)$，$q=\\|T\\|_2=%.2f$" % Q)
+            label="尾界")
 ax.semilogy(NS, REAL, color=BLUE, lw=1.2, marker="o", ms=3,
-            label="真实残差 $\\|(I-T)^{-1}-S_n\\|_2$")
+            label="实际误差")
 ax.set_xlabel("部分和步数 $n$", fontsize=8)
-ax.set_ylabel("尾（对数轴）", fontsize=8)
-ax.set_title("Neumann 级数：尾界随 $q^{n+1}$ 几何衰减", fontsize=8)
+ax.set_ylabel("误差范数", fontsize=8)
+ax.set_title('', fontsize=8)
 ax.set(xticks=range(0, 16, 2), ylim=(1e-3, 20))
-ax.grid(True, which="both")
+ax.grid(False)
 ax.legend(loc="lower left", fontsize=7.5, frameon=False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

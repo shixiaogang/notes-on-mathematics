@@ -4,6 +4,9 @@ Only styles text and artists; never substitutes, samples, smooths or changes dat
 from pathlib import Path
 import hashlib
 import unicodedata
+import json
+import os
+import re
 import matplotlib as mpl
 mpl.use("Agg")
 from matplotlib import font_manager, _mathtext
@@ -88,18 +91,32 @@ def configure():
       'mathtext.rm':EN,'mathtext.it':EN,'mathtext.bf':EN,'mathtext.bfit':EN,'mathtext.cal':EN,
       'mathtext.sf':EN,'mathtext.tt':EN,'axes.unicode_minus':False,'text.usetex':False,
       'pdf.fonttype':3,'ps.fonttype':3,'svg.fonttype':'path',
-      'text.color':INK,'axes.labelcolor':INK,'axes.edgecolor':STROKE,'axes.linewidth':.75,
+      'text.color':INK,'axes.labelcolor':INK,'axes.edgecolor':STROKE,'axes.linewidth':.95,
       'axes.spines.top':False,'axes.spines.right':False,'xtick.color':STROKE,'ytick.color':STROKE,
       'xtick.major.width':.6,'ytick.major.width':.6,'xtick.minor.width':.5,'ytick.minor.width':.5,
-      'grid.color':GRID,'grid.linewidth':.4,'grid.alpha':1,'lines.linewidth':1.1,
+      'grid.color':GRID,'grid.linewidth':.4,'grid.alpha':1,'lines.linewidth':1.4,
       'patch.linewidth':.8,'legend.frameon':False,'figure.facecolor':'white','axes.facecolor':'white','savefig.facecolor':'white'})
 
 def prepare_figure(fig):
     for ax in fig.axes:
-        for spine in ax.spines.values(): spine.set_color(STROKE); spine.set_linewidth(.75)
-        ax.tick_params(which='both',width=.6,colors=STROKE)
+        for spine in ax.spines.values(): spine.set_color(STROKE); spine.set_linewidth(.95)
+        ax.tick_params(which='both',width=.8,colors=STROKE)
         for line in ax.get_xgridlines()+ax.get_ygridlines():
             line.set_color(GRID);line.set_linewidth(.4);line.set_alpha(1)
+    if not getattr(fig, '_academic_strokes_applied', False):
+        for ax in fig.axes:
+            # Axes3D treats extra keyword arguments as a request to enable its grid.
+            if getattr(ax, 'name', '') == '3d':
+                ax.grid(False)
+            else:
+                ax.grid(False, which='both')
+            for line in ax.lines:
+                if line.get_linewidth() > 0:
+                    line.set_linewidth(max(.85, line.get_linewidth()*1.3))
+            for patch in ax.patches:
+                if patch.get_linewidth() > 0:
+                    patch.set_linewidth(max(.85, patch.get_linewidth()*1.3))
+        fig._academic_strokes_applied = True
     for text in fig.findobj(Text):
         # English first gives actual Fira glyphs; CJK falls back only to the
         # explicitly loaded Normal face. Notes opt into WenKai by role.
@@ -110,6 +127,120 @@ def prepare_figure(fig):
     if fig.get_layout_engine() is not None:
         for _ in range(3):fig.canvas.draw()
         fig.set_layout_engine(None)
+    # Finalize after generators' last tight_layout/subplots_adjust call, at export.
+    # The same physical layout is reused for PDF, SVG and PNG.
+    if not getattr(fig, '_academic_export_wrapped', False):
+        original_savefig = fig.savefig
+        def publication_savefig(filename, *args, **kwargs):
+            finalize_panel_markers(fig)
+            result = original_savefig(filename, *args, **kwargs)
+            audit = os.environ.get('ACADEMIC_PANEL_AUDIT')
+            if audit and isinstance(filename, (str, Path)) and str(filename).endswith('.pdf'):
+                record = dict(asset=str(Path(filename).relative_to(ROOT)),
+                              **getattr(fig, '_academic_panel_record', {'panels': []}))
+                with Path(audit).open('a') as stream:
+                    stream.write(json.dumps(record, ensure_ascii=False)+'\n')
+            return result
+        fig.savefig = publication_savefig
+        fig._academic_export_wrapped = True
+
+def finalize_panel_markers(fig):
+    """Place panel letters below real content, with a shared baseline per row.
+
+    Preserve axes, glyph and curve sizes. Reuse the space left by old titles;
+    extend the canvas only when the measured labels need more room. Unlabelled
+    axes below a labelled axis belong to that panel (e.g. an error subplot).
+    """
+    if getattr(fig, '_academic_panels_applied', False):
+        return
+    fig._academic_panels_applied = True
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    panels = []
+    for text in fig.findobj(Text):
+        match = re.fullmatch(r'\(([a-z])\)(?:\s+.*)?', text.get_text().strip())
+        if not match or not text.get_visible():
+            continue
+        bbox = text.get_window_extent(renderer)
+        ax = text.axes
+        x = (bbox.x0+bbox.x1)/2/fig.bbox.width
+        if ax is None:
+            ax = min(fig.axes, key=lambda a: abs((a.get_position().x0+a.get_position().x1)/2-x))
+        pos = ax.get_position()
+        panels.append(dict(letter=match[1], ax=ax, x=(pos.x0+pos.x1)/2,
+                           row=(pos.y0+pos.y1)/2))
+        # Explanatory suffixes are already stated in the caption.
+        text.set_text('')
+        text.set_visible(False)
+    if not panels:
+        return
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    width, height = fig.get_size_inches()*72
+    rows = []
+    for panel in sorted(panels, key=lambda p: -p['row']):
+        row = next((r for r in rows if abs(r[0]['row']-panel['row']) < .16), None)
+        if row is None:
+            rows.append([panel])
+        else:
+            row.append(panel)
+    def content_box(ax):
+        return ax.get_tightbbox(renderer).transformed(fig.transFigure.inverted())
+    boxes = {ax: content_box(ax) for ax in fig.axes}
+    gap_pt = 3*72/25.4
+    # A centred 8 pt parenthesized letter is 8 pt high on this renderer.
+    for row in rows:
+        bottoms = []
+        for panel in row:
+            pos = panel['ax'].get_position()
+            members = [panel['ax']]
+            for ax in fig.axes:
+                other = ax.get_position()
+                overlap = min(pos.x1, other.x1)-max(pos.x0, other.x0)
+                if (ax not in [p['ax'] for p in panels] and other.y1 <= pos.y1+.01
+                        and overlap > .6*min(pos.width, other.width)):
+                    members.append(ax)
+            bottoms.extend(boxes[a].y0*height for a in members)
+        # A shared legend is part of the bottom row's content.
+        if row is rows[-1]:
+            bottoms.extend(legend.get_window_extent(renderer).y0/fig.bbox.height*height
+                           for legend in fig.legends if legend.get_visible())
+        baseline = min(bottoms)-gap_pt-6.5
+        for panel in row:
+            panel['baseline_pt'] = baseline
+    lowest = min(p['baseline_pt'] for p in panels)-2
+    need = max(0, 3-lowest)
+    content_top = max(box.y1*height for box in boxes.values())
+    visible_texts = [t for t in fig.texts if t.get_visible() and t.get_text()]
+    if visible_texts:
+        content_top = max(content_top, *(t.get_window_extent(renderer).y1/fig.bbox.height*height for t in visible_texts))
+    shift = min(need, max(0, height-content_top-3))
+    growth = need-shift
+    positions = {ax: ax.get_position().frozen() for ax in fig.axes}
+    text_positions = {text: text.get_position() for text in fig.texts}
+    legend_boxes = {legend: legend.get_bbox_to_anchor().transformed(fig.transFigure.inverted()).frozen()
+                    for legend in fig.legends}
+    new_height = height+growth
+    fig.set_size_inches(width/72, new_height/72, forward=False)
+    lift = shift+growth
+    for ax, pos in positions.items():
+        ax.set_position([pos.x0, (pos.y0*height+lift)/new_height,
+                         pos.width, pos.height*height/new_height])
+    for text, (x,y) in text_positions.items():
+        text.set_position((x, (y*height+lift)/new_height))
+    for legend, box in legend_boxes.items():
+        legend.set_bbox_to_anchor((box.x0, (box.y0*height+lift)/new_height,
+                                  box.width, box.height*height/new_height), transform=fig.transFigure)
+    record = []
+    for panel in panels:
+        y = (panel['baseline_pt']+lift)/new_height
+        fig.text(panel['x'], y, '('+panel['letter']+')', ha='center', va='baseline',
+                 fontsize=8, fontfamily=[EN,STIX,CN], color=INK)
+        record.append(dict(letter=panel['letter'], x_pt=panel['x']*width,
+                           baseline_pt=y*new_height, gap_mm=3))
+    fig._academic_panel_record = dict(panels=record, width_mm=width*25.4/72,
+                                     height_mm=new_height*25.4/72,
+                                     canvas_growth_mm=growth*25.4/72)
 
 def note(text):
     text.academic_role='note';text.set_fontfamily([EN,STIX,NOTE]);return text
@@ -119,6 +250,6 @@ def style_record():
       'Chinese_body':str(CN_FILE.relative_to(ROOT)),'Chinese_note':str(NOTE_FILE.relative_to(ROOT)),
       'Latin_digits_math':str(EN_FILE.relative_to(ROOT)),'only_missing_math_glyphs':str(STIX_FILE.relative_to(ROOT))},'font_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in [CN_FILE,NOTE_FILE,EN_FILE,STIX_FILE]},
       'mathtext':'custom Fira Math; CJK-specific fallback to explicitly loaded Normal/WenKai; general math fallback disabled; actual STIX2 only for Fira-absent glyphs per user authorization',
-      'label_size_pt':{'main':8,'note':7.5},'fixed_pale_fills':{'blue':BLUE_FILL,'green':GREEN_FILL,'yellow':YELLOW_FILL,'red':RED_FILL,'purple':PURPLE_FILL},'line_width_pt':{'main':1.1,'axes':.75,'auxiliary':.6,'grid':.4},'background':'white',
+      'label_size_pt':{'main':8,'note':7.5},'fixed_pale_fills':{'blue':BLUE_FILL,'green':GREEN_FILL,'yellow':YELLOW_FILL,'red':RED_FILL,'purple':PURPLE_FILL},'line_width_pt':{'main':1.4,'axes':.95,'auxiliary':.85,'grid':.65},'background':'white','panel_markers':{'position':'below content','gap_mm':3,'font_size_pt':8,'alignment':'shared baseline per visual row; plot size preserved'},
       'fine_yellow_curve':'No automatic color substitution; semantic colors are chosen explicitly in scientific sources',
       'export':'PDF vector Type3 outlines; SVG glyph paths; PNG genuine export dpi'}

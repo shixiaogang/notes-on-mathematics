@@ -1,15 +1,23 @@
 """New exact data panels for paths and mixed TikZ/Matplotlib figures."""
 from pathlib import Path
-import sys,json,math
+import sys,json,math,argparse,hashlib
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pymupdf as fitz
 ROOT=next(p for p in Path(__file__).resolve().parents if (p/'build.sh').exists())
 OUT=Path(__file__).resolve().parent
 REGISTRY=json.loads((OUT/'registry.json').read_text())
+# Current canonical location after the volume migration. Keep the historical
+# redraw registry read-only while generating the asset referenced by the book.
+CURRENT_FOLDERS = {'ch06-transient-growth':
+ 'figures/00-shared/mathematical-preliminaries-upper/02-linear-spaces/matplotlib/ch06-transient-growth'}
+def production_figure_dir(key):
+ return ROOT / Path(CURRENT_FOLDERS.get(key, REGISTRY['figures']['v1-'+key]['folder']))
 def figure_dir(key):
- p=Path(REGISTRY['figures']['v1-'+key]['folder'])
- return Path(__import__('os').environ['ACADEMIC_PROOF_DIR'])/p.relative_to('figures') if __import__('os').environ.get('ACADEMIC_PROOF_DIR') else ROOT/p
+ p=production_figure_dir(key)
+ return Path(__import__('os').environ['ACADEMIC_PROOF_DIR'])/p.relative_to(ROOT/'figures') if __import__('os').environ.get('ACADEMIC_PROOF_DIR') else p
 sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
 from plot_style import configure,prepare_figure,style_record,BLUE,RED,GREEN,MUTED,note
 from plot_style import BLUE, GREEN, YELLOW, RED, PURPLE, BLUE_FILL, GREEN_FILL, YELLOW_FILL, RED_FILL, PURPLE_FILL
@@ -33,7 +41,7 @@ def paths():
  export(fig,'rv-paths')
  (figure_dir('rv-paths')/'data.json').write_text(json.dumps({'kind':'Exact teaching coordinates copied from active TikZ source, not simulated observations','time':t.tolist(),'paths':values.tolist(),'fixed_time':50,'section_values':[26,8,32]},ensure_ascii=False,indent=2)+'\n')
 
-def mixed(key,which):
+def mixed(key,which,reuse_tikz=False):
  if which=='transient':
   k=np.arange(21);x1=40/3*(.8**k-.5**k);x2=.5**k;y=np.hypot(x1,x2)
   assert y[1]>y[0] and y[-1]<.2
@@ -52,10 +60,35 @@ def mixed(key,which):
   definition={'circle_radius':1,'theta':theta.tolist(),'arc':arc.tolist(),'chord':chord.tolist(),'formulas':['d_intrinsic=theta, 0<=theta<=pi','d_extrinsic=2*sin(theta/2)']}
  export(fig,key,'data-panel')
  d=figure_dir(key);(d/'data-panel-definitions.json').write_text(json.dumps(definition,ensure_ascii=False,indent=2)+'\n')
+ # Reproduction includes the geometry panel. The shared renderer applies the
+ # publication stroke policy once to a temporary input, preserving source widths.
+ if not reuse_tikz:
+  from render_tikz import render
+  render(production_figure_dir(key)/'source.tex', output_dir=d)
  left=fitz.open(d/'source.pdf');right=fitz.open(d/'data-panel.pdf');doc=fitz.open();page=doc.new_page(width=169/25.4*72,height=65/25.4*72)
  page.show_pdf_page(fitz.Rect(0,0,82/25.4*72,page.rect.height),left,0)
  page.show_pdf_page(fitz.Rect(87/25.4*72,0,page.rect.width,page.rect.height),right,0)
  doc.save(d/'figure.pdf');page.get_pixmap(dpi=360).save(d/'figure.png');(d/'figure.svg').write_text(page.get_svg_image(text_as_path=True))
  (d/'composition.json').write_text(json.dumps({'route':'TikZ geometry + Matplotlib quantitative panel, vector PDF composition with PyMuPDF at native 82mm panel widths','left':'source.pdf','right':'data-panel.pdf','page_mm':[169,65],'definitions':'data-panel-definitions.json','style':style_record()},ensure_ascii=False,indent=2)+'\n')
  left.close();right.close();doc.close()
-paths();mixed('ch06-transient-growth','transient');mixed('geometry-circle-distances','circle')
+ recipe_path=d/'generation.json'
+ recipe=json.loads(recipe_path.read_text()) if recipe_path.exists() else {'key':'v1-'+key}
+ source_files=[production_figure_dir(key)/'source.tex',Path(__file__).resolve(),ROOT/'figures/00-shared/academic-drawing/render_tikz.py',ROOT/'figures/00-shared/academic-drawing/plot_style.py']
+ recipe.update(route='mixed',stage='Reproduced with current publication fonts and strokes',actually_rendered=True,
+   source=[str(p.relative_to(ROOT)) for p in source_files],
+   data=str((production_figure_dir(key)/'data-panel-definitions.json').relative_to(ROOT)),
+   assets_sha256={f'figure.{ext}':hashlib.sha256((d/f'figure.{ext}').read_bytes()).hexdigest() for ext in ['pdf','svg','png']},
+   source_sha256={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files},
+   replay='python3 '+str(Path(__file__).resolve().relative_to(ROOT))+' --only '+key,
+   replay_scope='Selected TikZ panel, analytical Matplotlib panel and vector composition; no unrelated outputs.')
+ if key=='ch06-transient-growth':
+  recipe['body_owner']='tex/02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis/05-linear-recurrence-stability.tex'
+ recipe_path.write_text(json.dumps(recipe,ensure_ascii=False,indent=2)+'\n')
+if __name__ == '__main__':
+ parser=argparse.ArgumentParser(description=__doc__)
+ parser.add_argument('--only',choices=['rv-paths','ch06-transient-growth','geometry-circle-distances'],help='Generate only the selected asset.')
+ parser.add_argument('--reuse-tikz',action='store_true',help='Use an existing source.pdf after a separate shared-renderer batch.')
+ args=parser.parse_args()
+ if args.only in (None,'rv-paths'): paths()
+ if args.only in (None,'ch06-transient-growth'): mixed('ch06-transient-growth','transient',args.reuse_tikz)
+ if args.only in (None,'geometry-circle-distances'): mixed('geometry-circle-distances','circle',args.reuse_tikz)

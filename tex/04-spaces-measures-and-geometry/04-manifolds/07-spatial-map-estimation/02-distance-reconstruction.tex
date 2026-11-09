@@ -1,0 +1,495 @@
+\section{距离观测的坐标重构}
+\label{sec:smap-distance-reconstruction}
+
+上一节说明，距离最多把点配置确定到合同为止。本节在这个限度内研究重构，依次回答四个问题：完整距离表在什么条件下来自欧氏点，最少需要几维，坐标怎样写出；维数受限时怎样近似；只观测部分距离时形状是否仍然确定；测量误差会怎样传到坐标。比较两组坐标时，总要先消去整体平移与正交变换，否则相差一个旋转的两组正确坐标也会被误判为不同。
+
+\subsection{完整距离的欧氏实现}
+\label{sec:smap-full-distance}
+
+设$n$个点两两之间的距离全部已知，排成矩阵$\bm D=[d_{i,j}]\in\mathbb R^{n\times n}$。任何来自点的距离表都满足三条基本要求：各项非负，$d_{i,j}=d_{j,i}$，对角元$d_{i,i}=0$。下面始终假定输入满足这三条，并记逐项平方后的矩阵为$\bm\Delta=[\delta_{i,j}]$，其中$\delta_{i,j}=d_{i,j}^2$。
+
+问题是：是否存在$\bm x_1,\ldots,\bm x_n\in\mathbb R^d$，使$\lVert\bm x_i-\bm x_j\rVert_2^2=\delta_{i,j}$对所有$i,j$成立？若存在，称$\bm\Delta$\term{欧氏可实现}（Euclidean realizable），所取的点称为它的一个实现。
+
+\paragraph{从坐标到Gram矩阵}
+
+距离和坐标之间隔着一层非线性：坐标的差要平方再相加。内积却是坐标的双线性函数，矩阵语言可以直接处理。所以思路是先把平方距离换成内积，再由内积矩阵读出坐标，这和由协方差矩阵读出主方向是同一类操作。
+
+把各点按行排成$\bm X\in\mathbb R^{n\times d}$，第$i$行为$\bm x_i^\top$。Gram矩阵$\bm G=\bm X\bm X^\top$记录两两内积$g_{i,j}=\bm x_i^\top\bm x_j$。展开平方距离，
+\begin{equation}
+ \delta_{i,j}=\lVert\bm x_i\rVert_2^2+\lVert\bm x_j\rVert_2^2-2\bm x_i^\top\bm x_j=g_{i,i}+g_{j,j}-2g_{i,j}.
+ \label{eq:smap-distance-gram}
+\end{equation}
+记$\bm g=(g_{1,1},\ldots,g_{n,n})^\top$，$\bm1$为全一向量，写成矩阵就是
+\begin{equation}
+ \bm\Delta=\bm g\bm1^\top+\bm1\bm g^\top-2\bm G .
+ \label{eq:smap-distance-gram-matrix}
+\end{equation}
+
+反方向不能直接解出$\bm G$。距离不依赖原点，内积却依赖：整组点平移后，$\bm\Delta$不变而$\bm G$改变。所以要先约定原点，最自然的选择是质心。令
+\begin{equation}
+ \bm J=\bm I_n-\frac1n\bm1\bm1^\top .
+ \label{eq:smap-centering-matrix}
+\end{equation}
+它对称，满足$\bm J^2=\bm J$与$\bm J\bm1=\bm0$，是到$\bm1$的正交补上的正交投影。作用在一个列向量上，$\bm J$从每个分量减去该向量的平均值，所以$\bm J\bm X$的各行就是以质心为原点的坐标。
+
+用$\bm J$左右夹乘式~\eqref{eq:smap-distance-gram-matrix}。由$\bm J\bm1=\bm0$，含$\bm1$的两项都变成零矩阵，只剩
+\begin{equation}
+ -\frac12\bm J\bm\Delta\bm J=\bm J\bm G\bm J=(\bm J\bm X)(\bm J\bm X)^\top .
+ \label{eq:smap-double-centering}
+\end{equation}
+右端正是中心化坐标的Gram矩阵。这一运算称为\term{双中心化}（double centering）：左乘$\bm J$消去每列的均值，右乘$\bm J$消去每行的均值。
+
+下面记$\bm B=-\frac12\bm J\bm\Delta\bm J$。它对任何对称零对角的$\bm\Delta$都有定义，不必事先知道$\bm\Delta$来自点。逐元素写出来，记$\bar\delta_{i\cdot}$、$\bar\delta_{\cdot j}$为第$i$行、第$j$列的均值，$\bar\delta_{\cdot\cdot}$为全体元素的均值，则
+\begin{equation}
+ b_{i,j}=-\frac12\bigl(\delta_{i,j}-\bar\delta_{i\cdot}-\bar\delta_{\cdot j}+\bar\delta_{\cdot\cdot}\bigr).
+ \label{eq:smap-double-centering-entry}
+\end{equation}
+
+\paragraph{可实现的判据}
+
+若$\bm\Delta$可实现，由式~\eqref{eq:smap-double-centering}，$\bm B$是一个Gram矩阵，因而半正定：对任意$\bm c\in\mathbb R^n$，
+\[
+ \bm c^\top\bm B\bm c=\lVert(\bm J\bm X)^\top\bm c\rVert_2^2\geq0 .
+\]
+要证明半正定也是充分的，需要确认双中心化没有丢掉信息，即零对角的对称矩阵由它的双中心化唯一确定。
+
+\begin{lemma}[双中心化的核]
+\label{lem:smap-double-centering-kernel}
+设$\bm H\in\mathbb R^{n\times n}$对称且$\bm J\bm H\bm J=\bm0$，则存在$\bm a\in\mathbb R^n$使
+\begin{equation}
+ \bm H=\bm a\bm1^\top+\bm1\bm a^\top .
+ \label{eq:smap-double-centering-kernel}
+\end{equation}
+若还有$h_{i,i}=0$对所有$i$成立，则$\bm H=\bm0$。
+\end{lemma}
+\begin{proof}
+记
+\[
+ \bm m=\frac1n\bm H\bm1,\qquad\mu=\frac1{n^2}\bm1^\top\bm H\bm1 .
+\]
+把式~\eqref{eq:smap-centering-matrix}代入$\bm J\bm H\bm J=\bm0$并展开，得到
+\[
+ \bm H-\bm1\bm m^\top-\bm m\bm1^\top+\mu\bm1\bm1^\top=\bm0 .
+\]
+取$\bm a=\bm m-\frac\mu2\bm1$，上式就是式~\eqref{eq:smap-double-centering-kernel}。此时对角元为$h_{i,i}=2a_i$，零对角迫使$\bm a=\bm0$，于是$\bm H=\bm0$。
+\end{proof}
+
+\begin{theorem}[欧氏可实现的判据]
+\label{thm:smap-realizability}
+设$\bm\Delta\in\mathbb R^{n\times n}$对称、零对角，$\bm B=-\frac12\bm J\bm\Delta\bm J$。则$\bm\Delta$是某组欧氏点的平方距离矩阵，当且仅当$\bm B$半正定。此时实现所需的最小维数等于$r=\operatorname{rank}\bm B$，并且可以取
+\begin{equation}
+ \bm Y=\bm Q_r\bm\Lambda_r^{1/2}\in\mathbb R^{n\times r},
+ \label{eq:smap-classical-scaling}
+\end{equation}
+其中$\bm\Lambda_r$是$\bm B$的$r$个正特征值组成的对角矩阵，$\bm Q_r$的列是对应的标准正交特征向量。
+\end{theorem}
+\begin{proof}
+必要性已在上面说明。设$\bm B$半正定，由对称矩阵的谱分解，$\bm B=\bm Q_r\bm\Lambda_r\bm Q_r^\top$，于是式~\eqref{eq:smap-classical-scaling}的$\bm Y$满足
+\[
+ \bm Y\bm Y^\top=\bm B .
+\]
+由$\bm B\bm1=\bm0$得
+\[
+ \lVert\bm Y^\top\bm1\rVert_2^2=\bm1^\top\bm B\bm1=0 ,
+\]
+所以$\bm Y$的各行已经中心化，$\bm J\bm Y=\bm Y$。
+
+记$\bm\Delta'$为$\bm Y$各行的平方距离矩阵。由式~\eqref{eq:smap-double-centering}，
+\[
+ -\frac12\bm J\bm\Delta'\bm J=\bm Y\bm Y^\top=\bm B ,
+\]
+所以$\bm H=\bm\Delta-\bm\Delta'$对称、零对角，且$\bm J\bm H\bm J=\bm0$。由引理~\ref{lem:smap-double-centering-kernel}，$\bm H=\bm0$，即$\bm Y$实现了$\bm\Delta$。
+
+最后看维数。任何$\mathbb R^k$中的实现，中心化后的Gram矩阵就是$\bm B$，而它是一个$n\times k$矩阵与其转置之积，秩不超过$k$，故$k\geq r$；上面的构造又在$k=r$时达到。$r=0$时所有点重合。
+\end{proof}
+
+这一判据与谱分解构造合称\term{经典多维尺度}（classical multidimensional scaling）。所用的对称矩阵谱分解可参考\BookChapterRef{chap:eigen-spectral-decomposition}{卷二第6章“谱分解”}。计算时依次做五件事：逐项平方得$\bm\Delta$，双中心化得$\bm B$，求$\bm B$的特征值与特征向量，检查有无负特征值，按式~\eqref{eq:smap-classical-scaling}写出坐标。写出坐标后，还要用它们重新计算距离，与原表核对。
+
+\paragraph{坐标的唯一性}
+
+谱分解中特征向量可以变号，重特征值时特征空间内部还可以换基，所以式~\eqref{eq:smap-classical-scaling}给出的坐标并不唯一。下面的定理说明，这些差别恰好是正交变换，并且任何两个同维实现都只差一个合同。
+
+\begin{theorem}[完整距离确定合同类]
+\label{thm:smap-full-distance-congruence}
+设$\bm x_1,\ldots,\bm x_n$与$\bm x_1',\ldots,\bm x_n'\in\mathbb R^d$的两两距离全部相同，则两组点合同。更具体地，存在$\bm Q\in\mathrm O(d)$，使
+\begin{equation}
+ \bm x_i'-\overline{\bm x}'=\bm Q(\bm x_i-\overline{\bm x}),\qquad i=1,\ldots,n ,
+ \label{eq:smap-full-distance-congruence}
+\end{equation}
+其中$\overline{\bm x}$、$\overline{\bm x}'$是两组点的质心。
+\end{theorem}
+\begin{proof}
+记$\bm z_i=\bm x_i-\overline{\bm x}$、$\bm z_i'=\bm x_i'-\overline{\bm x}'$。由式~\eqref{eq:smap-double-centering}，两组中心化坐标的Gram矩阵都等于同一个$\bm B$，即$\bm z_i^\top\bm z_j=\bm z_i'^\top\bm z_j'$对所有$i,j$成立。于是对任意系数$\bm c\in\mathbb R^n$，
+\[
+ \Bigl\lVert\sum_ic_i\bm z_i\Bigr\rVert_2^2=\bm c^\top\bm B\bm c=\Bigl\lVert\sum_ic_i\bm z_i'\Bigr\rVert_2^2 .
+\]
+
+记$S$、$S'$分别是$\bm z_i$与$\bm z_i'$张成的子空间，规定
+\[
+ L\Bigl(\sum_ic_i\bm z_i\Bigr)=\sum_ic_i\bm z_i' .
+\]
+若两组系数给出$S$中同一向量，它们的差$\bm c$使$\sum_ic_i\bm z_i=\bm0$，由上式$\sum_ic_i\bm z_i'=\bm0$。所以$L$是良定义的线性映射，并且保持长度。
+
+保长的线性映射是单射，所以$\dim S'=\dim S$，正交补$S^\perp$与$S'^\perp$维数也相同。在两个正交补中各取一组标准正交基，把前者逐个送到后者，就把$L$延拓为$\mathbb R^d$上保长的线性映射$\bm Q$，即正交矩阵，并且$\bm Q\bm z_i=\bm z_i'$。
+\end{proof}
+
+这一定理兑现了第~\ref{sec:smap-identifiability}节的论断：对完整距离表，合同是唯一的不确定性。$\bm\Lambda_r$的特征值互不相同时，式~\eqref{eq:smap-classical-scaling}中特征向量的选取只差各列的符号，对应沿各坐标轴的反射；有重特征值时，相应的坐标轴可以在特征空间内任意旋转。
+
+\paragraph{实现与不可实现的例子}
+
+先用三个点把整个流程走一遍。图~\ref{fig:smap-mds-example}按计算顺序摆出了原始点、平方距离表、双中心化结果和重构坐标，例子中的数值都可以对照这幅图。
+
+\begin{example}[三个点的重构]
+\label{ex:smap-three-point-mds}
+取三个点
+\[
+ \bm x_1=(-1,0)^\top,\quad\bm x_2=(0,1)^\top,\quad\bm x_3=(1,0)^\top ,
+\]
+平方距离为$\delta_{1,2}=\delta_{2,3}=2$、$\delta_{1,3}=4$。
+
+第一步按式~\eqref{eq:smap-double-centering-entry}作双中心化。三列的均值分别是$2$、$\frac43$、$2$，全体元素的均值是$\frac{16}9$。例如
+\[
+ b_{1,1}=-\frac12\Bigl(0-2-2+\frac{16}9\Bigr)=\frac{10}9,\qquad
+ b_{1,2}=-\frac12\Bigl(2-2-\frac43+\frac{16}9\Bigr)=-\frac29 .
+\]
+其余元素同样算出，得到
+\[
+ \bm B=\frac19\begin{bmatrix}10&-2&-8\\-2&4&-2\\-8&-2&10\end{bmatrix}.
+\]
+
+第二步求特征向量。交换点$1$和点$3$时$\bm B$不变，所以可以按这一对称性找特征向量。取反对称的$\bm v=(1,0,-1)^\top/\sqrt2$和对称且与$\bm1$正交的$\bm w=(1,-2,1)^\top/\sqrt6$，直接计算得
+\[
+ \bm B\bm v=2\,\bm v,\qquad\bm B\bm w=\frac23\,\bm w,\qquad\bm B\bm1=\bm0 .
+\]
+
+第三步写出坐标。两个特征值都为正，所以精确重构恰好需要二维。由式~\eqref{eq:smap-classical-scaling}，重构坐标的两列为
+\[
+ \sqrt2\,\bm v=(1,0,-1)^\top,\qquad\sqrt{\tfrac23}\,\bm w=\tfrac13(1,-2,1)^\top ,
+\]
+三个点是$\bm y_1=(1,\frac13)^\top$、$\bm y_2=(0,-\frac23)^\top$、$\bm y_3=(-1,\frac13)^\top$。
+
+第四步核对。两两的平方距离为$1+1=2$、$1+1=2$、$4+0=4$，与原表一致。原配置平移到质心后为$(-1,-\frac13)^\top$、$(0,\frac23)^\top$、$(1,-\frac13)^\top$，重构结果恰是它旋转$180^\circ$的结果，与原配置合同；特征向量取相反的符号，就得到中心化的原配置本身。
+\end{example}
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=110.031mm]{figures/04-spaces-measures-and-geometry/04-manifolds/tikz/smap-mds-example/figure.pdf}
+  \caption{三个点的经典多维尺度。(a)原始点（蓝）与它们的质心。(b)平方距离表$\bm\Delta$经过双中心化变成$\bm B$。(c)由$\bm B$的特征向量和特征值写出的重构坐标（绿），坐标轴是两个特征方向。重构配置与原配置相差一个$180^\circ$旋转和一个平移。}
+  \label{fig:smap-mds-example}
+\end{BookInlineFigure}
+
+把上例中的数换成一般的$\delta_{1,2}=\delta_{2,3}=a$、$\delta_{1,3}=b$，上面的对称性论证不变，$\bm v$和$\bm w$仍是特征向量。用$\bm J\bm v=\bm v$、$\bm J\bm w=\bm w$算出瑞利商，特征值为
+\begin{equation}
+ \bm v^\top\bm B\bm v=\frac b2,\qquad
+ \bm w^\top\bm B\bm w=\frac{4a-b}6 .
+ \label{eq:smap-three-point-eigenvalues}
+\end{equation}
+这个公式后面会反复用到。
+
+\begin{example}[违反三角不等式的距离表]
+\label{ex:smap-nonrealizable}
+取$d_{1,2}=d_{2,3}=1$、$d_{1,3}=3$，即$a=1$、$b=9$。由式~\eqref{eq:smap-three-point-eigenvalues}，$\bm B$的特征值为
+\[
+ \frac92,\qquad\frac{4-9}6=-\frac56,\qquad0 ,
+\]
+出现负特征值，所以这张表在任何维数的欧氏空间中都不可实现。这与直接观察一致：$3>1+1$违反三角不等式。负特征值的特征向量是$(1,-2,1)^\top$，它指出问题出在中间点相对两端的位置上。
+\end{example}
+
+图~\ref{fig:smap-spectrum-realizable}显示了$d_{1,2}=d_{2,3}=1$时$d_{1,3}$变化的全过程。$d_{1,3}<2$时两个圆相交，存在真实的三角形，第二个特征值为正；$d_{1,3}=2$时三点共线，第二个特征值恰好为零，表只需要一维；$d_{1,3}>2$时两个圆分离，第二个特征值变负，负的程度量出了“不可实现”的程度。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/smap-spectrum-realizable/figure.pdf}
+  \caption{可实现性与谱。设$d_{1,2}=d_{2,3}=1$。(a)半径为$1$的两个圆（虚线）圆心相距$d_{1,3}$，中间点需要同时落在两圆上：$d_{1,3}=1.2$时存在，$d_{1,3}=2$时退化为共线，$d_{1,3}=3$时不存在（红）。(b)特征值$d_{1,3}^2/2$（蓝）与$(4-d_{1,3}^2)/6$（绿、红）随$d_{1,3}$的变化，后者在$d_{1,3}=2$处穿过零，例~\ref{ex:smap-nonrealizable}的取值落在负的部分。}
+  \label{fig:smap-spectrum-realizable}
+\end{BookInlineFigure}
+
+\subsection{低维坐标重构}
+\label{sec:smap-low-dimension}
+
+实际中常常指定维数$k$，例如要在平面上画出点的分布，而$\bm B$的秩可能大于$k$；含误差的距离表还可能让$\bm B$出现负特征值，根本不可实现。这时只能求近似坐标$\bm Y\in\mathbb R^{n\times k}$。近似必须先说明比较什么，本小节先以Gram矩阵为比较对象，再看距离上的误差。
+
+\paragraph{Gram矩阵的最优截断}
+
+以Frobenius范数比较Gram矩阵，问题是在秩不超过$k$的半正定矩阵中找离$\bm B$最近的一个。$\bm B$半正定时，它的谱分解就是奇异值分解，截断到前$k$个特征值即得最优解，这是最佳低秩逼近定理的直接推论，可参考\BookChapterRef{chap:matrix-approximation}{卷二第18章“矩阵逼近”}。$\bm B$有负特征值时还要多一步：负谱部分对任何半正定近似都只会增加误差。
+
+\begin{theorem}[半正定低秩近似]
+\label{thm:smap-psd-truncation}
+设$\bm B$对称，特征值$\lambda_1\geq\cdots\geq\lambda_n$，标准正交的特征向量为$\bm q_1,\ldots,\bm q_n$。令$p$为正特征值的个数，$k'=\min(k,p)$，并记
+\begin{equation}
+ \bm B_k=\sum_{l\leq k'}\lambda_l\bm q_l\bm q_l^\top .
+ \label{eq:smap-psd-truncation}
+\end{equation}
+则对一切秩不超过$k$的半正定矩阵$\bm X$，
+\begin{equation}
+ \lVert\bm B-\bm X\rVert_{\mathrm F}^2\geq\lVert\bm B-\bm B_k\rVert_{\mathrm F}^2
+ =\sum_{l=k'+1}^{p}\lambda_l^2+\sum_{\lambda_l<0}\lambda_l^2 .
+ \label{eq:smap-psd-truncation-bound}
+\end{equation}
+\end{theorem}
+\begin{proof}
+把$\bm B$分成正部与负部：
+\[
+ \bm B_+=\sum_{\lambda_l>0}\lambda_l\bm q_l\bm q_l^\top,\qquad
+ \bm B_-=\sum_{\lambda_l<0}(-\lambda_l)\bm q_l\bm q_l^\top .
+\]
+二者都半正定，$\bm B=\bm B_+-\bm B_-$，且由特征向量正交，$\bm B_+\bm B_-=\bm0$。对半正定的$\bm X$，把$\bm B-\bm X$写成$(\bm B_+-\bm X)-\bm B_-$并展开平方，得到
+\[
+ \lVert\bm B-\bm X\rVert_{\mathrm F}^2
+ =\lVert\bm B_+-\bm X\rVert_{\mathrm F}^2+\lVert\bm B_-\rVert_{\mathrm F}^2+2\operatorname{tr}(\bm X\bm B_-) .
+\]
+这里交叉项中的$\operatorname{tr}(\bm B_+\bm B_-)$为零。
+
+两个半正定矩阵之积的迹非负：写$\bm B_-=\bm C\bm C^\top$，则
+\[
+ \operatorname{tr}(\bm X\bm B_-)=\operatorname{tr}(\bm C^\top\bm X\bm C)\geq0 .
+\]
+所以
+\[
+ \lVert\bm B-\bm X\rVert_{\mathrm F}^2\geq\lVert\bm B_+-\bm X\rVert_{\mathrm F}^2+\lVert\bm B_-\rVert_{\mathrm F}^2 .
+\]
+
+$\bm B_+$半正定，由最佳低秩逼近定理，秩不超过$k$时
+\[
+ \lVert\bm B_+-\bm X\rVert_{\mathrm F}^2\geq\sum_{l=k'+1}^p\lambda_l^2 ,
+\]
+等号在$\bm X=\bm B_k$时取到。而$\bm X=\bm B_k$时$\operatorname{tr}(\bm B_k\bm B_-)=0$，上面的不等式都取等号。
+\end{proof}
+
+于是低维坐标取$\bm Y_k=\bm Q_{k'}\bm\Lambda_{k'}^{1/2}$，即只保留前$k'$个正特征值对应的列。它仍然中心化，因为每个保留的特征向量都与$\bm1$正交。
+
+负特征值被舍弃，舍弃量$\sum_{\lambda_l<0}\lambda_l^2$应与测量误差的大小比较。若它远大于误差能解释的范围，问题出在数据或模型上，而不是维数选小了。
+
+\paragraph{距离上的误差}
+
+Gram矩阵的误差并不直接说明距离差了多少，需要单独计算。设$\bm\Delta$可实现，$\bm Y=\bm Q_r\bm\Lambda_r^{1/2}$是它的中心化实现。$\bm Y_k$恰好是$\bm Y$的前$k$列，相当于把每个点正交投影到前$k$个坐标轴张成的子空间上。正交投影不增加长度，所以每一对点的距离只会缩短：
+\[
+ \lVert\widetilde{\bm y}_i-\widetilde{\bm y}_j\rVert_2\leq d_{i,j}.
+\]
+
+缩短的总量可以精确算出。对中心化的点，展开平方并用$\sum_i\bm y_i=\bm0$，得到
+\begin{equation}
+ \sum_{i<j}\lVert\bm y_i-\bm y_j\rVert_2^2=n\sum_i\lVert\bm y_i\rVert_2^2=n\operatorname{tr}\bm B .
+ \label{eq:smap-distance-sum-trace}
+\end{equation}
+对截断坐标，同样的计算给出
+\[
+ \sum_{i<j}\widetilde\delta_{i,j}=n\operatorname{tr}\bm B_k .
+\]
+两式相减得
+\begin{equation}
+ \sum_{i<j}\bigl(\delta_{i,j}-\widetilde\delta_{i,j}\bigr)=n\sum_{l>k}\lambda_l .
+ \label{eq:smap-truncation-distance-loss}
+\end{equation}
+这里出现的是特征值之和，而Gram误差的平方是特征值的平方和。两种误差都由舍弃的谱决定，但不是同一个量。
+
+\begin{example}[三个点的一维近似]
+\label{ex:smap-one-dimensional}
+回到例~\ref{ex:smap-three-point-mds}，取$k=1$，只保留特征值$2$。一维坐标就是重构坐标的第一列，三个点落在$1$、$0$、$-1$处，如图~\ref{fig:smap-truncation-stress}(a)。两端距离仍为$2$，中间点到两端的距离由$\sqrt2$缩成$1$。
+
+Gram矩阵的误差平方是舍弃的特征值的平方$(2/3)^2=4/9$，误差本身是$2/3$。平方距离的总缩短量为
+\[
+ (2-1)+(2-1)+(4-4)=2 ,
+\]
+恰为式~\eqref{eq:smap-truncation-distance-loss}给出的$n\lambda_2=3\cdot\frac23$。
+\end{example}
+
+\paragraph{最优性依赖目标}
+
+谱截断在Gram矩阵的Frobenius误差下最优，不等于在一切几何准则下最优。常用的另一种准则直接比较距离，称为\term{应力}（stress）：
+\begin{equation}
+ \sum_{i<j}\bigl(\lVert\widetilde{\bm y}_i-\widetilde{\bm y}_j\rVert_2-d_{i,j}\bigr)^2 .
+ \label{eq:smap-stress}
+\end{equation}
+
+继续上面的例子。截断坐标的两端距离精确，中间两段各差$\sqrt2-1$，所以应力为
+\[
+ 2(\sqrt2-1)^2=2(3-2\sqrt2)\approx0.343 .
+\]
+改取一维坐标$(-s,0,s)$，中间两段长$s$，两端相距$2s$，应力成为
+\[
+ 2(s-\sqrt2)^2+(2s-2)^2 .
+\]
+
+对$s$求导令其为零，得到
+\[
+ s=\frac{2+\sqrt2}3\approx1.138 .
+\]
+代回去，$s-\sqrt2=\frac{2-2\sqrt2}3$，$2s-2=\frac{2\sqrt2-2}3$，应力为
+\[
+ \frac{4(\sqrt2-1)^2}3=\frac{4(3-2\sqrt2)}3\approx0.229 ,
+\]
+比截断坐标小。
+
+图~\ref{fig:smap-truncation-stress}(b)是这条应力曲线。截断坐标保住了两端的长距离，把缩短全部留给中间两段；应力准则愿意把两端拉长一点，换取中间两段的误差变小，于是最优位置离开了$s=1$。应力关于坐标不是凸的，一般需要迭代优化，而不能由一次谱分解得到。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/smap-truncation-stress/figure.pdf}
+  \caption{一维近似。(a)重构坐标（绿）竖直投影到第一特征方向上（蓝），对应保留特征值$2$，舍弃$2/3$。(b)一维坐标$(-s,0,s)$的应力随$s$的变化，$s=1$是谱截断（绿，$0.343$），$s\approx1.14$是应力最优解（红，$0.229$）。}
+  \label{fig:smap-truncation-stress}
+\end{BookInlineFigure}
+
+\subsection{部分距离的重构}
+\label{sec:smap-partial-distance}
+
+许多测量只能给出部分点对的距离，例如传感器只能测到通信范围内的邻居。把已观测的点对看作边，就得到\term{观测图}（observation graph）$\mathcal G=(V,E)$；图的基本概念可参考\BookChapterRef{chap:graph-objects}{卷三第1章“图与连接结构”}。观测图不连通时，不同分量之间没有任何约束，各分量可以独立地移动。下面两个例子说明，连通也远远不够。
+
+\paragraph{连通而形状不定}
+
+在平面上取三个点，只观测$d_{1,2}=d_{2,3}=1$。观测图是一条路径，是连通的。但$\bm x_2$处的夹角可以任意选取：$\bm x_1$与$\bm x_3$都在以$\bm x_2$为圆心的单位圆上，如图~\ref{fig:smap-partial-examples}(a)，它们的距离可以是$[0,2]$中的任何值。不同的夹角给出互不合同的配置，所以连通不保证形状确定。
+
+\paragraph{局部确定而全局不唯一}
+
+为了区分两种“确定”，先给出定义。设$\bm x_1,\ldots,\bm x_n\in\mathbb R^d$满足观测图$\mathcal G$上的全部距离，称它是一个实现。局部的确定只看这个实现附近；全局的确定要看所有实现。
+
+\begin{definition}[局部刚性与全局刚性]
+\label{def:smap-rigidity}
+若存在$\eta>0$，使得每个满足同一组观测距离、且$\lVert\bm x_i'-\bm x_i\rVert_2<\eta$对所有$i$成立的实现都与原实现合同，则称原实现\term{局部刚性}（locally rigid）。若满足观测距离的每个实现都与它合同，则称它\term{全局刚性}（globally rigid）。
+\end{definition}
+
+取平面上的四个点
+\[
+ \bm x_1=(0,0)^\top,\quad\bm x_2=(2,0)^\top,\quad\bm x_3=(1,1)^\top,\quad\bm x_4=(1,-2)^\top ,
+\]
+观测除$\{3,4\}$外的五对距离：$d_{1,2}=2$，$d_{1,3}=d_{2,3}=\sqrt2$，$d_{1,4}=d_{2,4}=\sqrt5$。这是两个共用边$\{1,2\}$的三角形，也就是图~\ref{fig:smap-two-observations}(a)的数据。
+
+先看局部刚性。三角形的三边确定它到合同为止，所以$\bm x_1,\bm x_2,\bm x_3$整体只能作合同变换。在此基础上，$\bm x_4$到$\bm x_1,\bm x_2$的距离给定，它只能落在两个圆的两个交点之一，即直线$\bm x_1\bm x_2$的两侧各一个。两个交点相距$4$，小范围的扰动不能从一个跳到另一个，所以原实现局部刚性。
+
+再看全局。把$\bm x_4$关于直线$\bm x_1\bm x_2$反射到$\bm x_4'=(1,2)^\top$，五个观测距离都不变，未观测的$d_{3,4}$却由$3$变成$1$，见图~\ref{fig:smap-partial-examples}(b)(c)。两个实现互不合同，所以原实现不是全局刚性的。局部确定只排除了附近的连续形变，不排除远处另有一个离散的解。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=109.94mm]{figures/04-spaces-measures-and-geometry/04-manifolds/tikz/smap-partial-examples/figure.pdf}
+  \caption{部分距离的几种情形。(a)两条单位边组成的链，观测图连通，$\bm x_3$仍可在圆上任意转动。(b)(c)两个共边三角形的两个实现，$\bm x_4$与$\bm x_4'$关于公共边互为反射，未观测的距离分别为$3$和$1$（红色虚线）。(d)把(a)中缺失的$d_{1,3}$填成零后的结果：链被折叠（红），灰色虚线是其余可行的形状。}
+  \label{fig:smap-partial-examples}
+\end{BookInlineFigure}
+
+\paragraph{缺边、不相容与含噪}
+
+固定维数$d$，并按第~\ref{sec:smap-identifiability}节的方式约定参照以消去合同自由度之后，部分距离问题有三种不同的困难。缺边可能使解不唯一，如上面的路径和两个三角形；观测不相容时根本无解，例如三个点的三条观测边长为$1$、$1$、$3$；观测含噪时一般也无精确解，只能在已观测的边上度量偏差。
+
+含噪时自然的做法是只对已观测的边建立残差，例如
+\begin{equation}
+ \sum_{\{i,j\}\in E}\bigl(\lVert\bm x_i-\bm x_j\rVert_2-d_{i,j}\bigr)^2 ,
+ \label{eq:smap-partial-residual}
+\end{equation}
+或用平方距离之差代替距离之差。未观测的点对不进入目标，因为对它们没有任何数据。
+
+这类目标关于坐标不是凸的，可能有多个局部极小，对应的正是上面的离散多解；其求解属于迭代优化。
+
+\paragraph{不能把缺失填成零}
+
+把缺失的距离填零，再套用第~\ref{sec:smap-full-distance}节的谱重构，是常见的错误。零距离不是“未知”，而是断言两点重合。在路径的例子中填$d_{1,3}=0$，得到完整表，其中$a=1$、$b=0$。由式~\eqref{eq:smap-three-point-eigenvalues}，$\bm B$的特征值为
+\[
+ \frac{4a-b}6=\frac23,\qquad\frac b2=0,
+\]
+表是可实现的，实现就是$\bm x_1=\bm x_3$，链被完全折叠，如图~\ref{fig:smap-partial-examples}(d)。
+
+谱重构会毫无警告地给出这个配置，好像形状已经确定，实际上它只是无穷多个可行形状中被错误的数据选中的一个。填入其他猜测值同样会选出某个特定形状。所以缺失距离只能作为“无约束”处理，或者在明确的附加假设下另行估计，而不能伪装成观测。
+
+\subsection{坐标重构的稳定性}
+\label{sec:smap-reconstruction-stability}
+
+距离表总带有测量误差。本小节先研究完整表上的误差怎样经过平方、双中心化和谱分解传到坐标，再说明部分距离为什么需要另作分析。
+
+所用的工具取自\BookChapterRef{chap:condition-and-spectral-perturbation}{卷二第9章“条件数与谱扰动”}。对称矩阵受对称扰动$\bm F$时，按降序配对的特征值至多移动$\lVert\bm F\rVert_2$（Weyl界）。若前$k$个特征值与其余特征值之间有间隔$g$，且$\lVert\bm F\rVert_2\leq g/2$，前$k$个特征向量张成的子空间最大主夹角的正弦不超过$2\lVert\bm F\rVert_2/g$（Davis--Kahan界）。
+
+\paragraph{从距离误差到Gram误差}
+
+设观测的平方距离表为$\widetilde{\bm\Delta}=\bm\Delta+\bm E$，$\bm E$对称、零对角。双中心化是线性的，所以
+\[
+ \widetilde{\bm B}-\bm B=-\frac12\bm J\bm E\bm J .
+\]
+$\bm J$是正交投影，谱范数为$1$，于是
+\begin{equation}
+ \lVert\widetilde{\bm B}-\bm B\rVert_2\leq\frac12\lVert\bm E\rVert_2 .
+ \label{eq:smap-gram-perturbation}
+\end{equation}
+
+误差是加在平方距离上的：若距离本身有误差$\varepsilon_{i,j}$，平方距离的误差为$2d_{i,j}\varepsilon_{i,j}+\varepsilon_{i,j}^2$，长距离上的同样误差会被放大。
+
+\begin{theorem}[完整距离表的谱扰动]
+\label{thm:smap-mds-perturbation}
+在上述记号下，设$\lambda_l$与$\widetilde\lambda_l$分别是$\bm B$与$\widetilde{\bm B}$按降序排列的第$l$个特征值，则
+\begin{equation}
+ |\widetilde\lambda_l-\lambda_l|\leq\frac12\lVert\bm E\rVert_2,\qquad l=1,\ldots,n .
+ \label{eq:smap-eigenvalue-perturbation}
+\end{equation}
+若$g=\lambda_k-\lambda_{k+1}>0$且$\lVert\bm E\rVert_2\leq g$，则两者前$k$个特征向量张成的子空间满足
+\begin{equation}
+ \sin\theta_{\max}\leq\frac{\lVert\bm E\rVert_2}g .
+ \label{eq:smap-subspace-perturbation}
+\end{equation}
+\end{theorem}
+\begin{proof}
+由式~\eqref{eq:smap-gram-perturbation}，扰动$\widetilde{\bm B}-\bm B$的谱范数不超过$\frac12\lVert\bm E\rVert_2$，Weyl界直接给出式~\eqref{eq:smap-eigenvalue-perturbation}。条件$\lVert\bm E\rVert_2\leq g$保证这个范数不超过$g/2$，代入Davis--Kahan界，得到$2\cdot\frac12\lVert\bm E\rVert_2/g$，即式~\eqref{eq:smap-subspace-perturbation}。
+\end{proof}
+
+\paragraph{谱隙与小特征值}
+
+定理分两层说明误差的去向。特征值本身稳定，误差至多为$\frac12\lVert\bm E\rVert_2$。坐标轴的方向取决于谱隙：相邻特征值接近时，很小的误差就能让坐标轴在相应的特征空间内大幅转动，这与重特征值时坐标轴本来就不唯一是同一现象的两面。
+
+用一个$2\times2$的对称块可以把这件事算清楚。设两个相邻特征值相差$g$，扰动在这个块上写成
+\[
+ \begin{bmatrix}\lambda+g/2&e\\e&\lambda-g/2\end{bmatrix},
+\]
+扰动的谱范数为$e$。特征向量相对原坐标轴转过的角度$\theta$满足$\tan2\theta=2e/g$，所以
+\begin{equation}
+ \theta=\frac12\arctan\frac{2e}g .
+ \label{eq:smap-gap-rotation}
+\end{equation}
+$g=1$、$e=0.1$时只转$5.7^\circ$；$g=0.02$、$e=0.1$时转$42.1^\circ$，几乎转到两个坐标轴的中间。同样的扰动，转角由谱隙决定，见图~\ref{fig:smap-stability}(b)。
+
+坐标的长度还要再经过开方。第$l$列坐标按$\sqrt{\lambda_l}$缩放，而
+\begin{equation}
+ \bigl|\sqrt{\widetilde\lambda_l}-\sqrt{\lambda_l}\bigr|
+ =\frac{|\widetilde\lambda_l-\lambda_l|}{\sqrt{\widetilde\lambda_l}+\sqrt{\lambda_l}}
+ \leq\frac{|\widetilde\lambda_l-\lambda_l|}{\sqrt{\lambda_l}} .
+ \label{eq:smap-sqrt-perturbation}
+\end{equation}
+特征值越小，相对误差越大。更严重的是，误差与小特征值同量级时，$\widetilde\lambda_l$可能变成负数，这个方向就整个丢失了。
+
+\begin{example}[几乎共线的三个点]
+\label{ex:smap-near-collinear}
+取三个点
+\[
+ \bm x_1=(-1,0)^\top,\quad\bm x_2=(0,h)^\top,\quad\bm x_3=(1,0)^\top,\qquad h=0.1 .
+\]
+这时$a=1.01$，$b=4$，由式~\eqref{eq:smap-three-point-eigenvalues}，三个特征值为
+\[
+ \lambda_1=2,\qquad\lambda_2=\frac{2h^2}3\approx0.0067,\qquad\lambda_3=0 .
+\]
+
+设$d_{1,3}$被测成$2.02$，只有$1\%$的误差，于是$\widetilde\delta_{1,3}=4.0804$。代入同一公式，
+\[
+ \frac b2=2.0402,\qquad\frac{4a-b}6=\frac{4.04-4.0804}6\approx-0.0067 ,
+\]
+所以第二个特征值由正变负，按降序排成$2.0402$、$0$、$-0.0067$。事实上$2.02>2\sqrt{1.01}\approx2.0100$已违反三角不等式，表在任何维数中都不可实现。
+
+第一个特征值的相对变化约为$2\%$；纵向那个高为$0.1$的坐标则完全丢失，见图~\ref{fig:smap-stability}(a)。这里$\bm E$只有$(1,3)$、$(3,1)$两项$0.0804$，$\lVert\bm E\rVert_2=0.0804$，三个特征值的变化分别是$0.0402$、$0.0067$、$0.0067$，都在式~\eqref{eq:smap-eigenvalue-perturbation}的界$0.0402$之内。
+\end{example}
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=112mm]{figures/04-spaces-measures-and-geometry/04-manifolds/matplotlib/smap-stability/figure.pdf}
+  \caption{稳定性的三个机制。(a)几乎共线的三点中，第二个特征值随观测的$d_{1,3}$变化，$d_{1,3}$从$2.00$变到$2.02$时由正（绿）变负（红）。(b)式~\eqref{eq:smap-gap-rotation}给出的坐标轴转角，谱隙$g$越小，同样大的扰动$e$造成的转动越大。(c)部分距离的例子中，放大倍数$1/(2\eta)$随$\eta\to0$无界增长。}
+  \label{fig:smap-stability}
+\end{BookInlineFigure}
+
+\paragraph{比较坐标前消去合同}
+
+评价重构误差时，不能直接比较$\widetilde{\bm Y}$与真实坐标$\bm X$的各个分量：即使距离完全精确，重构也只确定到合同为止。正确的做法是先把两组坐标都平移到质心，再求
+\begin{equation}
+ \min_{\bm Q\in\mathrm O(d)}\lVert\widetilde{\bm Y}-\bm X\bm Q\rVert_{\mathrm F}.
+ \label{eq:smap-orthogonal-alignment}
+\end{equation}
+它的解由第~\ref{sec:smap-rotation}节的正交对齐给出。这里必须允许反射，因为距离同样无法辨认反射。
+
+\paragraph{部分距离的稳定性}
+
+只观测部分距离时，没有完整的$\bm B$可以分析，稳定性取决于观测约束本身是否足够，不能由某张完整表的谱隙推出。仍以两个共边三角形为例，把$\bm x_4$改为$(1,-\eta)^\top$，$\eta>0$很小，第四个点贴近公共边。
+
+由$d_{1,4}^2=1+\eta^2$，若$d_{1,4}^2$与$d_{2,4}^2$都有误差$\varepsilon$，$\eta^2$就改变$\varepsilon$，由导数得$\eta$约改变$\varepsilon/(2\eta)$。放大倍数$1/(2\eta)$随$\eta\to0$无界增长，如图~\ref{fig:smap-stability}(c)：$\eta=0.5$时是$1$，$\eta=0.1$时已是$5$。
+
+同时，$\bm x_4$在公共边两侧的两个解只相距$2\eta$，误差稍大就无法判断它在哪一侧。这些现象只与观测图在这组点上的约束几何有关，而与真实配置的完整距离表是否有良好的谱隙无关：真实配置的完整表在这个例子中完全正常。

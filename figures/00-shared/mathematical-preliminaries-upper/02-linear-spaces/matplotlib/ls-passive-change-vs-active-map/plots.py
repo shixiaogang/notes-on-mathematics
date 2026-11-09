@@ -42,6 +42,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
@@ -86,11 +91,11 @@ a.text(B2[0] - .42, B2[1] + .04, "$b_2$", fontsize=8, color=GREEN)
 a.text(X[0] + .10, X[1] + .06, "$x$", fontsize=8, color=INK)
 a.text(3.15, 1.55, "旧读数 $(3,3)$", fontsize=8, color=MUTED)
 a.text(-2.7, 3.62, "新读数 $(2,1)$：$x=2\\,b_1+b_2$", fontsize=8)
-a.text(-2.7, -0.85, "向量没动，只是坐标轴换了", fontsize=8)
-a.set_title("(a) 被动换基：向量不动，坐标数字变了", fontsize=8)
+pass
+a.set_title('(a)', fontsize=8)
 a.set(xlim=(-2.9, 5.6), ylim=(-1.1, 4.2), xticks=[-2, 0, 2, 4], yticks=[-1, 0, 1, 2, 3])
 a.set_aspect("equal")
-a.grid(True)
+a.grid(False)
 
 # ---- 右：主动变换。坐标系不动，x 被 A 搬到 Ax ----
 arrow(b, (0, 0), X, BLUE, lw=1.3)
@@ -104,13 +109,13 @@ b.annotate("", xy=tuple(AX), xytext=tuple(X),
                            connectionstyle="arc3,rad=-0.25"))
 b.text(1.9, 3.45, "$x=(3,3)$", fontsize=8, color=BLUE)
 b.text(AX[0] + .10, AX[1] + .05, "$Ax=(6,3)$", fontsize=8, color=GREEN)
-b.text(-.2, -0.85, "坐标系没动，切变 $A x=(6,3)$（$A$：向右错一位）", fontsize=8)
-b.set_title("(b) 主动变换：坐标系不动，向量换了位置", fontsize=8)
+pass
+b.set_title('(b)', fontsize=8)
 b.set(xlim=(-1.1, 7.4), ylim=(-1.1, 4.2), xticks=[0, 2, 4, 6], yticks=[0, 1, 2, 3])
 b.set_aspect("equal")
-b.grid(True)
+b.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:
@@ -130,7 +135,7 @@ record = {
     },
     "evaluated_data": {"x": list(X), "two_b1": list(2 * B1), "Ax": list(AX)},
     "processing": "直接求值；无平滑、无随机采样。",
-    "width_mm": 169, "height_mm": 66, "png_dpi": 300,
+    "width_mm": 169, "height_mm": fig.get_figheight()*25.4, "png_dpi": 300,
     "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
 }
 (HERE / "sources.json").write_text(

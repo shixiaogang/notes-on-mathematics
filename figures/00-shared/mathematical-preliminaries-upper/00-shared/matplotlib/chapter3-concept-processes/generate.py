@@ -7,6 +7,7 @@ from pathlib import Path
 import importlib.util
 import json
 import warnings
+import sys
 import os
 ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
 os.environ.setdefault('MPLCONFIGDIR',str(ROOT/'build/ch3-figures/mpl-cache'))
@@ -22,6 +23,10 @@ spec = importlib.util.spec_from_file_location('chapter_figure_support',
 s = importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
 OUT = Path(__file__).resolve().parent
 RECORDS = []
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+import plot_style as drawing_style
+s.configure = drawing_style.configure
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 s.configure()
 
 def axes2(ax, xlabel='$x$', ylabel='$y$'):
@@ -51,6 +56,12 @@ def arrow(ax, p, q, color, **kwargs):
 
 def save(fig, name, facts):
     # Keep the canvas fixed: no tight bounding-box rescaling of final fonts.
+    drawing_style.prepare_figure(fig)
+    for ax in fig.axes:
+        ax.grid(False)  # 3D axes treat extra grid kwargs as an enable request.
+        for collection in ax.collections:
+            if isinstance(collection, Line3DCollection):
+                collection.set_linewidth([max(.85,float(w)*1.3) for w in collection.get_linewidths()])
     fig.canvas.draw()
     for ext in ('pdf','png'):
         fig.savefig(OUT/(name+'.'+ext), dpi=360, facecolor='white')
@@ -59,7 +70,7 @@ def save(fig, name, facts):
         scale=1, png_dpi=360, facts=facts,
         source='generate.py', data_source='exact analytic formulas; no empirical observations',
         random_sampling=False, filtering='none; singular points and plotting windows declared per figure',
-        **s.provenance())
+        visual_style=drawing_style.style_record(), background_grid=False, **s.provenance())
     (OUT/(name+'.json')).write_text(json.dumps(record,ensure_ascii=False,indent=2)+'\n')
     RECORDS.append(record); s.plt.close(fig)
 

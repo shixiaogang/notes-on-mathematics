@@ -44,6 +44,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0, str(ROOT / "figures/00-shared/academic-drawing"))
+from plot_style import configure, prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -75,11 +80,11 @@ a.plot(ell[0], ell[1], color=BLUE, lw=1.2, zorder=3)
 a.plot([-S1 * V1[0], S1 * V1[0]], [-S1 * V1[1], S1 * V1[1]],
        color=YELLOW, lw=3.0, solid_capstyle="round", zorder=4)
 a.text(-2.05, 1.25, "$A$ 的椭圆像", fontsize=8, color=BLUE)
-a.text(0.35, 1.05, "秩一近似：压扁成主轴线段", fontsize=7.5, color=YELLOW)
-a.set_title("(a) 单位圆 → 椭圆 vs 秩一线段", fontsize=8)
+
+a.set_title("")
 a.set(xlim=(-2.6, 2.6), ylim=(-1.7, 1.7), xticks=range(-2, 3), yticks=range(-1, 2))
 a.set_aspect("equal")
-a.grid(True)
+a.grid(False, which="both")
 
 # ---- 右 panel：奇异值条形 ----
 bars = b.bar(["$\\sigma_1\\approx2.21$", "$\\sigma_2\\approx0.79$"],
@@ -91,11 +96,11 @@ b.annotate("舍弃", xy=(1, S2), xytext=(1, S2 + .35),
            arrowprops=dict(arrowstyle="->", color=MUTED, lw=.6))
 b.set_ylabel("奇异值大小")
 b.set_ylim(0, 2.9)
-b.set_title("(b) 奇异值谱：截断小奇异值", fontsize=8)
-b.grid(True, axis="y")
+b.set_title("")
+b.grid(False, which="both")
 b.grid(False, axis="x")
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 if selection == NAME:
     for ext in ("pdf", "svg", "png"):

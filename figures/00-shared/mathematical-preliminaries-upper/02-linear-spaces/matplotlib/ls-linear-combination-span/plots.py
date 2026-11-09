@@ -43,6 +43,11 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME],
                     help="本目录仅一幅图；保留参数以统一调用方式。")
@@ -81,11 +86,11 @@ a.plot(*(U + V), "o", ms=5, mfc=YELLOW, mec=INK, mew=.5, zorder=5)
 a.text(U[0] + .12, U[1] - .05, "$u$", fontsize=8, color=BLUE)
 a.text(V[0] - .32, V[1] + .10, "$v$", fontsize=8, color=GREEN)
 a.text((U + V)[0] + .12, (U + V)[1] + .05, "$u+v$", fontsize=8, color=YELLOW)
-a.text(-3.4, 3.45, "$c_1u+c_2v$：$c_1,c_2$ 任意，点取遍整个平面", fontsize=8)
-a.set_title("(a) 两个不共线方向：组合张成整个平面", fontsize=8)
+pass
+a.set_title('(a)', fontsize=8)
 a.set(xlim=(-3.7, 4.1), ylim=(-3.3, 4.0), xticks=range(-3, 5), yticks=range(-3, 4))
 a.set_aspect("equal")
-a.grid(True)
+a.grid(False)
 
 # ---- 右 panel：只用 u 的组合只能停在一条直线上 ----
 t = np.array([-2.3, 2.6])
@@ -98,13 +103,13 @@ b.plot(*V, "o", ms=5, mfc=GREEN, mec=INK, mew=.5, zorder=5)
 b.annotate("$v$ 不在 $cu$ 这条直线上", xy=tuple(V), xytext=(-4.9, 1.9),
            fontsize=8, color=GREEN,
            arrowprops=dict(arrowstyle="->", color=GREEN, lw=.6))
-b.text(-5.3, -2.75, "只用 $u$：所有 $c u$ 都在过原点的同一条直线上", fontsize=8)
-b.set_title("(b) 只有一个方向：组合只覆盖一条直线", fontsize=8)
+pass
+b.set_title('(b)', fontsize=8)
 b.set(xlim=(-5.6, 5.6), ylim=(-3.0, 3.2), xticks=range(-4, 6, 2), yticks=range(-2, 4))
 b.set_aspect("equal")
-b.grid(True)
+b.grid(False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:
@@ -128,7 +133,7 @@ record = {
         "u": list(U), "v": list(V), "u_plus_v": list(U + V),
     },
     "processing": "直接求值；无平滑、无随机采样。",
-    "width_mm": 169, "height_mm": 66, "png_dpi": 300,
+    "width_mm": 169, "height_mm": fig.get_figheight()*25.4, "png_dpi": 300,
     "outputs": [f"{NAME}.pdf", f"{NAME}.svg", f"{NAME}.png"],
 }
 (HERE / "sources.json").write_text(

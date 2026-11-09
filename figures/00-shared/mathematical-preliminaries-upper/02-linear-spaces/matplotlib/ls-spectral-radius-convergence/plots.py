@@ -42,14 +42,19 @@ matplotlib.rcParams.update({
     "pdf.fonttype": 3, "svg.fonttype": "path",
 })
 
+import sys
+sys.path.insert(0,str(ROOT/'figures/00-shared/academic-drawing'))
+from plot_style import configure,prepare_figure
+configure()
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--only", default=NAME, choices=[NAME])
 selection = parser.parse_args().only
 
 KS = np.arange(0, 21)
-CASES = [(0.5, "ρ(T)=0.5：快收敛", BLUE, "o"),
-         (0.9, "ρ(T)=0.9：慢收敛", GREEN, "s"),
-         (1.1, "ρ(T)=1.1>1：发散", RED, "^")]
+CASES = [(0.5, r"$\rho(T)=0.5$", BLUE, "o"),
+         (0.9, r"$\rho(T)=0.9$", GREEN, "s"),
+         (1.1, r"$\rho(T)=1.1$", RED, "^")]
 
 
 def finalize(fig):
@@ -68,12 +73,12 @@ ax.axhline(1, color=MUTED, lw=.5, ls=":")
 ax.text(.6, 2.6, "$\\|e_0\\|=1$", fontsize=7.5, color=MUTED)
 ax.set_xlabel("迭代步数 $k$", fontsize=8)
 ax.set_ylabel("误差范数 $\\|e_k\\|$（对数轴）", fontsize=8)
-ax.set_title("固定迭代 $e_{k+1}=Te_k$：谱半径决定收敛与否与快慢", fontsize=8)
+ax.set_title('', fontsize=8)
 ax.set(xticks=range(0, 21, 2), ylim=(3e-5, 12))
-ax.grid(True, which="both")
+ax.grid(False)
 ax.legend(loc="lower left", fontsize=7.5, frameon=False)
 
-finalize(fig)
+prepare_figure(fig)
 fig.tight_layout()
 for ext in ("pdf", "svg", "png"):
     if selection == NAME:

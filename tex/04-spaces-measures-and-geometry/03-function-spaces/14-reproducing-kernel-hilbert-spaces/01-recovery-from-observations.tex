@@ -1,0 +1,133 @@
+\section{从离散观测恢复函数}
+\label{sec:rkhs-recovery}
+
+设在位置$x_1,\ldots,x_n$处读到数值$y_1,\ldots,y_n$，我们想找一个函数$f$，使每个$f(x_i)$都与$y_i$相符。先看一个最小的例子。在$[0,1]$上取三个位置，读数如下：
+\[
+ x=0,\ \tfrac12,\ 1,\qquad y=0,\ 1,\ 0.
+\]
+抛物线和正弦曲线都恰好通过这三个点：
+\[
+ q(x)=4x(1-x),\qquad s(x)=\sin(\pi x).
+\]
+
+通过这三点的函数还有很多。函数$c(x)=x(x-\tfrac12)(x-1)$在三个测点上都取零，所以对任意实数$\beta$，$q+\beta c$也通过这三点。这些函数在测点上完全一致，在测点之间却各不相同。在$x=\tfrac14$处读一下，
+\[
+ q(\tfrac14)=0.75,\qquad s(\tfrac14)=\tfrac{\sqrt2}{2}\approx0.707,\qquad c(\tfrac14)=\tfrac{3}{64}.
+\]
+调节$\beta$，就能让$q+\beta c$在$\tfrac14$处取任何想要的值。
+
+用第~\ref{chap:functions-as-vectors}章的图景看，函数是下标取遍$[0,1]$的向量，三个读数只是其中三个坐标。在$\mathbb R^{100}$中知道三个坐标，其余$97$个坐标仍可任取；函数的情形只是“其余的坐标”有不可数多个。所以有限个点值通常不能确定函数，必须先说明在哪一类函数中寻找，也就是给那些没有读到的坐标加上约束。
+
+选定候选函数的范围之后，仍有三个不同的问题。第一是\emph{精确插值}：是否存在候选函数在每个测点上都等于读数，若存在，怎样在众多可行函数中选出一个。第二是\emph{带残差的拟合}：读数含有误差时，强求精确通过反而会把误差写进函数，这时允许$f(x_i)$与$y_i$有偏差，再权衡偏差与函数本身的复杂程度。
+
+第三是\emph{域外误差}：所选函数与真实函数在测点之外相差多少，这已经不是读数本身能回答的问题。本章主要处理第一个问题，以及第三个问题中只依赖空间结构的部分。第二个问题需要选择损失与正则项，属于卷五。当测点由随机抽样产生时，域外误差还涉及样本量与置信水平，可参考\BookChapterRef{chap:finite-sample-error-bounds}{卷八第4章“有限样本的误差上界”}。
+
+\subsection{有限特征空间}
+\label{sec:rkhs-finite-feature-space}
+
+最直接的做法是预先固定有限个函数$\phi_1,\ldots,\phi_d$，只在它们的线性组合中寻找候选函数：
+\[
+f_{\bm\theta}(x)=\sum_{k=1}^d\theta_k\phi_k(x),\qquad \bm\theta\in\mathbb R^d .
+\]
+这些$\phi_k$称为特征或基函数。这样，寻找函数就变成寻找有限个系数，观测条件也随之变成线性方程。
+
+把第$i$个测点处各特征的取值排成一行，得到$n\times d$的\term{设计矩阵}（design matrix）$\bm A$，其元素为$\bm A_{i,k}=\phi_k(x_i)$。函数$f_{\bm\theta}$在全部测点上的取值向量就是$\bm A\bm\theta$，所以精确插值的条件是
+\begin{equation}
+\bm A\bm\theta=\bm y .
+\label{eq:rkhs-design-equation}
+\end{equation}
+
+这是卷二讨论过的线性方程。方程相容当且仅当$\bm y$属于$\bm A$的列空间；相容时，解唯一当且仅当$\bm A$的列线性无关。不相容时，可以改求使$\lVert\bm A\bm\theta-\bm y\rVert_2$最小的最小二乘解，解不唯一时再从中选出欧氏长度最小的一个。这些判据与选解方法可参考\BookChapterRef{chap:linear-solution-selection}{卷二第11章“线性方程与最小二乘的选解”}。
+
+\begin{example}[多项式特征下的三种情形]
+\label{ex:rkhs-polynomial-features}
+仍取测点$0,\tfrac12,1$与读数$\bm y=(0,1,0)^{\top}$，依次增加多项式特征的个数。
+
+先取$\phi_1=1$，$\phi_2=x$，设计矩阵及法方程为
+\[
+\bm A=\begin{bmatrix}1&0\\1&\tfrac12\\1&1\end{bmatrix},\qquad
+\bm A^{\top}\bm A\,\bm\theta=\begin{bmatrix}3&\tfrac32\\\tfrac32&\tfrac54\end{bmatrix}\bm\theta=\begin{bmatrix}1\\\tfrac12\end{bmatrix}.
+\]
+三个数据点不共线，$\bm y$不在列空间中，方程~\eqref{eq:rkhs-design-equation}无解。法方程的解是$\bm\theta=(\tfrac13,0)^{\top}$，最小二乘给出常数$\tfrac13$，残差向量为$(-\tfrac13,\tfrac23,-\tfrac13)^{\top}$。
+
+再加入$\phi_3=x^2$，设计矩阵变成$3\times3$的Vandermonde矩阵。测点互异，矩阵可逆。第一行给出$\theta_1=0$，后两行给出
+\[
+\tfrac12\theta_2+\tfrac14\theta_3=1,\qquad \theta_2+\theta_3=0 .
+\]
+解得$\theta_2=4$，$\theta_3=-4$，这就是$q(x)=4x-4x^2$。
+
+再加入$\phi_4=x^3$，矩阵变为$3\times4$，秩仍为$3$，零空间是一维的，由下面的系数向量张成：
+\[
+(0,\tfrac12,-\tfrac32,1)^{\top},
+\]
+它对应前面的$c(x)=x^3-\tfrac32x^2+\tfrac12x$。于是$q+\beta c$对任意实数$\beta$都是精确插值。
+\end{example}
+
+这个例子说明，表示维数改变的不只是方程的形状，还有候选函数本身。维数太低时数据可能无法实现，维数恰好时插值唯一，维数再增加时测点就不足以区分全部候选函数。“解是否存在、是否唯一”由候选空间与测点共同决定，不是读数单独决定的。
+
+观测残差为零也不保证整个定义域上的误差为零。若真实函数是$s(x)=\sin(\pi x)$，第二种情形得到的$q$在三个测点上与$s$完全一致，在$x=\tfrac14$处却相差约$0.043$；在第三种情形中，误差还随$\beta$任意变化。要谈论测点之外的误差，必须对候选函数加上读数之外的约束。
+
+\subsection{点值观测的稳定性}
+\label{sec:rkhs-point-stability}
+
+有限特征空间的做法依赖事先选好的维数。另一种思路是让候选函数在一个无限维Hilbert空间$H$中变化，用范数$\lVert f\rVert_H$衡量函数的大小，再从可行函数中选范数最小者。这样做之前，要先检查读数与这个范数是否相容。
+
+在$\mathbb R^n$中这不成问题：每个坐标都不超过欧氏长度，$\lvert v_i\rvert\leq\lVert\bm v\rVert_2$，两个向量接近时每个坐标都接近。对函数我们也希望如此：对每个$x$存在常数$C_x$，使
+\begin{equation}
+\lvert f(x)-g(x)\rvert\leq C_x\lVert f-g\rVert_H\qquad(f,g\in H).
+\label{eq:rkhs-stability-requirement}
+\end{equation}
+若这一点不成立，范数很小的函数仍可能在测点上有很大的读数，“选范数最小的可行函数”就控制不了读数。
+
+\paragraph{$L^2$空间中点值的两个缺陷}
+
+$L^2(0,1)$是最熟悉的函数Hilbert空间，但它不满足这个要求，而且失败的方式有两种。第一，$L^2$的元素是几乎处处相等的函数类。零函数与只在$x=\tfrac12$处取$1$的函数属于同一个元素，却给出不同的点值，所以“取$\tfrac12$处的值”在$L^2$上没有确定意义。
+
+第二，即使只看连续函数，点值也不受$L^2$范数控制。尖峰函数$f_k(t)=\max(1-kt,0)$满足$f_k(0)=1$，而它的范数平方是
+\[
+\lVert f_k\rVert_{L^2}^2=\int_0^{1/k}(1-kt)^2\,\mathrm dt=\frac{1}{3k}.
+\]
+比值$f_k(0)/\lVert f_k\rVert_{L^2}=\sqrt{3k}$随$k$无界：在$L^2$范数下任意小的扰动，可以把原点的读数改变$1$。
+
+向量的类比能说明这个现象的来由。在$N$个等距点上采样，$L^2$范数近似于$\bigl(\tfrac1N\sum_iv_i^2\bigr)^{1/2}$，它把每个坐标的贡献除以$N$，于是单个坐标只受下面的界控制：
+\[
+\lvert v_i\rvert\leq\sqrt N\,\Bigl(\frac1N\sum_{j=1}^Nv_j^2\Bigr)^{1/2}.
+\]
+常数$\sqrt N$随坐标个数增大而爆炸，与尖峰的$\sqrt{3k}$是同一回事。$L^2$范数是对所有坐标取平均，平均值管不住其中的一个坐标。
+
+\paragraph{Sobolev空间中的点值}
+
+把导数也计入范数，情况就不同了。第~\ref{chap:sobolev-spaces}章说明，一维Sobolev空间$H^1(0,1)$中的每个元素都有唯一的绝对连续代表，其几乎处处导数就是弱导数$f'\in L^2(0,1)$。以下总取这个代表，于是$f(x)$有确定的值，第一个缺陷消失。
+
+现在看第二个缺陷。取任意$x,y\in[0,1]$，由绝对连续性得到
+\[
+f(x)=f(y)+\int_y^xf'(t)\,\mathrm dt .
+\]
+对$y$在$[0,1]$上积分，左边不变，右边成为
+\[
+f(x)=\int_0^1f(y)\,\mathrm dy+\int_0^1\!\!\int_y^xf'(t)\,\mathrm dt\,\mathrm dy .
+\]
+
+第二项里的内层积分不超过$\int_0^1\lvert f'\rvert$，所以
+\[
+\lvert f(x)\rvert\leq\int_0^1\lvert f\rvert+\int_0^1\lvert f'\rvert .
+\]
+在长度为$1$的区间上，Cauchy--Schwarz不等式给出$\int_0^1\lvert g\rvert\leq\lVert g\rVert_{L^2}$。分别用于$f$与$f'$，再用$a+b\leq\sqrt2\sqrt{a^2+b^2}$，得到
+\begin{equation}
+\lvert f(x)\rvert\leq\sqrt2\,\lVert f\rVert_{H^1},\qquad
+\lVert f\rVert_{H^1}^2=\lVert f\rVert_{L^2}^2+\lVert f'\rVert_{L^2}^2 .
+\label{eq:rkhs-h1-point-bound}
+\end{equation}
+这正是要求~\eqref{eq:rkhs-stability-requirement}，而且常数$\sqrt2$对所有$x$通用。
+
+尖峰$f_k$在这里不再是反例。它的导数在$[0,\tfrac1k]$上等于$-k$，所以
+\[
+\lVert f_k'\rVert_{L^2}^2=\int_0^{1/k}k^2\,\mathrm dt=k .
+\]
+$H^1$范数随$k$增大，要造出高而窄的尖峰，必须付出很大的范数代价。
+
+\paragraph{候选空间与真实函数}
+
+于是候选空间要同时满足两项要求：元素是在每一点都有确定取值的函数，并且每个点的读取都受范数控制。前者由空间的选取保证，后者取决于空间所带的范数；$L^2$两项都不满足，$H^1(0,1)$两项都满足。
+
+这两项要求只针对候选函数，并不断言真实函数属于该空间。若真实的量在$x=\tfrac12$处有跳跃，它就不属于$H^1(0,1)$。在$H^1$中寻找插值函数仍然可行，但得到的只是一个连续的替代品，跳跃附近的误差不会因为读数增多而自动消失。候选空间是否贴合真实函数，要结合问题本身判断。
