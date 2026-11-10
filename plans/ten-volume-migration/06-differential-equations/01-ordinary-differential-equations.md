@@ -1,12 +1,12 @@
 # 卷六 · 第一部分：常微分方程
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷六正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：一条曲线怎样由导数与初值确定，解是否存在、怎样依赖数据，以及如何进行数值求解。
 
 主要依赖卷一的微积分、卷二的线性系统与矩阵指数，以及卷四的完备空间、压缩映射和绝对连续性。6.1建立初值问题并求解简单方程，6.2处理线性方程，6.3讨论存在、唯一和延拓，6.4研究数据依赖及解映射，6.5建立代表性数值方法；长期稳定、吸引子和分岔由卷九承担。
 
-整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。初值问题与线性方程核对[Teschl作者教材](https://www.mat.univie.ac.at/~gerald/ftp/book-ode/)，数值方法核对[Hairer、Nørsett与Wanner教材](https://archive-ouverte.unige.ch/unige:12346)及[刚性问题教材](https://link.springer.com/book/10.1007/978-3-642-05221-7)。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)。初值问题与线性方程核对[Teschl作者教材](https://www.mat.univie.ac.at/~gerald/ftp/book-ode/)，数值方法核对[Hairer、Nørsett与Wanner教材](https://archive-ouverte.unige.ch/unige:12346)及[刚性问题教材](https://link.springer.com/book/10.1007/978-3-642-05221-7)。
 
 ## 6.1 初值问题
 

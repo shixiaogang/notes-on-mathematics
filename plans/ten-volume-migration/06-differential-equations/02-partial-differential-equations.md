@@ -1,12 +1,12 @@
 # 卷六 · 第二部分：偏微分方程
 
-状态：十卷方案大纲，尚未修改正文。返回[全局大纲](../README.md)。
+本部分已迁入卷六正文，细纲随当前正文校准。返回[全局大纲](../README.md)。
 
 研究对象与主要问题：空间场怎样由偏导关系与初边值条件确定，不同方程的解如何表示、选择和近似计算。
 
 主要依赖本卷常微分方程、卷二的场与积分定理、卷四的Sobolev空间和Fourier变换，以及卷五的变分工具。6.6建立共同问题设定，6.7—6.9集中讨论椭圆、扩散和波动这三类典型二阶方程，6.10—6.12讨论输运、标量守恒律和Hamilton–Jacobi方程，6.13集中讲数值求解；波动方程保留为补充。弱导数和函数空间基础回用卷四，一般泛函优化回用5.29，长期行为与随机过程由卷九展开。
 
-整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)；本文件按十卷方案重新归属内容，不表示正文已迁移。
+整理依据：[既有大纲1](../source-outline/03-optimization-evolution-and-signals/10-processes-and-trajectory-evolution.md)。
 
 技术参考：[Stanford偏微分方程讲义](https://web.stanford.edu/class/math220a/lecturenotes.html)、[Hamilton–Jacobi方程讲义](https://people.math.wisc.edu/~htran24/HJ-equations-Tran-AMS.pdf)、[Berkeley有限差分课程](https://persson.berkeley.edu/math228b/html/finite_difference_methods_for_PDEs.html)、[有限元收敛分析](https://finite-element.github.io/L5_convergence.html)。
 
