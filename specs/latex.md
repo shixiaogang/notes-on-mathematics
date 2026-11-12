@@ -2,7 +2,7 @@
 
 ## 文件组织与命名
 
-- `tex/volumes.json` 登记已迁入正文的各卷元数据（当前为十卷计划的卷一至卷六）；尚未迁入的计划卷中被引用的章节位置登记在 `tex/planned-references.json`，相应卷迁入后删除对应条目；各卷 `tex/<slug>/main.tex` 是薄入口，只声明卷元数据，再载入共享驱动 `tex/book.tex`。不设置全集入口。
+- `tex/volumes.json` 登记已迁入正文的各卷元数据（当前为十卷计划的卷一至卷七）；尚未迁入的计划卷中被引用的章节位置登记在 `tex/planned-references.json`，相应卷迁入后删除对应条目；各卷 `tex/<slug>/main.tex` 是薄入口，只声明卷元数据，再载入共享驱动 `tex/book.tex`。不设置全集入口。
 - `tex/book.tex` 统一加载文档类、`tex/preamble.tex`、共享前页、当前版本的正文范围和共享后页。`tex/frontmatter.tex` 与 `tex/backmatter.tex` 分别是共享前页和后页入口。
 - 设部分的卷按“卷—部分—章”组织；当前各卷均按部分组织。`tex/` 下的两位序号目录表示卷，卷内同样编号的子目录表示部分；每章使用独立 `.tex` 文件。`volume.tex` 只声明卷及其内容，不承担文档类、前后页或出版模式配置。
 - 目录前缀按卷内、部分内顺序从 01 开始，只表示源文件顺序，不等同于 PDF 中显示的编号。

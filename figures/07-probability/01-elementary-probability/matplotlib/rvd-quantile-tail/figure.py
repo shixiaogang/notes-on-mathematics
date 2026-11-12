@@ -1,0 +1,35 @@
+from pathlib import Path
+import sys
+ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
+sys.path.insert(0, str(ROOT/'figures/07-probability/01-elementary-probability/matplotlib/rvd-common'))
+from rvd_common import *
+# Target: waiting time F(t)=1-e^{-t}. (a) read quantiles from F: Q(0.5)=ln2, Q(0.9)=ln10.
+# (b) tail probability P(T>t)=e^{-t}: at t=1 it is e^{-1}~0.368; at t=Q(0.9) it equals 0.1.
+t = np.linspace(0, 4.2, 600)
+fig, axs = figure(width_mm=108, height_mm=48, ncols=2)
+ax = axs[0]; style(ax)
+ax.plot(t, 1-np.exp(-t), color=BLUE, lw=1.4)
+for p in (.5, .9):
+    q = -np.log(1-p)
+    ax.plot([0, q], [p, p], color=LINE, lw=.85, ls=':'); ax.plot([q, q], [0, p], color=LINE, lw=.85, ls=':')
+    ax.plot([q], [p], 'o', ms=3.6, color=RED, zorder=5)
+ax.set_xlim(0, 4.2); ax.set_ylim(0, 1.05)
+ax.set_xticks([0, np.log(2), np.log(10), 4]); ax.set_xticklabels(['0', 'ln 2', 'ln 10', '4'])
+ax.set_yticks([0, .5, .9, 1]); ax.set_yticklabels(['0', '0.5', '0.9', '1'])
+ax.set_ylabel('$F_T(t)$')
+sub(ax, 'a', '$t$')
+ax = axs[1]; style(ax)
+m = t >= np.log(10)
+ax.fill_between(t, 0, np.exp(-t), where=m, color=BLUE_FILL, lw=0)
+ax.plot(t, np.exp(-t), color=BLUE, lw=1.4)
+q = np.log(10)
+ax.plot([q, q], [0, .1], color=LINE, lw=.85, ls=':'); ax.plot([0, q], [.1, .1], color=LINE, lw=.85, ls=':')
+ax.plot([q], [.1], 'o', ms=3.6, color=RED, zorder=5)
+ax.plot([1, 1], [0, np.exp(-1)], color=LINE, lw=.85, ls=':'); ax.plot([0, 1], [np.exp(-1), np.exp(-1)], color=LINE, lw=.85, ls=':')
+ax.plot([1], [np.exp(-1)], 'o', ms=3.2, color=BLUE, zorder=5)
+ax.set_xlim(0, 4.2); ax.set_ylim(0, 1.05)
+ax.set_xticks([0, 1, q, 4]); ax.set_xticklabels(['0', '1', 'ln 10', '4'])
+ax.set_yticks([0, .1, np.exp(-1), 1]); ax.set_yticklabels(['0', '0.1', '0.368', '1'])
+ax.set_ylabel('$1-F_T(t)$')
+sub(ax, 'b', '$t$')
+save(fig, HERE(__file__), 'figure', {'median': float(np.log(2)), 'q90': float(q), 'tail_at_1': float(np.exp(-1))})

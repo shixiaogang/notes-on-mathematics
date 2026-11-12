@@ -1,0 +1,30 @@
+from pathlib import Path
+import sys
+ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
+sys.path.insert(0, str(ROOT/'figures/07-probability/01-elementary-probability/matplotlib/rvd-common'))
+from rvd_common import *
+# Target: (a) W: no wait with prob 0.3, otherwise density 0.7 e^{-t}: F_W(t)=0.3+0.7(1-e^{-t}), t>=0.
+# (b) Y=min(T,2) with F_T(t)=1-e^{-t}: F_Y(y)=1-e^{-y} on [0,2), jump e^{-2}~0.1353 at y=2.
+fig, axs = figure(width_mm=108, height_mm=46, ncols=2)
+ax = axs[0]; style(ax)
+t = np.linspace(0, 4.2, 500)
+ax.plot([-.8, 0], [0, 0], color=BLUE, lw=1.4)
+ax.plot(t, .3+.7*(1-np.exp(-t)), color=BLUE, lw=1.4)
+ax.plot([0, 0], [0, .3], color=RED, lw=2.0, zorder=3)
+ax.plot([0], [0], 'o', ms=3.2, mfc='white', mec=BLUE, mew=.9, zorder=4); ax.plot([0], [.3], 'o', ms=3.2, color=BLUE, zorder=4)
+ax.text(.12, .15, '0.3', color=RED, fontsize=7.5, va='center')
+ax.set_xlim(-.8, 4.2); ax.set_ylim(0, 1.08); ax.set_xticks([0, 1, 2, 3, 4]); ax.set_yticks([0, .3, .5, 1])
+ax.set_ylabel('$F_W(t)$')
+sub(ax, 'a', '$t$')
+ax = axs[1]; style(ax)
+y = np.linspace(0, 2, 300)
+ax.plot([-.8, 0], [0, 0], color=BLUE, lw=1.4)
+ax.plot(y, 1-np.exp(-y), color=BLUE, lw=1.4)
+ax.plot([2, 4.2], [1, 1], color=BLUE, lw=1.4)
+ax.plot([2, 2], [1-np.exp(-2), 1], color=RED, lw=2.0, zorder=3)
+ax.plot([2], [1-np.exp(-2)], 'o', ms=3.2, mfc='white', mec=BLUE, mew=.9, zorder=4); ax.plot([2], [1], 'o', ms=3.2, color=BLUE, zorder=4)
+ax.text(2.12, 1-np.exp(-2)/2, f'{np.exp(-2):.4f}', color=RED, fontsize=7.5, va='center')
+ax.set_xlim(-.8, 4.2); ax.set_ylim(0, 1.08); ax.set_xticks([0, 1, 2, 3, 4]); ax.set_yticks([0, .5, 1])
+ax.set_ylabel('$F_Y(y)$')
+sub(ax, 'b', '$y$')
+save(fig, HERE(__file__), 'figure', {'atom_W0': .3, 'atom_Y2': float(np.exp(-2))})

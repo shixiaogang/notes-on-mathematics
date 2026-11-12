@@ -1,6 +1,6 @@
 # 正文大纲索引
 
-本目录记录已迁入本仓库的数学正文。正文按[十卷重组计划](../../plans/ten-volume-migration/README.md)分批迁入，当前完成卷一至卷六，共24个部分、120章；卷七至卷十尚无正文，不在此登记。各卷及部分的章数、标题和顺序以实际正文入口为准。
+本目录记录已迁入本仓库的数学正文。正文按[十卷重组计划](../../plans/ten-volume-migration/README.md)分批迁入，当前完成卷一至卷七，共32个部分、154章；卷八至卷十尚无正文，不在此登记。各卷及部分的章数、标题和顺序以实际正文入口为准。
 
 迁移前五卷正文的旧提要保存在 `tex_bak/outlines/current/`，只作后续迁移的来源，不反映当前正文。
 
@@ -12,7 +12,8 @@
 | 4 | 函数空间与流形 | 31 | [拓扑与度量](04-spaces-measures-and-geometry/01-topology-and-metric.md)（第1—4章）；[测度](04-spaces-measures-and-geometry/02-measure.md)（第5—9章）；[函数空间](04-spaces-measures-and-geometry/03-function-spaces.md)（第10—23章）；[流形](04-spaces-measures-and-geometry/04-manifolds.md)（第24—31章） |
 | 5 | 优化 | 29 | [线性规划](05-optimization/01-linear-programming.md)（第1—4章）；[光滑优化](05-optimization/02-smooth-optimization.md)（第5—10章）；[非光滑优化](05-optimization/03-nonsmooth-optimization.md)（第11章）；[分块优化](05-optimization/04-block-optimization.md)（第12章）；[随机优化](05-optimization/05-stochastic-optimization.md)（第13—16章）；[约束优化](05-optimization/06-constrained-optimization.md)（第17—25章）；[多目标与嵌套优化](05-optimization/07-multiple-criteria-and-nested-optimization.md)（第26—28章）；[泛函优化](05-optimization/08-functional-optimization.md)（第29章） |
 | 6 | 微分方程 | 13 | [常微分方程](06-differential-equations/01-ordinary-differential-equations.md)（第1—5章）；[偏微分方程](06-differential-equations/02-partial-differential-equations.md)（第6—13章） |
+| 7 | 概率 | 34 | [初等概率模型](07-probability/01-elementary-probability.md)（第1—8章）；[概率的测度基础](07-probability/02-measure-theoretic-probability.md)（第9—11章）；[概率极限](07-probability/03-probability-limits.md)（第12—15章）；[概率分布的分析](07-probability/04-distribution-analysis.md)（第16—19章）；[信源编码](07-probability/05-source-coding.md)（第20—22章）；[信道编码](07-probability/06-channel-coding.md)（第23—25章）；[概率分布的优化与逼近](07-probability/07-distribution-optimization.md)（第26—29章）；[随机采样与积分计算](07-probability/08-sampling-and-integration.md)（第30—34章） |
 
-迁移时未纳入前四卷的旧材料：原卷一“概率与统计基础”按计划归卷七、卷八，原“图上的谱方法”按计划归卷九“图信号处理”，原卷二“概率空间”按计划归卷七，目前仍保存在 `tex_bak/`。
+迁移时未纳入已有各卷的旧材料：原卷一“概率与统计基础”中的样本、估计与检验按计划归卷八，原“图上的谱方法”按计划归卷九“图信号处理”，目前仍保存在 `tex_bak/`。
 
 正文变更时同步相应部分的大纲、目录和完成状态，具体见[大纲目录规范](../../specs/outlines.md)。

@@ -1,0 +1,35 @@
+from pathlib import Path
+import sys
+ROOT = next(p for p in Path(__file__).resolve().parents if (p/'build.sh').is_file() and (p/'tex/book.tex').is_file())
+sys.path.insert(0, str(ROOT/'figures/07-probability/01-elementary-probability/matplotlib/rvd-common'))
+from rvd_common import *
+# Target: waiting time T with density f(t)=e^{-t} (t>=0) and F(t)=1-e^{-t}.
+# P(1<T<=2) = e^{-1}-e^{-2} shown as an area under f (a) and as a height difference of F (b).
+t = np.linspace(0, 4.2, 600)
+f = np.exp(-t); F = 1-np.exp(-t)
+a, b = 1.0, 2.0
+prob = np.exp(-a)-np.exp(-b)
+fig, axs = figure(width_mm=104, height_mm=46, ncols=2)
+ax = axs[0]; style(ax)
+m = (t >= a) & (t <= b)
+ax.fill_between(t[m], 0, f[m], color=BLUE_FILL, lw=0)
+ax.plot(t, f, color=BLUE, lw=1.4)
+ax.plot([-.6, 0], [0, 0], color=BLUE, lw=1.4)
+ax.text(1.5, .07, f'{prob:.4f}', ha='center', fontsize=7.5)
+ax.set_xlim(-.6, 4.2); ax.set_ylim(0, 1.1); ax.set_xticks([0, 1, 2, 3, 4]); ax.set_yticks([0, .5, 1])
+ax.set_ylabel('$f_T(t)$')
+sub(ax, 'a', '$t$')
+ax = axs[1]; style(ax)
+ax.plot(t, F, color=BLUE, lw=1.4)
+ax.plot([-.6, 0], [0, 0], color=BLUE, lw=1.4)
+Fa, Fb = 1-np.exp(-a), 1-np.exp(-b)
+ax.plot([a, a], [0, Fa], color=LINE, lw=.85, ls=':'); ax.plot([b, b], [0, Fb], color=LINE, lw=.85, ls=':')
+ax.plot([a, b], [Fa, Fa], color=LINE, lw=.85, ls=':')
+ax.plot([b, b], [Fa, Fb], color=RED, lw=2.0)
+ax.plot([a, b], [Fa, Fb], 'o', ms=3.2, color=BLUE, zorder=4)
+ax.text(b+.1, (Fa+Fb)/2, f'{prob:.4f}', color=RED, fontsize=7.5, va='center')
+ax.set_xlim(-.6, 4.2); ax.set_ylim(0, 1.1); ax.set_xticks([0, 1, 2, 3, 4])
+ax.set_yticks([0, round(Fa, 3), round(Fb, 3), 1]); ax.set_yticklabels(['0', f'{Fa:.3f}', f'{Fb:.3f}', '1'])
+ax.set_ylabel('$F_T(t)$')
+sub(ax, 'b', '$t$')
+save(fig, HERE(__file__), 'figure', {'P(1<T<=2)': prob, 'F(1)': Fa, 'F(2)': Fb})
