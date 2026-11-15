@@ -94,7 +94,7 @@ build_volume() {
   latexmk \
     "${latexmk_options[@]}" \
     -jobname="$job_name" \
-    "$source"
+    "$source" </dev/null
   mkdir -p target
   cp "$cached_pdf" "$output.tmp"
   mv "$output.tmp" "$output"
@@ -104,11 +104,12 @@ build_volume() {
 }
 
 build_volumes() {
-  local slug
+  local slugs slug
+  slugs="$(python3 scripts/book_catalog.py slugs)"
   while IFS= read -r slug; do
     [[ -n "$slug" ]] || continue
     build_volume "$slug"
-  done < <(python3 scripts/book_catalog.py slugs)
+  done <<< "$slugs"
 }
 
 clean_project() {

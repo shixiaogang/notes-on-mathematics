@@ -239,9 +239,8 @@ def main():
             raise ValueError(f"以下卷的构建输入已过期或 PDF 与构建记录不同：{', '.join(stale)}；运行 ./build.sh build。")
         if args.staged:
             check_index()
-            for name in [MANIFEST] + ["target/" + n for n in sorted(expected)]:
-                if not staged_matches(name, (ROOT / name).read_bytes()):
-                    raise ValueError(f"成品尚未暂存或暂存版本已过期：{name}")
+            if git("ls-files", "--", "build/", "target/", "output/"):
+                raise ValueError("构建目录仍在暂存区；请取消跟踪本地构建产物。")
         print(f"成品检查通过：{len(expected)} 卷 PDF 与各卷当前输入一致。")
 
 

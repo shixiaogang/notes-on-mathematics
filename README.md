@@ -22,15 +22,7 @@ python3 scripts/check_outline.py  # 校验十卷计划章纲与本地链接
 make test
 ```
 
-成品位于 `target/`，每卷独立出版。卷名与章节组织按十卷计划，书名、前言和版式按十卷计划设置。
-
-| 卷 | 内容 | PDF |
-| --- | --- | --- |
-| 一 | 集合与一元微积分 | [阅读](target/vol1-sets-and-univariate-calculus.pdf) |
-| 二 | 向量、矩阵与多元微积分 | [阅读](target/vol2-vectors-matrices-and-multivariate-calculus.pdf) |
-| 三 | 图 | [阅读](target/vol3-graphs.pdf) |
-
-各卷 PDF 使用 Git LFS 保存。克隆后运行 `git lfs install --skip-repo`、`git lfs pull` 获取完整成品，并用 `git config --local core.hooksPath .githooks` 启用提交检查。
+运行 `./build.sh all` 编译目录中登记的各卷，PDF 输出到本地 `target/`。后续运行 `./build.sh build` 增量编译，运行 `./build.sh check-target` 校验成品。使用 `git config --local core.hooksPath .githooks` 启用提交检查。
 
 ## 目录与维护
 
