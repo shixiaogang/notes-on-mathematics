@@ -1,0 +1,146 @@
+\section{邻接矩阵的谱}
+\label{sec:adjacency-walk-counts}
+
+邻接矩阵记录哪些顶点直接相连。乘一次矩阵，相当于沿边走一步。多乘几次，就能数出不同长度的行走。如果只看那些走完又回到起点的行走，把各起点的数目相加，总数恰好是矩阵幂的迹——而迹可以用特征值直接算出来。
+
+我们先从一步开始，看矩阵乘法怎样对应到行走的拼接。
+
+从顶点$u$出发，走一步能到达哪些顶点？如果$u$和$v$之间有边，恰好有一种走法；如果没有边，走不过去。邻接矩阵的元素$a_{u,v}$就记录了这个数：有边时为$1$，无边时为$0$。换句话说，$(\bm A^1)_{u,v}=a_{u,v}$恰好等于从$u$到$v$的一步行走条数。
+
+现在考虑两步行走。以路径$1\text{--}2\text{--}3$为例。从顶点$1$出发，第一步只能到$2$（因为$1$只和$2$相邻），第二步可以回到$1$或继续到$3$。两种走法分别是$1\to2\to1$和$1\to2\to3$。
+
+写成矩阵乘法来看：$\bm A^2$的第$(1,3)$项是
+\[
+(\bm A^2)_{1,3}=\sum_{z\in V}a_{1,z}\,a_{z,3}.
+\]
+求和中的$z$跑遍所有顶点。只有$z=2$同时满足$a_{1,z}=1$和$a_{z,3}=1$，其余项都包含一个零因子。所以$(\bm A^2)_{1,3}=1$，正好等于从$1$经过一个中间点到$3$的行走条数。
+
+这不是巧合。每一项$a_{1,z}\cdot a_{z,3}$恰好在$1$和$z$之间有边、同时$z$和$3$之间也有边时等于$1$，否则为零。也就是说，每一项对应一种中间顶点$z$的选择。把所有选择加起来，就是把所有可能的中间点$z$的行走都数到了。
+
+图~\ref{fig:adjacency-walk-progression}用四点环加对角线$\{1,3\}$的例子，逐步展示从顶点$1$出发走$k=1,2,3$步能到达各点的行走条数，也就是$\bm A^k$第一行的各个元素。观察三个面板：一步只能到达$1$的直接邻居，二步可以经一个中间点到达更远的顶点（包括返回自身），三步则出现了更多走法。$(\bm A^3)_{1,1}=4$说明从$1$走三步回到$1$有四条不同的路线。
+
+\begin{figure}[!htb]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm,>=Stealth,
+  vertex/.style={circle,draw=FigureBlue,fill=FigureBlueFill,inner sep=0pt,
+    minimum size=5mm,line width=.52pt,font=\figurefont\fontsize{8}{10}\selectfont},
+  origin/.style={vertex,fill=FigureYellowFill,draw=FigureYellow,line width=.72pt},
+  countlabel/.style={font=\figurefont\fontsize{7.5}{9}\selectfont,FigureInk},
+  panel/.style={anchor=mid,font=\figurefont\footnotesize}]
+  % Panel (a): k=1, A^1 row 1 = (0,1,1,1)
+  \begin{scope}[xshift=0mm]
+    \node[origin] (a1) at (0,12) {$1$};
+    \node[vertex] (a2) at (12,12) {$2$};
+    \node[vertex] (a3) at (12,0) {$3$};
+    \node[vertex] (a4) at (0,0) {$4$};
+    \draw[FigureStroke,line width=.45pt] (a1)--(a2) (a2)--(a3) (a3)--(a4) (a4)--(a1) (a1)--(a3);
+    \draw[->,FigureBlue,line width=.7pt] (a1) -- (a2);
+    \draw[->,FigureBlue,line width=.7pt] (a1) -- (a3);
+    \draw[->,FigureBlue,line width=.7pt] (a1) -- (a4);
+    \node[countlabel,above] at (a1.north) {$0$};
+    \node[countlabel,above] at (a2.north) {$1$};
+    \node[countlabel,below] at (a3.south) {$1$};
+    \node[countlabel,below] at (a4.south) {$1$};
+    \node[panel] at (6,-8) {(a) $k=1$};
+  \end{scope}
+  % Panel (b): k=2, A^2 row 1 = (3,1,2,1)
+  \begin{scope}[xshift=36mm]
+    \node[origin] (b1) at (0,12) {$1$};
+    \node[vertex] (b2) at (12,12) {$2$};
+    \node[vertex] (b3) at (12,0) {$3$};
+    \node[vertex] (b4) at (0,0) {$4$};
+    \draw[FigureStroke,line width=.45pt] (b1)--(b2) (b2)--(b3) (b3)--(b4) (b4)--(b1) (b1)--(b3);
+    \node[countlabel,above] at (b1.north) {$3$};
+    \node[countlabel,above] at (b2.north) {$1$};
+    \node[countlabel,below] at (b3.south) {$2$};
+    \node[countlabel,below] at (b4.south) {$1$};
+    \node[panel] at (6,-8) {(b) $k=2$};
+  \end{scope}
+  % Panel (c): k=3, A^3 row 1 = (4,3,4,3)
+  \begin{scope}[xshift=72mm]
+    \node[origin] (c1) at (0,12) {$1$};
+    \node[vertex] (c2) at (12,12) {$2$};
+    \node[vertex] (c3) at (12,0) {$3$};
+    \node[vertex] (c4) at (0,0) {$4$};
+    \draw[FigureStroke,line width=.45pt] (c1)--(c2) (c2)--(c3) (c3)--(c4) (c4)--(c1) (c1)--(c3);
+    \node[countlabel,above] at (c1.north) {$4$};
+    \node[countlabel,above] at (c2.north) {$3$};
+    \node[countlabel,below] at (c3.south) {$4$};
+    \node[countlabel,below] at (c4.south) {$3$};
+    \node[panel] at (6,-8) {(c) $k=3$};
+  \end{scope}
+\end{tikzpicture}
+\caption{四点环加对角线$\{1,3\}$上，从顶点$1$出发走$k$步到达各顶点的行走条数，即$\bm A^k$第一行的各个元素。浅黄色标出起点$1$。(a) 一步只能到达三个邻居。(b) 两步后可以到达自身（三条往返路线），也能经过中间顶点到达$3$（两条路线）。(c) 三步后各点的行走数继续增长。}
+\label{fig:adjacency-walk-progression}
+\end{figure}
+
+\paragraph{从一步到多步}
+
+这个思路推广到$k$步行走。设我们已经知道$(\bm A^k)_{u,z}$等于从$u$到$z$的$k$步行走条数。现在要数从$u$到$v$的$k+1$步行走。
+
+任取一条这样的行走$u=v_0\to v_1\to\cdots\to v_k\to v_{k+1}=v$。倒数第二个顶点$z=v_k$把这条行走唯一地拆成两段：前$k$步从$u$到$z$，最后一步从$z$到$v$。
+
+反过来，对每个与$v$相邻的顶点$z$，把任意一条从$u$到$z$的$k$步行走接上最后一步$z\to v$，就拼出一条从$u$到$v$的$k+1$步行走。不同的$z$或不同的前段行走拼出的是不同的$k+1$步行走。
+
+把所有中间点$z$的贡献相加：从$u$到$z$有$(\bm A^k)_{u,z}$条$k$步行走，其中每一条都可以接上最后一步$z\to v$，而最后一步能否走取决于$a_{z,v}$是否为$1$。因此
+\[
+\text{从$u$到$v$的$k+1$步行走数}
+=\sum_{z\in V}(\bm A^k)_{u,z}\,a_{z,v}.
+\]
+右边按矩阵乘法的定义，正是$(\bm A^{k+1})_{u,v}$。综合以上推理，我们得到
+
+\begin{theorem}[行走计数]
+\label{thm:adjacency-walk-count}
+设$\bm A$是简单无向图的邻接矩阵。对任意正整数$k$和任意一对顶点$u,v$，
+\begin{equation}
+(\bm A^k)_{u,v}=\text{从$u$到$v$的$k$步行走条数。}
+\label{eq:adjacency-walk-count}
+\end{equation}
+\end{theorem}
+
+\paragraph{闭行走与迹}
+
+一条从$u$出发又回到$u$的行走叫作\term{闭行走}（closed walk）。在定理~\ref{thm:adjacency-walk-count}中取$v=u$，从$u$出发的$k$步闭行走数就是对角元$(\bm A^k)_{u,u}$。
+
+把所有$k$步闭行走按起点分组。每条闭行走有唯一的第一个顶点，因此恰好属于一组。第$u$组有$(\bm A^k)_{u,u}$条记录。把各组加起来，
+\begin{equation}
+\text{$k$步闭行走总数}
+=\sum_{u\in V}(\bm A^k)_{u,u}
+=\operatorname{tr}(\bm A^k).
+\label{eq:adjacency-closed-walk-trace}
+\end{equation}
+
+回到路径$1\text{--}2\text{--}3$的例子。从顶点$1$出发，两步回来只有$1\to2\to1$一条。从顶点$2$出发，有$2\to1\to2$和$2\to3\to2$两条。从顶点$3$出发，只有$3\to2\to3$一条。三个对角元依次是$1,2,1$，迹为$4$。行走$1\to2\to3$没有回到起点，记录在非对角项$(\bm A^2)_{1,3}$中，不计入迹。
+
+起点是闭行走的一部分。沿三角形$1\to2\to3\to1$走一圈，换个起点就变成$2\to3\to1\to2$或$3\to1\to2\to3$，三条记录分别计入三个不同的对角元。
+
+闭行走允许重复经过顶点和边。例如在只有一条边$\{a,b\}$的图上，$a\to b\to a$是两步闭行走，$a\to b\to a\to b\to a$是四步闭行走，两者都反复使用同一条边。只有在途中各顶点互不重复、最后一步回到起点、且长度至少为三时，才形成简单环。
+
+\paragraph{迹与谱矩}
+
+上面的结论把行走计数和矩阵幂联系在一起。下面再把矩阵幂的迹接到特征值上。
+
+$\bm A$是实对称矩阵，因此有一组正交特征向量基$\bm u_1,\ldots,\bm u_n$和对应的实特征值$\lambda_1,\ldots,\lambda_n$。将这组基排成正交矩阵$\bm P$，可以写成$\bm A=\bm P\operatorname{diag}(\lambda_1,\ldots,\lambda_n)\bm P^\top$。
+
+把$\bm A$乘$k$次。由于$\bm P^\top\bm P=\bm I$，相邻两个$\bm A$之间的$\bm P^\top$和$\bm P$互相抵消，只留下
+\[
+\bm A^k=\bm P\operatorname{diag}(\lambda_1^k,\ldots,\lambda_n^k)\bm P^\top.
+\]
+在特征基下，$\bm A^k$的对角元就是$\lambda_1^k,\ldots,\lambda_n^k$。
+
+迹是对角元之和。换基不改变迹——准确地说，$\operatorname{tr}(\bm P\bm D\bm P^\top)=\operatorname{tr}(\bm D\bm P^\top\bm P)=\operatorname{tr}(\bm D)$，用到的是迹的循环性质$\operatorname{tr}(\bm X\bm Y)=\operatorname{tr}(\bm Y\bm X)$。因此
+\begin{equation}
+\operatorname{tr}(\bm A^k)=\sum_{i=1}^{n}\lambda_i^k,
+\qquad k=1,2,\ldots .
+\label{eq:adjacency-spectral-moments}
+\end{equation}
+
+\begin{definition}[邻接谱与谱矩]
+\label{def:adjacency-spectrum}
+设$\bm A$是$n$阶实对称邻接矩阵，$\lambda_1\ge\cdots\ge\lambda_n$为其特征值（按降序排列，重复的按重数计入）。全部特征值组成的多重集$\{\lambda_1,\ldots,\lambda_n\}$称为图的\term{邻接谱}（adjacency spectrum）。和$\sum_{i=1}^n\lambda_i^k$称为第$k$阶\term{谱矩}（spectral moment）。
+\end{definition}
+
+这样，我们有了一条从图结构到代数运算的路线：矩阵幂数行走，对角元数闭行走，迹把所有起点加起来，而谱矩只用特征值就能算出迹。后续各节将分别回答：典型图的特征值是什么（第~\ref{sec:adjacency-standard-spectra}节），谱本身有什么结构性质（第~\ref{sec:adjacency-spectral-properties}节），以及谱能够或不能够告诉我们哪些图的结构信息（第~\ref{sec:adjacency-spectral-structure}节和第~\ref{sec:adjacency-spectral-invariant}节）。
+
+若改用带权矩阵$\bm W$，矩阵乘法的每一步都乘上对应边的权重。一条行走对$(\bm W^k)_{u,v}$的贡献不再是$1$，而是沿途$k$条边权重的乘积。一条边被走了几次，它的权重就乘几次。此时迹累计的是所有闭行走的权重和；取单位权时退化为闭行走条数。
+

@@ -1,0 +1,218 @@
+\section{矩阵树定理}
+\label{sec:graph-matrix-tree}
+
+拉普拉斯矩阵可以判断连通性，这是上一节的结论。现在的问题更精细：连通图有多少棵不同的生成树？答案藏在拉普拉斯的行列式中。哪些三条边的组合能做到？选$\{12,23,34\}$得到一条经过四个顶点的路径，没有环，符合要求。选$\{12,23,13\}$把三条边全用在三角形上，顶点$4$没有连到，不是生成树。
+
+图~\ref{fig:laplacian-tree-minors}展示了这两种选法。分清合格与不合格的依据是：选出的边是否恰好把所有顶点连成一棵无环树。这种逐组判断可以用行列式来完成。矩阵树定理说的是：从组合拉普拉斯中删去任意一个顶点对应的行和列，所得方阵的行列式恰好等于图的全部生成树的计数。
+
+为理解行列式怎样做到逐组筛选，我们需要一个能把乘积的行列式拆成各组边贡献的工具，即 Cauchy--Binet 公式。
+
+\subsection{Cauchy--Binet公式}
+\label{sec:graph-cauchy-binet}
+
+关联矩阵$\bm B$的列对应边。在四点图中删去一个顶点的行后，剩余的约化关联矩阵$\overline{\bm B}$有三行五列。拉普拉斯的关联分解$\bm L=\bm B\bm C\bm B^\top$在删行列后变成$\overline{\bm L}=\overline{\bm B}\bm C\overline{\bm B}^\top$，这是一个三行五列矩阵乘以对角矩阵再乘以五行三列矩阵的结果，最终只是一个$3\times3$方阵。我们想计算这个乘积的行列式，同时保留"五条边选三条"的信息。
+
+先用一个更小的例子看清关键思路。取
+\[
+  \bm M=\begin{bmatrix}1&0&1\\0&1&1\end{bmatrix},
+  \qquad \bm N=\bm M^\top.
+\]
+直接乘出
+\[
+  \bm M\bm N=\begin{bmatrix}2&1\\1&2\end{bmatrix}.
+\]
+它的行列式是$2\cdot2-1\cdot1=3$。
+
+同一个数可以用另一种办法得到。从$\bm M$的三列中每次选两列，算所选子矩阵的行列式，再与$\bm N$的对应行组成的行列式相乘。由于$\bm N=\bm M^\top$，两个行列式相同，乘积就是平方。三种选法如下：
+
+选第$1,2$列，子矩阵为$\bigl(\begin{smallmatrix}1&0\\0&1\end{smallmatrix}\bigr)$，行列式$1$，贡献$1^2=1$。
+
+选第$1,3$列，子矩阵为$\bigl(\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\bigr)$，行列式$1$，贡献$1^2=1$。
+
+选第$2,3$列，子矩阵为$\bigl(\begin{smallmatrix}0&1\\1&1\end{smallmatrix}\bigr)$，行列式$-1$，贡献$(-1)^2=1$。
+
+三项相加$1+1+1=3$，与直接计算一致。
+
+在图上使用时，中间的$m$个坐标恰好按边编号排列，每次选$n-1$列就是选一组边。下面给出一般公式。
+
+\begin{lemma}[Cauchy--Binet公式]
+\label{lem:graph-cauchy-binet}
+设$\bm M\in\mathbb R^{k\times m}$，$\bm N\in\mathbb R^{m\times k}$，$k\leq m$。对每个$k$元子集$S\subseteq\{1,\ldots,m\}$，按升序取出$\bm M$的对应列和$\bm N$的对应行。则\term{Cauchy--Binet公式}（Cauchy--Binet formula）为
+\begin{equation}
+  \det(\bm M\bm N)=
+  \sum_{\substack{S\subseteq\{1,\ldots,m\}\\ |S|=k}}
+  \det(\bm M_{:,S})\det(\bm N_{S,:}).
+  \label{eq:graph-cauchy-binet}
+\end{equation}
+当$m<k$时，右侧没有满足条件的子集，和为零。
+\end{lemma}
+
+\begin{proof}
+乘积$\bm M\bm N$的第$j$列可以写成$\bm M$的各列按$\bm N$的条目加权的线性组合，
+\[
+  (\bm M\bm N)_{:,j}=\sum_{s=1}^{m} n_{s,j}\,\bm M_{:,s}.
+\]
+行列式对每一列都是线性的。从第$1$列的和中选出第$s_1$项，从第$2$列中选出第$s_2$项，以此类推直到第$k$列，把所有选法的贡献相加，得到
+\[
+  \det(\bm M\bm N)
+  =\sum_{s_1,\ldots,s_k=1}^{m}
+  \left(\prod_{j=1}^k n_{s_j,j}\right)
+  \det\bigl[\bm M_{:,s_1},\ldots,\bm M_{:,s_k}\bigr].
+\]
+
+如果某两个中间指标相同，比如$s_a=s_b$，行列式就有两列完全一样，由交替性为零。当$m<k$时，选出$k$个互不相同的指标是不可能的，所以全部为零。
+
+当$m\geq k$时，保留下来的项都来自互不相同的$k$个指标。将选了同一组指标集$S=\{t_1<\cdots<t_k\}$但以不同顺序选取的项归到一起。以$k=2$、$S=\{1,3\}$为例，选取次序$(1,3)$与$(3,1)$属于同一组。
+
+给定$S$后，各种选取次序由排列$\pi$给出：第$j$列所选指标为$s_j=t_{\pi(j)}$。把所选列的次序调回升序时，列的交换带来因子$\operatorname{sgn}(\pi)$，因此
+\[
+  \det\bigl[\bm M_{:,t_{\pi(1)}},\ldots,\bm M_{:,t_{\pi(k)}}\bigr]
+  =\operatorname{sgn}(\pi)\,\det(\bm M_{:,S}).
+\]
+$\det(\bm M_{:,S})$对同一组的所有排列相同，可以提到求和外面。剩下关于排列$\pi$的求和
+\[
+  \sum_\pi\operatorname{sgn}(\pi)\prod_{j=1}^k n_{t_{\pi(j)},j}
+\]
+中，每一行的条目恰好被选取一次，这正是行列式的定义，即$\det(\bm N_{S,:})$。将各个指标集$S$的贡献相加，便得到式~\eqref{eq:graph-cauchy-binet}。
+\end{proof}
+
+\subsection{生成树与非零子式}
+\label{sec:graph-tree-incidence-minors}
+
+Cauchy--Binet公式把乘积的行列式分成了各组边各自的贡献。下一步要弄清楚：选出的$n-1$条边什么时候给出非零贡献？
+
+固定一个顶点$r$作为根，从关联矩阵$\bm B$中删去第$r$行，得到约化关联矩阵$\overline{\bm B}$。它仍保留全部$m$条边的列。然后按边序选择$n-1$条边组成集合$S$，只取这些边对应的列，得到$(n-1)\times(n-1)$的方阵$\overline{\bm B}_{:,S}$。
+
+为什么可以删去根的那一行？因为$\bm B$的任一条边的列在两个端点分别取$+1$和$-1$，其余为$0$，所以$\bm B$的各行相加为零向量。一旦其余$n-1$行确定了，根行的值也由零和条件唯一确定。删去根行不会丢失信息。
+
+\begin{lemma}[生成树的关联子式]
+\label{lem:graph-tree-incidence-minors}
+若$S$构成生成树，则$\det(\overline{\bm B}_{:,S})\in\{1,-1\}$。其他含$n-1$条边的集合$S$都使该行列式为零。
+\end{lemma}
+
+\begin{proof}
+先处理$S$含环的情形。沿环选定一个行走方向，对每条环边，如果行走方向与记录方向一致就取原列，否则取负列。调整后，每列把环的上一步端点标为$+1$、下一步端点标为$-1$。
+
+环上的任何一个顶点都在两条环边上出现：从进入的边收到$-1$，从离开的边收到$+1$，两者抵消为零。把调整后的列全部加起来，得到零向量。删去根行后仍然是零。这说明列之间有线性关系，行列式为零。
+
+再处理$S$不含环的情形。$n$个顶点和$n-1$条无环边构成一个森林。设森林有$c$个连通分量，其中每棵树的顶点数比边数多一，因此总共有$n-c$条边。我们选了$n-1$条边，所以$c=1$，这组边构成一棵生成树。
+
+对生成树，我们用递归计算它的关联子式。树中至少有两个顶点，就可以找到一个不是根的叶顶点。叶在生成树中只连一条边，因此$\overline{\bm B}_{:,S}$中对应的行只有一个非零条目，值为$+1$或$-1$。
+
+沿这一行展开行列式，去掉叶所在的行和叶边所在的列，剩余矩阵是较小的树删去根行后的关联矩阵。每次展开只乘一个$\pm1$的因子。反复删去非根叶，最后只剩根，而根行在开始时已经删去，此时是一个空矩阵，行列式约定为$1$。逐层回乘，原行列式的绝对值为$1$。
+\end{proof}
+
+在四点算例中删去第$4$行。取边集$\{12,23,34\}$得到
+\[
+  \overline{\bm B}_{:,\{12,23,34\}}=
+  \begin{bmatrix}
+  1&0&0\\
+  -1&1&0\\
+  0&-1&1
+  \end{bmatrix}.
+\]
+这是对角线全为$1$的下三角矩阵，行列式为$1$。改选$\{12,23,13\}$，由于这三条边构成三角形$1\!-\!2\!-\!3$，环的线性关系使行列式为零。后一组虽然也是三条边，却遗漏了顶点$4$。
+
+图~\ref{fig:laplacian-tree-minors}把两种选法并排展示。左图中的边$34$经过根顶点$4$，但它的列仍然保留——删去的只是根对应的行，不影响边的列。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/laplacian-tree-minors.pdf}
+  \caption{固定根$4$后对照两组边的关联子式。方框标出根，它没有对应的矩阵行。实线表示选中的边，同时给出矩阵的列标。（a）生成树的子式行列式为一。（b）三角形的子式前两列相加等于第三列。}
+  \label{fig:laplacian-tree-minors}
+\end{BookInlineFigure}
+
+\subsection{矩阵树定理的证明}
+\label{sec:graph-matrix-tree-proof}
+
+现在把前面两个工具合在一起。从$\bm L$中删去第$r$行和第$r$列，得到约化矩阵$\overline{\bm L}$。由关联分解式~\eqref{eq:graph-laplacian-incidence-factorization}，$\overline{\bm L}$的每个条目为
+\[
+  \overline L_{i,j}=\sum_{e\in E} B_{i,e}\,w_e\,B_{j,e},
+\]
+其中$i,j$遍历除$r$以外的顶点，求和仍遍及全部$m$条边。因此可以用约化关联矩阵$\overline{\bm B}$写成
+\[
+  \overline{\bm L}=\overline{\bm B}\,\bm C\,\overline{\bm B}^\top.
+\]
+
+令$\bm M=\overline{\bm B}\bm C^{1/2}$。$\bm M$的每列是原来的关联列乘以该边权重的平方根。于是$\overline{\bm L}=\bm M\bm M^\top$，这正是 Cauchy--Binet 公式适用的形式。
+
+\begin{theorem}[矩阵树定理]
+\label{thm:graph-matrix-tree}
+对有限无向非负权图，任取顶点$r$，删去$\bm L$的第$r$行和第$r$列得到$\overline{\bm L}$。设$\mathcal T$为图的所有生成树的集合。则\term{矩阵树定理}（matrix-tree theorem）给出
+\begin{equation}
+  \det \overline{\bm L}=\sum_{T\in\mathcal T}\prod_{e\in T}w_e.
+  \label{eq:graph-matrix-tree}
+\end{equation}
+单位权时每棵生成树贡献$1$，行列式就是生成树的数目。
+\end{theorem}
+
+\begin{proof}
+对$\overline{\bm L}=\bm M\bm M^\top$应用 Cauchy--Binet 公式~\eqref{eq:graph-cauchy-binet}。每次选$n-1$个列指标，即选一个$n-1$元边集$S$。由于$\bm N=\bm M^\top$，对应行和对应列组成的两个方阵互为转置，行列式相同。因此每组边贡献
+\[
+  \det(\bm M_{:,S})^2.
+\]
+
+$\bm M$的第$e$列是$\overline{\bm B}$的第$e$列乘以$\sqrt{w_e}$。取出$S$中各列后，每列各提出一个$\sqrt{w_e}$因子。在平方的表达式中，$\sqrt{w_e}$变成$w_e$。因此
+\[
+  \det(\bm M_{:,S})^2=\det(\overline{\bm B}_{:,S})^2\prod_{e\in S}w_e.
+\]
+
+由引理~\ref{lem:graph-tree-incidence-minors}，如果$S$构成生成树，关联子式为$\pm1$，平方为$1$，贡献恰好是这棵树各边权重的乘积。如果$S$不是生成树，关联子式为零，贡献为零。
+
+把所有保留下来的项相加，就得到式~\eqref{eq:graph-matrix-tree}。
+\end{proof}
+
+对根的选取无关紧要。因为树权总和不涉及任何特定根，所以删去不同顶点的行列后得到的主余子式都相等。含零权边的树贡献为零。如果正权支撑不连通，原图可能仍有由零权边参与的生成树，但它们的权积为零，约化行列式也为零。
+
+回到四点算例。删去顶点$3$对应的行和列，得到
+\[
+  \overline{\bm L}=
+  \begin{bmatrix}
+  3&-1&-1\\
+  -1&2&0\\
+  -1&0&2
+  \end{bmatrix}.
+\]
+沿第一行展开行列式。第一项是$3$乘右下$2\times2$块的行列式$2\cdot2-0=4$，贡献$12$。第二项是$-(-1)$乘$\bigl(\begin{smallmatrix}-1&0\\-1&2\end{smallmatrix}\bigr)$的行列式$-2$，贡献$-2$。第三项是$(-1)$乘$\bigl(\begin{smallmatrix}-1&2\\-1&0\end{smallmatrix}\bigr)$的行列式$2$，贡献$-2$。因此
+\[
+  \det\overline{\bm L}=12-2-2=8.
+\]
+
+五条边选三条共有$\binom53=10$组。其中两个三角形$\{12,23,13\}$与$\{13,34,41\}$各含环，贡献为零。其余八组各构成一棵生成树，单位权下各贡献$1$。
+
+如果把边$13$的权重改为$2$，生成树本身不变，但含$13$的树每棵多乘一个因子$2$。含$13$的生成树还需把顶点$2$和$4$各连进来，顶点$2$可接$12$或$23$、顶点$4$可接$34$或$41$，共$4$棵含$13$的树。这$4$棵各贡献$2$，其余$4$棵不含$13$各贡献$1$，总和变为$4\cdot2+4\cdot1=12$。
+
+\subsection{生成树计数公式}
+\label{sec:graph-tree-counting-formulas}
+
+矩阵树定理把树权总和转化为一个行列式。对某些特殊图，可以直接从特征值乘积得到结果，而不需要展开行列式。
+
+对$n\geq2$的完全图$K_n$，每个顶点的度都是$n-1$。拉普拉斯为$\bm L=n\bm I-\bm1\bm1^\top$。常向量$\bm1$是特征值$0$的方向。常向量的正交补上，$\bm1\bm1^\top$的作用为零（因为$\bm1^\top\bm x=0$），所以$\bm L\bm x=n\bm x$，共有$n-1$个重复的特征值$n$。
+
+删去一行一列后，约化矩阵是$(n-1)\times(n-1)$的。全一向量与$\bm1\bm1^\top$的乘积中，缩减后的全一向量有$n-1$个分量，内积为$n-1$，所以约化矩阵在这一方向上的特征值为$n-(n-1)=1$。正交补上的$n-2$个方向不受影响，特征值仍为$n$。行列式是特征值的乘积，于是
+\begin{equation}
+  |\mathcal T(K_n)|=1\cdot n^{n-2}=n^{n-2}.
+  \label{eq:graph-cayley-count}
+\end{equation}
+这就是 Cayley 公式。它也数出了在$n$个标号顶点上可以组成多少棵不同的标号树，因为完全图包含每一对顶点之间的候选边。
+
+对一般的正权连通图，也能从完整的拉普拉斯谱直接计算树权总和。将特征值由小到大排列为$0=\lambda_1<\lambda_2\leq\cdots\leq\lambda_n$。考虑多项式
+\[
+  \det(t\bm I+\bm L)=t\prod_{i=2}^n(t+\lambda_i).
+\]
+右边展开后，$t$的一次项系数是$\prod_{i=2}^n\lambda_i$。
+
+同一个行列式也可以按列展开来计算。在$t\bm I+\bm L$中，每一列的条目要么来自$t\bm I$（贡献一个因子$t$），要么来自$\bm L$。取一次项时，恰好只从$t\bm I$选一列。
+
+设选的是第$r$列。该列只在第$r$行有非零条目$t$，沿这一列展开后，剩余的子式就是删去$\bm L$的第$r$行和第$r$列后的主余子式，即$\det\overline{\bm L}$。每个顶点都可以担当这个角色，所以$n$项的系数之和为$n\cdot\det\overline{\bm L}$。
+
+将两种计算得到的一次项系数相等，便有
+\begin{equation}
+  \sum_{T\in\mathcal T}\prod_{e\in T}w_e
+  =\frac1n\prod_{i=2}^n\lambda_i.
+  \label{eq:graph-tree-count-from-spectrum}
+\end{equation}
+
+在四点算例中，拉普拉斯的四个特征值为$0,2,4,4$（下一节会逐个核验）。代入得到$2\cdot4\cdot4/4=8$，与约化行列式计算的结果一致。
+
+若全部边权同时乘$a>0$，每棵树的权积乘$a^{n-1}$。另一方面$\bm L$的全部条目乘$a$，每个非零特征值也乘$a$，$n-1$个因子共乘$a^{n-1}$。两边按相同比例变化，验证了公式在尺度变换下的一致性。

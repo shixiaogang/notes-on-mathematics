@@ -8,7 +8,7 @@ catalog = volumes()
 assert [v["number"] for v in catalog] == list(range(1, 8))
 assert len({v["pdf"] for v in catalog}) == 7
 assert not Path("tex/main.tex").exists(), "全集入口应退役"
-expected = [7, 27, 13, 31, 29, 13, 34]
+expected = [7, 27, 20, 31, 29, 13, 34]
 for volume, count in zip(catalog, expected):
     entry = (ROOT / volume["entry"]).read_text()
     assert "\\BookVolumeSlug" in entry and "\\input{tex/book}" in entry

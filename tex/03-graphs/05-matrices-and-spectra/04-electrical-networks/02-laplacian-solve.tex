@@ -1,0 +1,198 @@
+\section{拉普拉斯方程的求解}
+\label{sec:graph-laplacian-solve}
+
+把Ohm定律\eqref{eq:electrical-ohm-law}代入电流守恒\eqref{eq:electrical-current-conservation}，每条边上先取两端电势差，再乘电导，最后按顶点汇总。这三步运算合在一起，正是第~\ref{sec:graph-laplacian}节的组合拉普拉斯矩阵作用于电势向量：
+\begin{equation}
+  \bm L\bm v = \bm b, \qquad \bm L = \bm B\bm C\bm B^\top.
+  \label{eq:electrical-laplacian-system}
+\end{equation}
+方程的输入是各顶点的外部注入$\bm b$，输出是使网络平衡所需的电势$\bm v$。
+
+\subsection{接地}
+\label{sec:electrical-grounding}
+
+\paragraph{接地的原理}
+
+在连通网络中，给全部电势同时加一个常数不改变任何边上的电流。这意味着同一组注入量可以对应无穷多组电势，它们之间只差一个共同的平移。要唯一确定电势，必须选择一个基准。
+
+先看方程何时有解。把全部$n$个守恒方程加起来，左端每条边的贡献在两个端点处相消。因此右端必须满足
+\[
+  \bm 1^\top \bm b = 0.
+\]
+这就是上一节得到的分量内注入总量为零的条件。反过来，$\bm L$对称且零空间由常向量张成，所以$\bm L$的像空间恰好就是和为零的全体向量。于是$\bm 1^\top \bm b = 0$也是充分条件。任意两组解之差落在零空间中，确实只差一个常数。
+
+选定一个顶点$q$，令$v_q = 0$，称为在$q$\term{接地}（grounding）。比如三点电势$(5,3,2)^\top$，给第三点接地就将三个数统一减去$2$，得到$(3,1,0)^\top$。
+
+固定$v_q = 0$后，第$q$列在方程中的贡献为零，可以删去。同时，第$q$行对应的守恒方程可以由其余$n-1$行恢复：把其余各行求和，再利用全图注入总量为零，就得到第$q$行的右端。因此也把第$q$行删去。删去$\bm v$和$\bm b$的第$q$个分量，得到约化系统
+\begin{equation}
+  \overline{\bm L}\,\overline{\bm v} = \overline{\bm b}.
+  \label{eq:electrical-grounded-system}
+\end{equation}
+
+连到接地点的边仍然留在电路中。若边$e$连接$i$与$q$，它在第$i$行的拉普拉斯项原来贡献$c_e(v_i - v_q)$。代入$v_q = 0$后变成$c_e v_i$，仍然出现在约化矩阵中。因此约化矩阵中保留顶点的对角度数照原图计算，没有因为删行列而丢失接地支路。
+
+约化矩阵是否总可逆？取任意非零约化向量$\overline{\bm x}$，在第$q$个位置补零得到$\bm x$。因为$x_q = 0$而$\overline{\bm x}$非零，$\bm x$不是常向量。连通图中只有常向量的拉普拉斯能量为零，所以
+\[
+  \overline{\bm x}^\top \overline{\bm L}\,\overline{\bm x}
+  = \bm x^\top \bm L \bm x > 0.
+\]
+这对所有非零$\overline{\bm x}$成立，因此$\overline{\bm L}$对称正定。
+
+求出$\overline{\bm v}$后，把$v_q = 0$补回原来的位置。除$q$以外的$n-1$个方程已经满足。$\bm L\bm v - \bm b$的分量和为零，所以第$q$行的残差也自动为零，不需要单独检查。
+
+另一种常用的基准是让全体电势的平均值为零。连通图的零均值解可以直接写成$\bm v = \bm L^\dagger \bm b$，其中$\bm L^\dagger$是伪逆。把接地解的每个分量减去其平均值，就得到这组零均值解。两种选择给出相同的边电流。
+
+若正权支撑不连通，可以对每个分量独立选基准，分别检查注入相容性。孤点既没有正权边流入也没有正权边流出，注入必须为零。
+
+\begin{example}[四点电网络]
+\label{ex:electrical-four-vertex-network}
+四点环加对角边$13$，全部边取单位电导。边的记录顺序为$1\to2$、$2\to3$、$3\to4$、$4\to1$、$1\to3$。在顶点$1$注入一单位电流，从顶点$3$引出一单位，顶点$2$和$4$无外部注入。选顶点$3$接地，即$v_3 = 0$。
+
+先列出顶点$2$的守恒方程。顶点$2$连接两个邻居$1$和$3$，度为$2$，注入为零：
+\[
+  2v_2 - v_1 - v_3 = 0.
+\]
+代入$v_3 = 0$得到$v_2 = v_1/2$。顶点$4$的情形完全对称：它也连接$1$和$3$，度也是$2$，注入也为零，所以$v_4 = v_1/2$。
+
+顶点$1$有三个邻居$2$、$3$和$4$，度为$3$，注入为$1$：
+\[
+  3v_1 - v_2 - v_3 - v_4 = 1.
+\]
+把$v_2 = v_4 = v_1/2$和$v_3 = 0$代入，得到$3v_1 - v_1/2 - v_1/2 = 2v_1 = 1$。于是$v_1 = 1/2$，进而
+\[
+  \bm v = (1/2, \; 1/4, \; 0, \; 1/4)^\top.
+\]
+
+沿五条记录边取压降，再乘单位电导，逐边算出电流：
+
+边$12$：$f = v_1 - v_2 = 1/2 - 1/4 = 1/4$。
+
+边$23$：$f = v_2 - v_3 = 1/4 - 0 = 1/4$。
+
+边$34$：$f = v_3 - v_4 = 0 - 1/4 = -1/4$，实际从$4$流向$3$。
+
+边$41$：$f = v_4 - v_1 = 1/4 - 1/2 = -1/4$，实际从$1$流向$4$。
+
+边$13$：$f = v_1 - v_3 = 1/2 - 0 = 1/2$。
+
+合起来，
+\[
+  \bm f = (1/4, \; 1/4, \; -1/4, \; -1/4, \; 1/2)^\top.
+\]
+在顶点$1$核对：两条环边各送出$1/4$，对角边送出$1/2$，合计一单位。顶点$2$收到$1/4$后立即转给$3$，净流出为零。顶点$4$同理。顶点$3$从三个方向各收到$1/4$、$1/4$和$1/2$，合计一单位，与引出量一致。
+\end{example}
+
+图~\ref{fig:electrical-grounded-matrix}写出接地前后的线性系统。上方全系统的蓝色列标出乘$v_3$的位置，黄色行标出顶点$3$的方程。删去这一行和一列后，得到下方的$3\times 3$正定系统。注意第一行的对角元仍然是$3$，而不是$2$，因为连到接地点$3$的那条边并没有被删去。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[scale=1]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-grounded-matrix/figure.pdf}
+  \caption{在顶点$3$接地。上方是四点网络的全系统，蓝色竖带标出乘$v_3$的一列，黄色横带标出顶点$3$的方程。约化系统保留顶点$1,2,4$的未知量和守恒式。}
+  \label{fig:electrical-grounded-matrix}
+\end{BookInlineFigure}
+
+图~\ref{fig:electrical-current-split}把电势和电流方向画在同一张图上。从$1$到$3$，对角线上压降$1/2$。沿上侧支路$1\to2\to3$，电势分两次各降$1/4$，合计也是$1/2$。沿下侧支路$1\to4\to3$同样如此。三条支路两端的电势差完全相同，这不是巧合——它们连接的是同一对端点。这个观察将在后面直接用来计算有效电阻。
+
+图~\ref{fig:electrical-grounding-overview}从左到右概括整个接地求解过程。左图标出注入方向和接地点，右图标出求解后的电势和电流。观察电流如何在三条并联支路间分配：对角边承载了总流量的一半，上下两条外侧支路各承载$1/4$。
+
+\begin{figure}[!htb]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm,>=Stealth,
+  vertex/.style={circle,draw=FigureBlue,fill=FigureBlueFill,inner sep=0pt,
+    minimum size=5.5mm,line width=.52pt,font=\figurefont\fontsize{8}{10}\selectfont},
+  gnd/.style={vertex,fill=FigureBlueFill,draw=FigureBlue,line width=.72pt},
+  inject/.style={vertex,fill=FigureYellowFill,draw=FigureYellow,line width=.72pt},
+  elabel/.style={font=\figurefont\fontsize{7}{8.5}\selectfont,FigureInk},
+  vlabel/.style={font=\figurefont\fontsize{7.5}{9}\selectfont,FigureInk},
+  panel/.style={anchor=mid,font=\figurefont\footnotesize}]
+  % Left: setup
+  \begin{scope}[xshift=0mm]
+    \node[inject] (l1) at (0,14) {$1$};
+    \node[vertex] (l2) at (14,14) {$2$};
+    \node[gnd]    (l3) at (14,0) {$3$};
+    \node[vertex] (l4) at (0,0) {$4$};
+    \draw[FigureStroke,line width=.45pt] (l1)--(l2) (l2)--(l3) (l3)--(l4) (l4)--(l1) (l1)--(l3);
+    \draw[->,FigureYellow,line width=.8pt] (-6,14) -- (l1) node[vlabel,midway,above] {$+1$};
+    \draw[->,FigureBlue,line width=.8pt]  (l3) -- (20,0) node[vlabel,midway,above] {$-1$};
+    \node[vlabel,below=1mm] at (l3.south) {接地};
+    \node[panel] at (7,-8) {(a) 注入与接地};
+  \end{scope}
+  % Arrow
+  \draw[->,FigureStroke,line width=.7pt] (26,7) -- (38,7) node[midway,above,font=\figurefont\fontsize{7}{8.5}\selectfont] {求解};
+  % Right: solution
+  \begin{scope}[xshift=44mm]
+    \node[inject] (r1) at (0,14) {$1$};
+    \node[vertex] (r2) at (14,14) {$2$};
+    \node[gnd]    (r3) at (14,0) {$3$};
+    \node[vertex] (r4) at (0,0) {$4$};
+    \draw[FigureStroke,line width=.45pt] (r1)--(r2) (r2)--(r3) (r3)--(r4) (r4)--(r1) (r1)--(r3);
+    \node[vlabel,left=1.5mm] at (r1) {$\frac{1}{2}$};
+    \node[vlabel,right=1.5mm] at (r2) {$\frac{1}{4}$};
+    \node[vlabel,right=1.5mm] at (r3) {$0$};
+    \node[vlabel,left=1.5mm] at (r4) {$\frac{1}{4}$};
+    % Current arrows
+    \draw[->,FigureBlue,line width=.65pt] ([xshift=.5mm,yshift=-1mm]r1.east) -- ([xshift=-.5mm,yshift=-1mm]r2.west) node[elabel,above=.5mm,midway] {$\frac{1}{4}$};
+    \draw[->,FigureBlue,line width=.65pt] ([xshift=-1mm,yshift=.5mm]r2.south) -- ([xshift=-1mm,yshift=-.5mm]r3.north) node[elabel,left=.5mm,midway] {$\frac{1}{4}$};
+    \draw[->,FigureBlue,line width=.65pt] ([xshift=1mm,yshift=.5mm]r4.north) -- ([xshift=1mm,yshift=-.5mm]r1.south) node[elabel,right=.5mm,midway] {$\frac{1}{4}$};
+    \draw[->,FigureBlue,line width=.65pt] ([xshift=.5mm,yshift=1mm]r3.west) -- ([xshift=-.5mm,yshift=1mm]r4.east) node[elabel,below=.5mm,midway] {$\frac{1}{4}$};
+    \draw[->,FigureBlue,line width=.85pt] ([xshift=1.5mm,yshift=-1.5mm]r1.south east) -- ([xshift=-1.5mm,yshift=1.5mm]r3.north west) node[elabel,above right=0mm,midway] {$\frac{1}{2}$};
+    \node[panel] at (7,-8) {(b) 电势与电流};
+  \end{scope}
+\end{tikzpicture}
+\caption{四点电网络的接地求解。(a) 在顶点$1$注入$1$单位电流（浅黄），在顶点$3$接地（浅蓝）并引出$1$单位。(b) 求解后的电势标在顶点旁，蓝色箭头和数值给出实际电流方向及大小。对角边承载$1/2$的电流，两条外侧支路各承载$1/4$。}
+\label{fig:electrical-grounding-overview}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \input{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-current}
+  \caption{四点环加对角边的电流分配。各边电导为一，顶点$1$注入一单位电流，顶点$3$接地并引出一单位。节点旁标注电势，边上箭头和数值给出实际电流方向及大小。两条外侧支路各输送$1/4$，中间支路输送$1/2$。}
+  \label{fig:electrical-current-split}
+\end{figure}
+
+\subsection{数值求解}
+\label{sec:electrical-numerical-solve}
+
+接地后得到对称正定系统，可以用直接法或迭代法求解。无论选哪种方法，输入都是约化矩阵$\overline{\bm L}$与注入向量$\overline{\bm b}$，输出都是其余顶点的电势$\overline{\bm v}$。
+
+约化矩阵对称正定，可以作Cholesky分解$\overline{\bm L} = \bm G\bm G^\top$，其中$\bm G$是下三角矩阵。先解$\bm G\bm u = \overline{\bm b}$得到中间向量$\bm u$，再解$\bm G^\top\overline{\bm v} = \bm u$得到电势。Cholesky分解的细节可参考\BookChapterRef{chap:direct-linear-solvers}{卷二的线性方程直接法章}。若图和接地点固定不变，只是换了注入位置或数量，三角因子可以反复使用。每次只需做两次三角求解，不必重新分解。
+
+不过，稀疏图的分解可能出现填充。假设要消去顶点$i$，它同时连接着两个仍保留的顶点$j,k$。消去$v_i$后，$j$和$k$的方程都会经由$v_i$产生彼此的耦合项。即使$j$和$k$原本不相邻，约化方程也会出现新的非零位置。这个现象与第~\ref{chap:general-graph-dp-construction}章讨论的消元填充相同。因此，直接法的存储和运算量必须按消元后的非零结构来估算，而不是按原图的稀疏度。
+
+当填充较大时，可以改用共轭梯度法。它的主要操作是矩阵乘以向量。对每条边$e\colon i\to j$，计算$c_e(x_i - x_j)$，在顶点$i$处累加这个值，在$j$处减去它。扫描一遍所有边即得到$\bm L\bm x$，时间为$O(n + m)$。约化矩阵的乘法只需先在接地点补零，计算完后再删去相应分量。
+
+设当前要解的正定系统为$\bm A\bm x = \bm d$，条件数为$\kappa = \kappa_2(\bm A) > 1$。共轭梯度法在精确算术下，第$k$步的能量范数误差$\lVert\bm e^{(k)}\rVert_{\bm A}^2 = (\bm e^{(k)})^\top \bm A\,\bm e^{(k)}$满足
+\begin{equation}
+  \lVert\bm e^{(k)}\rVert_{\bm A}
+  \leq 2\left(\frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}\right)^k
+  \lVert\bm e^{(0)}\rVert_{\bm A}.
+  \label{eq:electrical-cg-error}
+\end{equation}
+当$\kappa = 1$时，系数矩阵是恒等算子的正倍数，一步就能得到精确解。条件数越大，上式提供的收敛保证越慢。共轭梯度及其预条件形式可参考\BookChapterRef{chap:krylov-methods}{卷二的Krylov子空间方法章}。
+
+使用接地系统时，上式中的条件数是$\kappa_2(\overline{\bm L})$。也可以从零均值初始点出发，在$\bm 1^\perp$上直接求解原系统。由于$\bm L$保持这个子空间，残差和迭代方向在精确算术下都留在其中。此时相关条件数为$\lambda_n(\bm L)/\lambda_2(\bm L)$。两种条件数一般不同，不能混用。第~\ref{chap:graph-sparsification}章会进一步说明如何用稀疏图构造预条件矩阵。
+
+\subsection{树上的线性时间求解}
+\label{sec:electrical-tree-solve}
+
+若正权支撑是一棵树，每条边都是连接两侧的唯一通道。删去任何一条边，两端就断开了。利用这一点，可以不解方程，直接从注入量算出每条边的电流。
+
+选定一个根$q$，暂且把每条边的方向取为子顶点$i$指向父顶点$p(i)$。以$i$为根的子树记为$T_i$。在$T_i$内对所有顶点的守恒方程求和，每条内部边在一个端点贡献$+f_e$、在另一个端点贡献$-f_e$，全部抵消。唯一剩下的是$i$与父顶点之间的连边。因此，从$i$到$p(i)$的边电流恰好等于子树$T_i$内的注入总和$s_i$。
+
+从叶子开始向上计算。叶子没有子节点，子树只有自己，$s_i = b_i$。一般的顶点$i$先等所有子节点算完，再把它们的注入和加上自己的注入：
+\begin{equation}
+  s_i = b_i + \sum_{j\colon p(j) = i} s_j.
+  \label{eq:electrical-subtree-injection}
+\end{equation}
+一遍后序遍历即完成全部计算。到达根时，$s_q$等于整棵树的注入总和。若它不为零，方程无解。
+
+知道了每条边的电流，就可以从根向叶恢复电势。令$v_q = 0$。沿每条边$i\to p(i)$，Ohm定律给出$f_{i\to p(i)} = c_{i,p(i)}(v_i - v_{p(i)})$。已知电流$s_i$和父电势，解出
+\begin{equation}
+  v_i = v_{p(i)} + r_{i,p(i)}\,s_i.
+  \label{eq:electrical-tree-voltage}
+\end{equation}
+一遍前序遍历从根走到每个叶子，每条边只处理一次，时间和存储均为$O(n)$。若换回原来的记录方向，只需对方向相反的边将电流分量变号。
+
+例如在路径$1\!-\!2\!-\!3\!-\!4$上，每条边的电阻为一，从$1$送入一单位电流，从$4$引出一单位。以$4$为根，叶子是$1$。从叶子向上：$s_1 = 1$（只有自己的注入）；$s_2 = 0 + s_1 = 1$（自己注入为零，加上子树$1$的总和）；$s_3 = 0 + s_2 = 1$。三条边的电流都是$1$，方向沿$1,2,3,4$。
+
+从根向叶恢复电势：$v_4 = 0$。沿边$3\to4$，电阻为$1$，电流为$1$，压降为$1$，所以$v_3 = v_4 + 1 = 1$。同理$v_2 = v_3 + 1 = 2$，$v_1 = v_2 + 1 = 3$。得到电势$(3,2,1,0)^\top$。

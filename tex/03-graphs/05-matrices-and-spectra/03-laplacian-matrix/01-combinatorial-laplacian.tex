@@ -1,0 +1,169 @@
+\section{组合拉普拉斯}
+\label{sec:graph-laplacian}
+
+关联矩阵把顶点读数变成边上的差，也把边上的流量变成顶点的净流出。如果先取差、再乘边权、再按顶点汇总，三步合成一个从顶点空间到自身的线性算子，就是拉普拉斯矩阵。本节要回答两个问题：这个矩阵的二次型衡量什么？它的零空间告诉我们什么？
+
+\subsection{加权邻接矩阵}
+\label{sec:graph-weighted-adjacency}
+
+沿用第~\ref{sec:graph-conn-adjacency-matrix}小节的记号。设图有$n$个顶点、$m$条边，加权邻接矩阵$\bm W=(w_{i,j})\in\mathbb R^{n\times n}$把每条边的权重记在对应位置，无边处和对角线取零。无向图的权重对称，$w_{i,j}=w_{j,i}\geq 0$。
+
+给顶点一组读数$\bm x\in\mathbb R^n$后，矩阵$\bm W$的第$i$行把每个邻居读数乘上对应的边权，再求和：
+\begin{equation}
+  (\bm W\bm x)_i=\sum_{j=1}^n w_{i,j}\,x_j.
+  \label{eq:graph-weighted-neighbor-sum}
+\end{equation}
+这一行只访问顶点$i$的邻居。在四点图上取读数$\bm f=(3,2,1,0)^\top$，第一行对三个邻居$2,3,4$求和，得到$1\cdot2+1\cdot1+1\cdot0=3$。第二行只有两个邻居$1$和$3$，得到$3+1=4$。
+
+如果把所有读数都改为$1$，顶点$1$的输出仍是$1+1+1=3$，而顶点$2$的输出只有$1+1=2$。同样的读数在两个顶点产生了不同的输出，差别来自它们各自的邻居数量和边权。
+
+将一个顶点的全部邻边权重加起来，就得到该顶点的\term{加权度}（weighted degree）：
+\begin{equation}
+  d_i=\sum_{j=1}^n w_{i,j},\qquad
+  \bm D=\operatorname{diag}(d_1,\ldots,d_n).
+  \label{eq:graph-laplacian-weighted-degree}
+\end{equation}
+无权图中$d_i$就是邻居数。加大一条现有边的权重只会增大两个端点的加权度，并不改变邻居名单。
+
+非负权有一个简单的推论。只有当顶点$i$与它所有相邻边的权重都为零时，$d_i$才等于零。保留全部顶点、只保留正权边所得到的图称为\emph{正权支撑}，零度顶点就是正权支撑中的孤点。
+
+在四点算例中，顶点$1$连接三个邻居，顶点$2$连接两个邻居，另外两点的情况也类似。全部边权取一时，度向量为
+\[
+  \bm d=(3,2,3,2)^\top.
+\]
+若只把对角边$13$的权重改成二，$d_1$增加一变为$4$，$d_3$同样增加一变为$4$，而$d_2,d_4$不受影响，得到$(4,2,4,2)^\top$。邻居数量没有变，但加权度随着边权增大而增大。后面的算例仍取全部单位权。
+
+\subsection{矩阵表达}
+\label{sec:graph-laplacian-matrix-form}
+
+有了邻居加权和与加权度之后，就可以把"本点读数与各邻居读数的带权差"汇总为一个矩阵作用。对每一条边$\{i,j\}$，我们将本点读数$x_i$减去邻居读数$x_j$，再乘上该边的权重$w_{i,j}$。把一个顶点的全部邻边贡献加在一起，得到该顶点的偏离量。
+
+\begin{definition}[组合拉普拉斯]
+\label{def:graph-combinatorial-laplacian}
+设$\bm W$和$\bm D$分别为无向非负权图的加权邻接矩阵和度矩阵。其\term{组合拉普拉斯}（combinatorial Laplacian）$\bm L\in\mathbb R^{n\times n}$定义为
+\begin{equation}
+  (\bm L\bm x)_i=\sum_{j=1}^n w_{i,j}(x_i-x_j),\qquad
+  \bm L=\bm D-\bm W.
+  \label{eq:graph-combinatorial-laplacian}
+\end{equation}
+\end{definition}
+
+逐项展开可以看清两部分的来源。在顶点$i$处，每一项$w_{i,j}(x_i-x_j)$的$x_i$部分贡献$w_{i,j}x_i$。把这些项加起来，系数之和正是加权度$d_i$。余下的邻居读数部分$-w_{i,j}x_j$加在一起，则是式~\eqref{eq:graph-weighted-neighbor-sum}的相反数。所以
+\[
+  (\bm L\bm x)_i=d_i x_i-(\bm W\bm x)_i.
+\]
+这就是对角阵$\bm D$逐点乘度后减去$\bm W\bm x$，即$\bm L=\bm D-\bm W$。
+
+当$d_i>0$时，可以换一种方式理解这个输出。将邻居加权总和$(\bm W\bm x)_i$除以$d_i$，就得到邻居读数的加权平均。每个邻居$j$占的份额是$w_{i,j}/d_i$，所有份额加起来等于$1$。组合拉普拉斯的输出等于$d_i$乘以本点读数与这个平均值的差。加权度越大，同样大小的偏离产生的输出也越大。
+
+上面的公式在每个顶点遍历一次邻居。也可以换一个角度——逐条边来处理，一次计算一条边对两个端点的贡献。
+
+第一步是把顶点读数变成边上的差值。回用带符号关联矩阵$\bm B\in\mathbb R^{n\times m}$。设边$e$从$i$记向$j$，$\bm B$的第$e$列$\bm b_e=\bm e_i-\bm e_j$在尾端$i$处取$+1$、在头端$j$处取$-1$。对这条边取差就是计算
+\[
+  \bm b_e^\top\bm x=x_i-x_j.
+\]
+对所有边同时取差，得到$m$维向量$\bm B^\top\bm x$。
+
+第二步在每个差值上乘对应的边权。令$\bm C=\operatorname{diag}(w_{e_1},\ldots,w_{e_m})$为边权对角阵，这一步得到$\bm C\bm B^\top\bm x$，其第$e$项为$w_e(x_i-x_j)$。
+
+第三步把带权差分送回两个端点。用$\bm b_e$乘边$e$的带权差，就在尾端$i$加入$w_e(x_i-x_j)$，同时在头端$j$加入相反数$-w_e(x_i-x_j)$。在四点图上，以边$13$为例，读数$3$和$1$之差为$2$，单位权下顶点$1$收到$+2$，顶点$3$收到$-2$。将每条边各自送来的贡献相加，就是左乘$\bm B$。
+
+每条边对应的秩一矩阵是$w_e\bm b_e\bm b_e^\top$。如果反转这条边的记录方向，$\bm b_e$的两次出现同时变号，乘积保持不变。把所有边的贡献相加，
+\begin{equation}
+  \bm L=\sum_{e\in E} w_e\bm b_e\bm b_e^\top
+       =\bm B\bm C\bm B^\top.
+  \label{eq:graph-laplacian-incidence-factorization}
+\end{equation}
+
+图~\ref{fig:laplacian-readings-aggregation}用一组读数演示了这三个步骤。请注意边$41$的参考方向从$4$指向$1$，差值为$0-3=-3$。在第三步中，顶点$1$收到$-(-3)=3$，这个$3$与另外两条邻边送来的$1$和$2$相加，得到$6$。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/laplacian-readings-aggregation.pdf}
+  \caption{四点单位权图上计算$\bm L\bm x$。（a）顶点旁是读数。（b）箭头表示参考方向，边上的数是起点读数减终点读数。边权都是一，乘权后差值保持原样。（c）顶点旁是各边带权差在该点汇总后的值。}
+  \label{fig:laplacian-readings-aggregation}
+\end{BookInlineFigure}
+
+拉普拉斯矩阵有一个简单的性质：常值读数的能量为零。取$\bm x=\bm 1$时，每条边两端相等，$\bm B^\top\bm 1=\bm 0$，于是$\bm L\bm 1=\bm 0$。即便各点度不同，只要所有顶点保持同一读数，沿边偏离就处处为零。
+
+在四点算例中，将度填入对角线，在每条边对应的两个非对角位置各填$-1$，得到
+\[
+  \bm L=
+  \begin{bmatrix}
+  3&-1&-1&-1\\
+  -1&2&-1&0\\
+  -1&-1&3&-1\\
+  -1&0&-1&2
+  \end{bmatrix}.
+\]
+若只在顶点$1$取读数$1$、其余为$0$，顶点$1$的读数比三个邻居各高出$1$，输出为$3$。另外三个顶点各只有一个邻居取值$1$，输出都是$-1$。这正是矩阵的第一列。
+
+\subsection{沿边变化能量}
+\label{sec:graph-laplacian-energy}
+
+逐点计算偏离量时，正负项可能互相抵消。对三个顶点组成的单位权路径$1\!-\!2\!-\!3$，依次取读数$0,1,2$。中间顶点$2$与左邻的差是$1$、与右邻的差是$-1$，两项加起来恰好为零。但这里的读数确实沿边有变化——只是正负相消掩盖了它。
+
+如果想衡量整张图上读数的变化，就不能让正负相消。一个办法是将每条边上的差先平方，再乘边权。平方使得每一项都非负。下面验证这样做恰好等于用$\bm x$与$\bm L\bm x$的内积。
+
+将关联矩阵分解代入二次型。记$\bm z=\bm B^\top\bm x$为各边的差值，于是
+\[
+  \bm x^\top\bm L\bm x
+  =(\bm B^\top\bm x)^\top\bm C(\bm B^\top\bm x)
+  =\bm z^\top\bm C\bm z.
+\]
+$\bm C$是对角矩阵，所以每条边只与自己的差相乘。第$e$项是$w_ez_e^2=w_e(x_i-x_j)^2$。也可以把它写成先给每个差乘$\sqrt{w_e}$、再取长度平方的形式$\lVert\bm C^{1/2}\bm B^\top\bm x\rVert_2^2$。这个量称为\term{沿边变化能量}（Dirichlet energy）：
+\begin{equation}
+  \bm x^\top\bm L\bm x
+  =\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2
+  =\frac12\sum_{i,j=1}^n w_{i,j}(x_i-x_j)^2.
+  \label{eq:graph-laplacian-energy}
+\end{equation}
+第一个求和中每条无向边只计一次。第二个求和经过所有有序顶点对$(i,j)$和$(j,i)$，每条边被数了两次，所以要乘$\tfrac12$。所有边权都非负，每项都非负，$\bm L$因此是实对称半正定矩阵。
+
+在四点算例上试两组读数。先取$\bm x=(1,0,1,0)^\top$。四条环边的两端分别为$(1,0)$、$(0,1)$、$(1,0)$、$(0,1)$，差的平方各为$1$，贡献共$4$。对角边$13$的两端都是$1$，差为零，没有贡献。总能量为$4$。
+
+再取只在顶点$1$处为$1$、其余为$0$的脉冲。它的三条邻边两端相差$1$，各贡献$1$，总能量为$3$。两组读数都恰好有两个顶点取值$1$，但能量不同——前者的两个$1$被对角边连在一起没有产生差异，后者的$1$孤立在一个顶点上。图~\ref{fig:laplacian-edge-energy}逐条标出了有能量贡献的边和没有贡献的边，方便直接对照。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/laplacian-edge-energy.pdf}
+  \caption{同一四点图上的两组读数。圆内为顶点读数，边旁是该边的平方差（单位边权）。实线有贡献，虚线贡献为零。（a）在$1,3$上取一。（b）在$1$上取一。}
+  \label{fig:laplacian-edge-energy}
+\end{BookInlineFigure}
+
+\subsection{零空间与连通分量}
+\label{sec:graph-laplacian-kernel}
+
+能量为零意味着什么？由式~\eqref{eq:graph-laplacian-energy}，和式中的每一项$w_e(x_i-x_j)^2$都非负。它们的和为零，就要求每一项都为零。对每条正权边而言，$(x_i-x_j)^2=0$意味着$x_i=x_j$。
+
+这个相等关系可以沿正权路径传递。如果顶点$i$和$j$属于同一个正权连通分量，它们之间存在一条由正权边组成的路径，每一步都有$x_k=x_{k+1}$，逐步传递下去就得到$x_i=x_j$。因此，能量为零的读数在每个正权连通分量上必须取同一个常值。
+
+反过来，如果一组读数在每个正权连通分量上各为常值，那么每条正权边的两端读数相同，差为零，各项全为零，能量确实等于零。
+
+\begin{theorem}[拉普拉斯的零空间]
+\label{thm:graph-laplacian-components}
+设正权支撑的连通分量为$V_1,\ldots,V_c$，以$\bm 1_{V_a}$记在$V_a$中为一、其余位置为零的指示向量。则
+\begin{equation}
+  \ker\bm L=\operatorname{span}\{\bm 1_{V_1},\ldots,\bm 1_{V_c}\},
+  \qquad
+  \operatorname{rank}\bm L=n-c.
+  \label{eq:graph-laplacian-kernel-components}
+\end{equation}
+零特征值的重数为$c$。
+\end{theorem}
+
+\begin{proof}
+先证零空间包含在分量常值函数中。若$\bm L\bm x=\bm 0$，与$\bm x$作内积得到$\bm x^\top\bm L\bm x=0$。由上面的讨论，$\bm x$在每个正权连通分量上取常值。
+
+再证分量常值函数属于零空间。若$\bm x$在各分量上分别为常值，每条正权边两端的差为零，代入定义式~\eqref{eq:graph-combinatorial-laplacian}即得$\bm L\bm x=\bm 0$。
+
+各分量的指示向量支撑互不相交，因此线性无关。它们可以给每个分量独立赋予任意常值，从而张成整个零空间。由秩与零空间维数之和为$n$，得到$\operatorname{rank}\bm L=n-c$。实对称矩阵可正交对角化，零特征值的重数就是零空间的维数$c$。
+\end{proof}
+
+用两个例子来体会这个结论。先看两条互不相连的边$\{1,2\}$和$\{3,4\}$，它们构成两个分量。能量为零只要求$x_1=x_2$且$x_3=x_4$，两组可以分别取任意值。$(1,1,0,0)^\top$和$(0,0,1,1)^\top$是两个独立的零方向。
+
+再看四点算例。它是连通的，只允许四点取同一个常值，即零空间只有常向量这一个方向。如果另外并入一个孤立顶点$5$，该点没有任何正权边与之连接，可以独立取值，零空间就多出一个方向$\bm e_5$。
+
+类似地，把一条正权边的权重降为零时，要看两端是否还有其他正权路径连接。如果仍有，零空间维数不变；如果原来那条边是唯一的连接通道，去掉它之后连通分量多了一个，零空间就多出一个方向。
+
+这给出一个直接的连通性判据。如果正权支撑连通（即$c=1$），常向量是唯一的零方向。任何与常向量正交的非零读数——即各顶点读数之和为零——都有严格正的能量。相反，如果支撑不连通，隔开的分量可以取不同的常值而不产生任何能量代价。

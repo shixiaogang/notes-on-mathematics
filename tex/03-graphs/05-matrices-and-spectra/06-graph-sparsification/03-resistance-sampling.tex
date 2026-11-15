@@ -1,0 +1,221 @@
+\section{按有效电阻抽样}
+\label{sec:graph-resistance-sampling}
+
+上一节说明了每条边在连通结构中有多重要。现在用这个度量来构造稀疏图：从原图的边表中反复抽边，每抽一次就给抽到的那条边增加一点权。需要决定两件事——每条边该多常被抽到？抽到后该给多少权？
+
+\subsection{抽样分布的选择}
+\label{sec:graph-resistance-sampling-distribution}
+
+最直接的想法是等概率抽边。但这样做有一个致命的缺陷。
+
+\paragraph{均匀抽样的风险}
+
+考虑图~\ref{fig:graph-sparsification-bridge}：两个大团之间只有一条桥。若$m$条边中等概率抽一条，一次没抽到桥的概率是$1-1/m$。独立抽$q$次都没抽到的概率为$(1-1/m)^q$。当$q$远小于$m$时，桥很容易被漏掉。
+
+被漏掉会怎样？给左团的顶点全部赋值一、右团的顶点全部赋值零。两团内部各边的两端取相同的值，不贡献能量。只有桥的两端相差一，独自承担这个方向上的全部能量。如果桥被漏了，所得图在这个方向上的能量变成了零，谱近似要求的正下界无法满足。
+
+\begin{figure}[!htb]
+  \centering
+  \input{figures/03-graphs/05-matrices-and-spectra/tikz/sparsification-bridge}
+  \caption{两个团之间只有一条桥。取在左团恒为一、右团恒为零的顶点函数，两团内部的边没有能量贡献，桥独自承担这个方向的全部能量。}
+  \label{fig:graph-sparsification-bridge}
+\end{figure}
+
+\paragraph{按电阻分配概率}
+
+上一节的包含概率$c_eR_e$正好反映了这种重要性差异。桥在每棵生成树中都出现，$c_eR_e=1$。团内有很多替代路径时，一条边只在一部分树中出现，$c_eR_e$较小。
+
+一棵生成树会同时包含多条边，这些概率加起来是$n-1$（Foster定理）。但我们每次只抽一条边，因此把每项除以$n-1$，得到加起来等于一的抽样概率，
+\begin{equation}
+p_e=\frac{c_eR_e}{n-1}.
+\label{eq:graph-resistance-sampling-probability}
+\end{equation}
+这里$n\geq 2$。每条正权边的有效电阻严格为正，因此$p_e>0$。
+
+\paragraph{权重补偿}
+
+独立有放回地抽$q$次。对于一条边$e$，每次有概率$p_e$抽到它，$q$次后平均被抽到$qp_e$次。为使它在输出图中的\emph{平均}总权等于原权$c_e$，每出现一次就给它加$c_e/(qp_e)$的权。
+
+举个例子：一条原权为一的边，抽到的概率是$1/4$，抽八次平均出现两次，因此每次出现加半单位权，平均总权$2\times 1/2=1$，恰好等于原权。
+
+从零权开始累计。同一条边抽到多次时在已有权上继续增加。全部$q$次抽样的贡献加起来，得到替代图的拉普拉斯矩阵
+\begin{equation}
+\bm L_H
+=\sum_{j=1}^q \frac{c_{e_j}}{qp_{e_j}}
+     \bm b_{e_j}\bm b_{e_j}^\top.
+\label{eq:graph-resistance-sampling-laplacian}
+\end{equation}
+
+\paragraph{期望等于原矩阵}
+
+对第$j$次抽样，只有抽中$e$时才会增加$c_e/(qp_e)$的权。这一项出现的概率是$p_e$，所以这条边本次的平均权贡献是$c_e/(qp_e)\times p_e=c_e/q$。把所有边的外积项按平均权相加，就得到本次矩阵的期望为$\bm L_G/q$。再把$q$次的期望加起来，
+\begin{equation}
+\mathbb E\bm L_H=\bm L_G.
+\label{eq:graph-resistance-sampling-expectation}
+\end{equation}
+这个等式对\emph{任何}处处为正的抽样分布都成立——只要概率补偿做对了。有效电阻抽样的特殊之处不在于期望，而在于控制波动。
+
+\paragraph{单次波动的控制}
+
+平均正确不够。如果某条边很少被抽到，除以很小的$p_e$会使它一旦出现就带来很大的权。我们需要问：一次抽样最多能让能量偏离多少？
+
+沿用式~\eqref{eq:graph-sparsification-normalized-order}的标准化坐标。取$\bm x\in\bm 1^\perp$，写成$\bm x=\bm L_G^{-1/2}\bm y$，原图能量就变成$\lVert\bm y\rVert_2^2$。现在只看原图能量等于一的方向，即$\lVert\bm y\rVert_2=1$。
+
+第$j$次抽到边$e_j$时，这次贡献的标准化矩阵为
+\begin{equation}
+\bm X_j=\frac{c_{e_j}}{qp_{e_j}}
+     (\bm L_G^{-1/2}\bm b_{e_j})
+     (\bm L_G^{-1/2}\bm b_{e_j})^\top.
+\label{eq:graph-resistance-sampling-standardized}
+\end{equation}
+令$\bm v_j=\bm L_G^{-1/2}\bm b_{e_j}$。对长度为一的$\bm y$，Cauchy--Schwarz给出$|\bm v_j^\top\bm y|\leq\lVert\bm v_j\rVert_2$，在$\bm y$平行于$\bm v_j$时取等。因此本次的最大能量偏移就是$(c_{e_j}/(qp_{e_j}))\lVert\bm v_j\rVert_2^2$。
+
+$\bm v_j$的平方长度恰好等于有效电阻：
+\[
+\lVert\bm v_j\rVert_2^2
+=\bm b_{e_j}^\top\bm L_G^{-1}\bm b_{e_j}
+=R_{e_j}.
+\]
+因为$\bm X_j$半正定，最大能量偏移就是它的算子范数。代入抽样概率式~\eqref{eq:graph-resistance-sampling-probability}，
+\[
+\lVert\bm X_j\rVert_2
+=\frac{c_{e_j}R_{e_j}}{qp_{e_j}}
+=\frac{n-1}{q}.
+\]
+不论抽到哪条边，单次贡献的范数都是同一个值$(n-1)/q$。这是有效电阻抽样的关键性质：它均衡了各条边在最坏方向上的贡献。增大$q$会降低单次波动，后面用这个界计算所需的抽样次数。
+
+\subsection{算法实现}
+\label{sec:graph-resistance-sampling-algorithm}
+
+\begin{algorithm}[按有效电阻抽样]
+\label{alg:graph-resistance-sampling}
+输入：连通正权图$\mathcal G$的边表与各边有效电阻（精确或带误差保证的估计），抽样次数$q$。输出：顶点集为$V$的重新加权子图$\mathcal H$。
+\begin{enumerate}
+  \item 对各边计算$c_e\widehat R_e$并归一化为概率$\{p_e\}$。建立累计概率表，将各边输出权$\widehat c_e$置零。
+  \item 重复$q$次：从$[0,1)$均匀取一个数，按累计概率定位一条边$e$，令$\widehat c_e\leftarrow\widehat c_e+c_e/(qp_e)$。
+  \item 保留全部顶点，输出所有$\widehat c_e>0$的边。
+\end{enumerate}
+\end{algorithm}
+
+输入包含顶点集、正权边表、精度$0<\varepsilon<1$和允许的失败概率$0<\delta<1$。调用第~\ref{sec:graph-effective-resistance}节的方法计算各边的有效电阻，可以给出精确值或带统一相对误差保证的近似值。把$c_e\widehat R_e$归一化为概率后，需要实现独立有放回抽样。
+
+依照边表的顺序，把区间$[0,1)$切成$m$个小区间，使第$i$个区间的长度等于$p_{e_i}$。每次从$[0,1)$均匀取一个数，用二分查找定位它落入哪个区间，就抽到了对应的边。抽过一条边后不改变区间——下一次仍可能抽到它。
+
+如果算出的$q$达到或超过原图边数，直接返回原图即可。对不连通图，可逐分量实施算法，各分量分别分配失败概率预算，孤点直接保留。
+
+\begin{example}[按抽样概率重新加权]
+\label{ex:graph-resistance-sampling}
+继续使用四点五边例，单位权。各边的$c_eR_e$就是有效电阻：四条环边为$5/8$，对角边为$1/2$。除以Foster总和$3$，得到环边概率$5/24$，对角边概率$1/6$。
+
+仅为展示操作，取$q=6$。每次抽到环边，加权$1/(6\times 5/24)=4/5$。每次抽到对角边，加权$1/(6\times 1/6)=1$。对角边的概率较低，出现一次补偿的权就更大。
+
+假设依次抽到边$12,23,34,41,13$，第六次再抽到$12$。表~\ref{tab:graph-resistance-sampling}记录各步累加的结果。最终$12$的权为$4/5+4/5=8/5$，来自第一次和第六次的两笔贡献。图~\ref{fig:sparsification-sampling-intervals}显示这两次的均匀数如何都落到同一条边的概率区间内。
+\end{example}
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/sparsification-sampling-intervals/figure.pdf}
+  \caption{按边的抽样概率切分$[0,1)$。区间内的两位数字表示边的端点。第一次和第六次的均匀数都落入边$12$的区间，所以两次增加的权都记在$12$上。}
+  \label{fig:sparsification-sampling-intervals}
+\end{BookInlineFigure}
+
+\begin{table}[!htb]
+  \centering
+  \begin{tabular}{ccrrrrr}
+    \toprule
+    次数 & 抽到的边 & $12$ & $23$ & $34$ & $41$ & $13$ \\
+    \midrule
+    1 & $12$ & $4/5$ & 0 & 0 & 0 & 0 \\
+    2 & $23$ & $4/5$ & $4/5$ & 0 & 0 & 0 \\
+    3 & $34$ & $4/5$ & $4/5$ & $4/5$ & 0 & 0 \\
+    4 & $41$ & $4/5$ & $4/5$ & $4/5$ & $4/5$ & 0 \\
+    5 & $13$ & $4/5$ & $4/5$ & $4/5$ & $4/5$ & 1 \\
+    6 & $12$ & $8/5$ & $4/5$ & $4/5$ & $4/5$ & 1 \\
+    \bottomrule
+  \end{tabular}
+  \caption{四点五边例的边权累加过程。每一行只增加当次抽到的那条边的权。}
+  \label{tab:graph-resistance-sampling}
+\end{table}
+
+取$\bm x=(1,0,1,0)^\top$。每条环边上的差都是一，对角边两端同值。原图能量为$4$，抽样图为$8/5+4/5+4/5+4/5=4$。这个方向上误差恰好是零。
+
+再取$\bm x=(1,0,0,0)^\top$。只有与顶点$1$相接的三条边贡献能量。原图能量为$3$，抽样图为$8/5+4/5+1=17/5$。同一张抽样图在不同方向上的误差大小不同。这次演示保留了全部五条边，六次抽样只用于核对权重更新的过程，不是概率保证所需的样本量。
+
+累积概率表的建立和输出边表的整理各用$O(m)$时间。二分查找使$q$次抽样用$O(q\log m)$时间。使用别名表时，建表$O(m)$，每次抽样$O(1)$，$q$次抽样及权重累加为$O(q+m)$。两种实现都只需按边维护累计权，辅助空间$O(m)$。电阻的预计算另计。
+
+\subsection{算法分析}
+\label{sec:graph-resistance-sampling-analysis}
+
+式~\eqref{eq:graph-resistance-sampling-expectation}说的是平均正确。但实际使用时只保留一次构造出的图，所以需要估计这张特定的图偏离原图的概率。
+
+\paragraph{为什么需要统一保证}
+
+如果只关心某个固定的向量，可以用标量集中不等式估计它的能量偏离概率。但换一个向量，概率可能不同。更严重的是，谱近似要求的是\emph{同一张}图在\emph{所有}方向上都满足误差界——哪怕是事后看过抽样结果再挑的方向。
+
+在标准化坐标中，原图用$\bm 1^\perp$上的单位矩阵表示，抽样图用$\sum_j\bm X_j$表示。对单位向量，这个矩阵能给出的最大和最小能量就是它的最大和最小特征值。只要两个极端特征值都落在$1\pm\varepsilon$之间，所有方向自动满足。
+
+\paragraph{矩阵Chernoff界}
+
+下面的概率界直接控制这两个极端特征值。
+
+\begin{theorem}[矩阵Chernoff界的单位均值形式]
+\label{thm:graph-matrix-chernoff}
+设$\bm X_1,\ldots,\bm X_q$是独立的$d\times d$随机半正定矩阵，满足$\lVert\bm X_j\rVert_2\leq r$且$\sum_{j=1}^q\mathbb E\bm X_j=\bm I$。则对$0<\varepsilon<1$，
+\begin{equation}
+\mathbb P\!\left(
+  \left\lVert\sum_{j=1}^q\bm X_j-\bm I\right\rVert_2>\varepsilon
+\right)
+\leq 2d\exp\!\left(-\frac{\varepsilon^2}{3r}\right).
+\label{eq:graph-matrix-chernoff}
+\end{equation}
+\end{theorem}
+
+这里引用Tropp的\term{矩阵Chernoff界}（matrix Chernoff bound）\scite{tropp2012userfriendly}，用于期望和为单位阵的情形。右端的$d$来自空间维数：最大特征值偏高和最小特征值偏低的概率各至多$d\exp(-\varepsilon^2/(3r))$，相加并用较大项统一估计。这个定理作为明确引用的外部工具，不声称卷七的标量集中已经证明了它。
+
+\paragraph{验证定理条件}
+
+逐项检查。$\bm X_j$来自彼此独立的抽样，每一项是非负系数乘向量外积，所以半正定。$q$项的期望和是将$\bm L_H$的期望$\bm L_G$换到标准化坐标得到的矩阵，
+\[
+\mathbb E\sum_{j=1}^q\bm X_j
+=\bm L_G^{-1/2}\bm L_G\bm L_G^{-1/2}
+=\bm I
+\quad\text{在}\;\bm 1^\perp\;\text{上}.
+\]
+常数方向已除去，空间维数$d=n-1$。上一小节算出的单次范数上界为$(n-1)/q$，即$r=(n-1)/q$。
+
+\paragraph{代入得到抽样次数}
+
+将$d=n-1$和$r=(n-1)/q$代入式~\eqref{eq:graph-matrix-chernoff}，失败概率至多为
+\[
+2(n-1)\exp\!\left(-\frac{q\varepsilon^2}{3(n-1)}\right).
+\]
+为使它不超过$\delta$，取整数$q$使
+\begin{equation}
+q\geq\frac{3(n-1)}{\varepsilon^2}
+         \log\frac{2(n-1)}{\delta}.
+\label{eq:graph-resistance-sampling-count}
+\end{equation}
+
+没有发生坏事件时，$\sum_j\bm X_j$的全部特征值都在$[1-\varepsilon,1+\varepsilon]$中。于是对每个$\bm y\in\bm 1^\perp$，抽样图在标准化坐标中的能量都夹在$(1\pm\varepsilon)\lVert\bm y\rVert_2^2$之间。
+
+代回$\bm y=\bm L_G^{1/2}\bm x$，长度平方还原为原图能量，中央的二次型还原为抽样图能量。最后，给所有顶点同时加常数不改变任何边上的差。因此$\bm 1^\perp$上的比较对全体顶点向量成立，得到了谱近似的统一保证。
+
+\paragraph{近似电阻的处理}
+
+若只知道满足
+\[
+(1-\eta)R_e\leq\widehat R_e\leq(1+\eta)R_e,
+\qquad 0\leq\eta<1
+\]
+的近似电阻，实际使用的概率$\widehat p_e$与精确概率$p_e$之间可能有偏差。某条边的电阻被低估、其他边的被高估，会使它归一化后的机会变小。取最坏情况：分子$c_e\widehat R_e\geq(1-\eta)c_eR_e$，分母$\sum_fc_f\widehat R_f\leq(1+\eta)(n-1)$，因此
+\[
+\widehat p_e\geq\frac{1-\eta}{1+\eta}p_e.
+\]
+
+按$\widehat p_e$补偿权重仍保持期望等于原矩阵。但概率变小使得单次范数上界放大了$(1+\eta)/(1-\eta)$倍。把式~\eqref{eq:graph-resistance-sampling-count}的$q$乘以同一个因子，就能抵消这部分波动。
+
+如果电阻估计本身也使用随机算法，可以先给估计步骤分配$\delta/2$的失败概率，在估计成功的条件下用剩余的$\delta/2$计算抽样次数。两个坏事件的并集概率至多$\delta$。
+
+\paragraph{抽样次数与总成本}
+
+式~\eqref{eq:graph-resistance-sampling-count}表明，固定失败概率时只需$O(n\log n/\varepsilon^2)$次抽样。稠密图的原始边数可能远大于此，因此确实可以得到更少的边。但总运行时间还取决于有效电阻估计和拉普拉斯求解器的开销。有效电阻抽样与快速求解器配合时可以进一步实现近线性总时间\scite{spielman2011graph}，本章不将该复杂算法的完整时间分析作为已证明结论。
