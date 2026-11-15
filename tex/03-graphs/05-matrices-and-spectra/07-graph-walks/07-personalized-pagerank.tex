@@ -1,0 +1,236 @@
+\section{个性化PageRank}
+\label{sec:graph-personalized-pagerank}
+
+把重启分布集中在一个顶点$s$上，就可以问：从$s$出发走一段随机步数后，最常在哪里结束？换一个起点，终点分布就不同。将重启集中在少数起点的做法称为\term{个性化PageRank}（personalized PageRank），这些起点称为种子。
+
+每轮扫描所有边能算出完整终点分布。如果只想知道哪些顶点靠近种子，可以从种子开始，只处理收到较多待分配质量的顶点。本节在至少有两个顶点的连通简单无权图上使用惰性转移矩阵$\bm{Q}$。图的无向性保证度向量在转移下平稳，无权性使度等于邻居数。
+
+\subsection{局部推送的原理}
+\label{sec:graph-pagerank-push-principle}
+
+固定每步结束的概率$\alpha$和式~\eqref{eq:graph-walk-lazy-transition}中的惰性转移矩阵$\bm{Q}$。为了能够单独处理某一小份质量，我们允许输入$\bm{s}$的各项非负、总和小于一。每一份质量按相同规则走到终点，所有份额的终点贡献直接相加。相应的线性算子为
+\begin{equation}
+\mathcal{R}(\bm{s})
+=\alpha\sum_{t=0}^{\infty}(1-\alpha)^t\bm{s}\bm{Q}^t.
+\label{eq:graph-pagerank-linear-operator}
+\end{equation}
+$\mathcal{R}(\bm{s})$的第$i$项是最后在$i$结束的质量。转移$\bm{Q}^t$不改变总质量，步数系数$\alpha(1-\alpha)^t$之和为一，因此终点质量的总和与输入总和相同。
+
+对尚未处理的质量$\bm{r}$，一部分会立即结束——比例为$\alpha$。继续走的部分经一步惰性转移成为$(1-\alpha)\bm{r}\bm{Q}$，之后仍遵循同一规则。因此
+\begin{equation}
+\mathcal{R}(\bm{r})=\alpha\bm{r}+(1-\alpha)\mathcal{R}(\bm{r}\bm{Q}).
+\label{eq:graph-pagerank-push-decomposition}
+\end{equation}
+在级数中，这对应先取出$t=0$项，再从其余各项中提取一次转移$\bm{Q}$和继续概率$1-\alpha$。
+
+\paragraph{不变量}
+
+局部推送保存两份数据。用$\bm{p}$记已经确认在哪些点结束的质量，用$\bm{r}$记还在各点等待处理的余量。余量未来会在哪些点结束，由$\mathcal{R}(\bm{r})$给出。整个计算始终满足
+\begin{equation}
+\mathcal{R}(\bm{s})=\bm{p}+\mathcal{R}(\bm{r}).
+\label{eq:graph-pagerank-push-invariant}
+\end{equation}
+起初$\bm{p}=\bm{0}$、$\bm{r}=\bm{s}$。每次只处理一个顶点$i$上的余量：将其中$\alpha$比例的质量划入$p_i$确认为终点分数，其余按$\bm{Q}$分配到各处。其他顶点的余量保持不变。同一份质量只是逐步从待处理变成已确认，最终要计算的$\mathcal{R}(\bm{s})$始终不变。
+
+\paragraph{推送阈值}
+
+处理顶点$i$时要读取$d_i$个邻居。如果$r_i$很小，分到每条边上的量微乎其微。用$r_i/d_i>\varepsilon$判断是否值得推送，能让待处理质量与邻接访问的开销相匹配。这个阈值$\varepsilon>0$也控制最终留在各点的余量。
+
+\subsection{算法实现}
+\label{sec:graph-pagerank-push-implementation}
+
+输入为按点读取的邻接表、稀疏概率行$\bm{s}$、重启概率$\alpha$和阈值$\varepsilon$。稀疏存储$\bm{p}$和$\bm{r}$，将满足$r_i>\varepsilon d_i$的顶点放进活动队列。
+
+\begin{algorithm}[个性化PageRank局部推送]
+\label{alg:graph-personalized-pagerank-push}
+输入：邻接表、稀疏种子$\bm{s}$、重启概率$\alpha$、阈值$\varepsilon$。输出：近似分数$\bm{p}$和余量$\bm{r}$。
+\begin{enumerate}
+  \item 令$\bm{p}=\bm{0}$、$\bm{r}=\bm{s}$。把满足$r_i>\varepsilon d_i$的顶点加入活动队列。
+  \item 从队列中取出顶点$i$，记旧余量$q=r_i$。执行：
+    \begin{enumerate}
+    \item 划入分数：$p_i\leftarrow p_i+\alpha q$。
+    \item 本点余量：$r_i\leftarrow(1-\alpha)q/2$。
+    \item 邻居余量：对$i$的每个邻居$j$，$r_j\leftarrow r_j+(1-\alpha)q/(2d_i)$。
+    \end{enumerate}
+    处理后，若$i$或受影响的邻居$j$满足$r_j>\varepsilon d_j$，加入队尾。
+  \item 队列为空时停止，返回$\bm{p}$和$\bm{r}$。
+\end{enumerate}
+\end{algorithm}
+
+取出顶点$i$，先将旧余量记为$q=r_i$。惰性转移一半保留本点、一半均分给邻居，因此
+\begin{equation}
+\begin{aligned}
+p_i &\leftarrow p_i+\alpha q,\\
+r_i &\leftarrow (1-\alpha)q/2,\\
+r_j &\leftarrow r_j+(1-\alpha)q/(2d_i),\qquad j\sim i.
+\end{aligned}
+\label{eq:graph-pagerank-push-update}
+\end{equation}
+全部更新使用同一个旧值$q$。处理完后，检查$i$和受影响邻居是否仍超过阈值，超过的加入队尾。队列空时输出$\bm{p}$和$\bm{r}$。
+
+\paragraph{不变量的验证}
+
+逐笔核对这次推送。从$i$的旧余量中取出$q\bm{e}_i^\top$。其中$\alpha q\bm{e}_i^\top$立即结束，加入$\bm{p}$。剩余$(1-\alpha)q\bm{e}_i^\top$经一步惰性转移成为$(1-\alpha)q\bm{e}_i^\top\bm{Q}$，加回余量。由式~\eqref{eq:graph-pagerank-push-decomposition}，这次推送把$q$的一部分从余量划入已确认分数，其余以新位置继续等待。因此式~\eqref{eq:graph-pagerank-push-invariant}仍然成立。
+
+每次推送只让$\alpha q$从余量变成确认。所以$\lVert\bm{p}\rVert_1+\lVert\bm{r}\rVert_1$始终等于$\lVert\bm{s}\rVert_1$。只给出$\bm{p}$时，它的总质量可能小于$1$，缺少的部分正是仍待处理的余量。
+
+\paragraph{四点路径上的演示}
+
+在四点路径上取种子$1$，$\alpha=1/2$，$\varepsilon=1/8$。四个顶点的度分别为$1,2,2,1$，推送阈值分别为$1/8,1/4,1/4,1/8$。
+
+第一次推送顶点$1$。旧余量$q=1$。立即确认$\alpha q=1/2$划入$p_1$。剩余$1/2$对半分：$1/4$保留在$1$的余量，$1/4$送给唯一邻居$2$，
+\[
+\bm{p}=(1/2,0,0,0),\qquad \bm{r}=(1/4,1/4,0,0).
+\]
+检查阈值：$1$的余量$1/4>1/8$，仍活动。$2$的余量$1/4$恰等于$2\varepsilon\cdot d_2=1/4$，不超过阈值。
+
+第二次推送顶点$1$。旧余量$q=1/4$。确认$1/8$，余下$1/8$对半分，$1/16$留本点、$1/16$给$2$，
+\[
+\bm{p}=(5/8,0,0,0),\qquad \bm{r}=(1/16,5/16,0,0).
+\]
+现在$2$的余量$5/16>1/4$，加入队列。
+
+第三次推送顶点$2$。旧余量$q=5/16$。确认$5/32$划入$p_2$。余下$5/32$对半分：$5/64$留在$2$，另外$5/64$在两个邻居$1,3$间均分，各得$5/128$。图~\ref{fig:graph-pagerank-third-push}画出这份旧余量的全部去向。
+
+\begin{BookInlineFigure}
+\centering
+\includegraphics[width=85.965mm]{figures/03-graphs/05-matrices-and-spectra/tikz/walk-examples/pagerank-push-path.pdf}
+\caption{四顶点路径的第三次局部推送，$\alpha=1/2$。从顶点$2$取出旧余量$5/16$，向上的箭头计入已确认分数$p_2$，回环保留在$2$的余量，向左右的箭头增加两个邻居的余量。}
+\label{fig:graph-pagerank-third-push}
+\end{BookInlineFigure}
+
+将$1$收到的$5/128$与旧余量$1/16$相加，得到
+\[
+\bm{p}=(5/8,5/32,0,0),\qquad
+\bm{r}=(13/128,5/64,5/128,0).
+\]
+四个阈值为$1/8,1/4,1/4,1/8$。各点余量都不超过对应阈值，算法停止。此时$p_3=0$，但顶点$3$尚有余量$5/128$，将来仍可能贡献终点分数。
+
+图~\ref{fig:pagerank-push-evolution}以柱状图对比三次推送前后的已确认分数$\bm{p}$和余量$\bm{r}$。观察已确认分数逐渐增长，余量逐渐分散并缩小。每次推送只改变被推送顶点和它的邻居，其他位置保持不变。
+
+\begin{figure}[!htb]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm,
+  pbar/.style={fill=FigureBlueFill,draw=FigureBlue,line width=.4pt},
+  rbar/.style={fill=FigureYellowFill,draw=FigureYellow,line width=.4pt},
+  panel/.style={anchor=mid,font=\figurefont\footnotesize},
+  vlabel/.style={font=\figurefont\fontsize{6.5}{8}\selectfont,FigureInk,anchor=north},
+  plabel/.style={font=\figurefont\fontsize{6}{7.5}\selectfont,FigureInk,anchor=south}]
+  \def\bw{3}% bar width
+  \def\sc{32}% vertical scale: 1 unit = 32mm
+  \def\gp{1.5}% gap between p and r bars
+  \def\vgp{4}% gap between vertices
+  % Legend
+  \fill[pbar] (0,27) rectangle +(3,2); \node[font=\figurefont\fontsize{6.5}{8}\selectfont,anchor=west] at (4,28) {分数$p_i$};
+  \fill[rbar] (20,27) rectangle +(3,2); \node[font=\figurefont\fontsize{6.5}{8}\selectfont,anchor=west] at (24,28) {余量$r_i$};
+  % Panel (a): after push 1
+  % p=(1/2,0,0,0), r=(1/4,1/4,0,0)
+  \begin{scope}[xshift=0mm]
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (0,\sc*0.55);
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (4*2*\bw+4*\gp+3*\vgp+1,0);
+    \foreach \i/\v/\pv/\rv in {0/1/0.5/0.25, 1/2/0/0.25, 2/3/0/0, 3/4/0/0} {
+      \pgfmathsetmacro{\x}{\i*(2*\bw+\gp+\vgp)+1}
+      \pgfmathsetmacro{\hp}{\pv*\sc}
+      \pgfmathsetmacro{\hr}{\rv*\sc}
+      \pgfmathparse{\pv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[pbar] (\x,0) rectangle +(\bw,\hp);
+      \fi
+      \pgfmathparse{\rv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[rbar] (\x+\bw+\gp,0) rectangle +(\bw,\hr);
+      \fi
+      \node[vlabel] at (\x+\bw+\gp/2,-1) {$\v$};
+    }
+    \node[panel] at (18,-7) {(a) 推送$1$后};
+  \end{scope}
+  % Panel (b): after push 1 again
+  % p=(5/8,0,0,0), r=(1/16,5/16,0,0)
+  \begin{scope}[xshift=44mm]
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (0,\sc*0.7);
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (4*2*\bw+4*\gp+3*\vgp+1,0);
+    \foreach \i/\v/\pv/\rv in {0/1/0.625/0.0625, 1/2/0/0.3125, 2/3/0/0, 3/4/0/0} {
+      \pgfmathsetmacro{\x}{\i*(2*\bw+\gp+\vgp)+1}
+      \pgfmathsetmacro{\hp}{\pv*\sc}
+      \pgfmathsetmacro{\hr}{\rv*\sc}
+      \pgfmathparse{\pv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[pbar] (\x,0) rectangle +(\bw,\hp);
+      \fi
+      \pgfmathparse{\rv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[rbar] (\x+\bw+\gp,0) rectangle +(\bw,\hr);
+      \fi
+      \node[vlabel] at (\x+\bw+\gp/2,-1) {$\v$};
+    }
+    \node[panel] at (18,-7) {(b) 推送$1$后};
+  \end{scope}
+  % Panel (c): after push 2
+  % p=(5/8,5/32,0,0), r=(13/128,5/64,5/128,0)
+  \begin{scope}[xshift=88mm]
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (0,\sc*0.7);
+    \draw[FigureStroke,line width=.35pt] (0,0) -- (4*2*\bw+4*\gp+3*\vgp+1,0);
+    \foreach \i/\v/\pv/\rv in {0/1/0.625/0.1016, 1/2/0.1563/0.0781, 2/3/0/0.0391, 3/4/0/0} {
+      \pgfmathsetmacro{\x}{\i*(2*\bw+\gp+\vgp)+1}
+      \pgfmathsetmacro{\hp}{\pv*\sc}
+      \pgfmathsetmacro{\hr}{\rv*\sc}
+      \pgfmathparse{\pv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[pbar] (\x,0) rectangle +(\bw,\hp);
+      \fi
+      \pgfmathparse{\rv>0?1:0}\ifnum\pgfmathresult=1
+        \fill[rbar] (\x+\bw+\gp,0) rectangle +(\bw,\hr);
+      \fi
+      \node[vlabel] at (\x+\bw+\gp/2,-1) {$\v$};
+    }
+    \node[panel] at (18,-7) {(c) 推送$2$后};
+  \end{scope}
+\end{tikzpicture}
+\caption{四点路径上三次局部推送后的已确认分数$\bm{p}$（蓝色）与余量$\bm{r}$（黄色）。每次推送把一个顶点的余量划入分数并分发邻居。(a) 第一次推送$1$后，$p_1$跳至$1/2$，余量出现在$1$和$2$。(b) 第二次再推$1$，$p_1$增至$5/8$，$2$的余量超过阈值。(c) 推送$2$后，分数和余量扩散到$3$。}
+\label{fig:pagerank-push-evolution}
+\end{figure}
+
+\subsection{算法分析}
+\label{sec:graph-pagerank-push-analysis}
+
+\paragraph{工作量}
+
+每次推送$i$要读取$d_i$个邻居。推送条件保证旧余量$q>\varepsilon d_i$，而其中$\alpha q$在这一步变成已确认分数。因此每访问一个邻接项，至少消耗$\alpha\varepsilon$的总余量。初始余量只有$\lVert\bm{s}\rVert_1\le1$，所以整个过程访问的邻接项数满足
+\begin{equation}
+\sum_{\text{各次推送}\;i}d_i\le\frac{1}{\alpha\varepsilon}.
+\label{eq:graph-pagerank-push-work}
+\end{equation}
+含种子初始化后的总时间为$O(|\operatorname{supp}(\bm{s})|+1/(\alpha\varepsilon))$。
+
+\paragraph{逐点误差}
+
+停止时，每点的余量都不超过$\varepsilon d_i$。但某个顶点最终还能得到多少分数，取决于所有其他点的余量经过多步转移后送来的量，不能只看该点目前的$r_i$。
+
+为此拿一份更大的余量$\varepsilon\bm{d}^\top$作比较。由于度向量在惰性转移下平稳，这份比较量右乘$\bm{Q}$后保持原样。另一方面，$\bm{Q}$的元素非负，逐点较小的$\bm{r}$经转移后仍不超过$\varepsilon\bm{d}^\top$。同样的理由对任意$t$步都成立：$\bm{r}\bm{Q}^t$逐点不超过$\varepsilon\bm{d}^\top$。
+
+余量的最终分配$\mathcal{R}(\bm{r})$是不同步数下结果的加权平均。每一步数下已有同一个逐点上界，平均后也不超过它。由式~\eqref{eq:graph-pagerank-push-invariant}，这份未来终点质量正是缺少的分数，因此
+\begin{equation}
+0\le\mathcal{R}(\bm{s})_i-p_i\le\varepsilon d_i.
+\label{eq:graph-pagerank-push-pointwise}
+\end{equation}
+总误差也可直接检查。$\mathcal{R}(\bm{r})$非负且保总质量，所以
+\begin{equation}
+\lVert\mathcal{R}(\bm{s})-\bm{p}\rVert_1=\lVert\bm{r}\rVert_1.
+\label{eq:graph-pagerank-push-mass}
+\end{equation}
+在路径算例中，最终余量总和$13/128+5/64+5/128=23/128$，与$1-5/8-5/32=23/128$吻合。
+
+带权无向图仍可用平稳度向量控制误差，但加权度与邻居数不同，式~\eqref{eq:graph-pagerank-push-work}便不直接给出内存访问次数。一般有向图的出度行向量通常不平稳，逐点误差的推导需要另选合适的尺度。
+
+\paragraph{局部划分}
+
+个性化分数还可用于寻找种子附近的割。将$p_i>0$的顶点按$p_i/d_i$降序排列，逐个加入前缀集合，并用第~\ref{sec:graph-cheeger}节的导通率评价每个非空且未覆盖全图的候选。整个正分数支撑若仍是全图的真子集，也作为一个候选。加点时只需按其邻边更新跨割权重并累加体积。
+
+例如用一条边$\{3,4\}$连接两个三角形$\{1,2,3\}$与$\{4,5,6\}$。取$\alpha=1/5$和$\varepsilon=1/25$，队列按进入顺序处理，邻居按编号访问。两个种子的扫描结果为
+\[
+\begin{array}{c@{\qquad}c@{\qquad}c}
+\text{种子}&\text{扫描顺序}&\text{前缀导通率}\\
+1&(1,2,3)&(1,1/2,1/7)\\
+3&(3,1,2,4)&(1,3/5,1/7,1/2)
+\end{array}
+\]
+两个种子都发现了第一个三角形的割。从桥端$3$出发时，正分数越过桥到达$4$，多考察了一个跨桥前缀。
+
+要在一般图上保证扫出低导通率的割，需要规定原图中有什么可供发现的集合、从何处出发、以及分数算到多精确。设边数$m>1$，希望找到导通率小于$\varphi$的割。Andersen、Chung和Lang的结果使用$\alpha=\varphi^2/(135\ln m)$\scite{andersen2006localpagerank}。假设图中有一个集合$C$，体积至多是全图的$2/3$，且导通率至多为$\alpha/10$。在这样的$C$中，存在一批加权度之和至少为$\operatorname{vol}(C)/2$的适合种子。从其中一个出发推送到$\max_i r_i/d_i\le1/(10\operatorname{vol}(C))$时，排名扫描出的某个前缀导通率一定小于$\varphi$。
+
+这些条件说明，单点重启需要放在能把足够质量留在$C$的位置，截断误差也要小到保住这部分质量。算法提供候选割，找到什么样的割还取决于图的结构、种子的位置和参数的选择。

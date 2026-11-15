@@ -1,0 +1,147 @@
+\section{图上的函数}
+\label{sec:graph-vertex-edge-functions}
+
+在同一张图上，我们可以给每个测点记一个温度，也可以给每条管道记一个流量。一个数写在顶点上，另一个数写在边上。这两组数各自排成向量后，恰好可以用关联矩阵从一组算到另一组。本节先建立这两类向量的坐标，再定义关联矩阵并演示它的两种作用。
+
+\subsection{顶点函数}
+\label{sec:incidence-vertex-functions}
+
+图~\ref{fig:incidence-running-example}画出了本章反复使用的四点图。四条边连成一个环，另有一条对角边连接顶点$1$和$3$。顶点集和边集分别为
+\[
+V=\{1,2,3,4\},\qquad E=\{12,23,34,41,13\},
+\]
+其中$ij$简记无序边$\{i,j\}$。图中每个顶点旁标注了一个读数，分别是$3,2,1,0$。
+
+给每个顶点赋一个实数，就得到一个\term{顶点函数}（vertex function）$f\colon V\to\mathbb{R}$。图的结构决定哪些顶点相邻，函数值则是在这一结构上另加的数据。同一张图在不同时刻可以承载不同的温度，也可以换成记录海拔或电势——图不变，数据变。
+
+\begin{figure}[!htb]
+  \centering
+  \input{figures/03-graphs/05-matrices-and-spectra/tikz/incidence-example.tex}
+  \caption{本章的四点图及一组顶点读数。黑灰色线是四条环边，蓝色线是额外的对角边。箭头给出记录差分和流量时使用的参考方向。顶点旁的数字是读数$\bm{f}=(3,2,1,0)^\top$。}
+  \label{fig:incidence-running-example}
+\end{figure}
+
+对$n$个顶点固定一个次序$v_1,\ldots,v_n$，按此顺序排列读数，函数$f$就与列向量
+\[
+\bm{f}=\bigl(f(v_1),\ldots,f(v_n)\bigr)^\top
+\]
+一一对应。两个顶点函数可以逐点相加，也可以乘以同一个实数。这些运算与$\mathbb{R}^n$中的向量运算完全一样，因此所有顶点函数构成线性空间$\mathbb{R}^V\cong\mathbb{R}^n$，维数等于顶点数$n$。对每个顶点$v$，只在$v$处取$1$、其余为$0$的指示函数$\bm{e}_v$对应标准基向量，$n$个这样的函数恰好组成一组基。
+
+两个顶点函数的内积定义为各点读数乘积的和，
+\begin{equation}
+\langle\bm{f},\bm{g}\rangle_V=\sum_{v\in V}f(v)\,g(v).
+\label{eq:incidence-vertex-inner-product}
+\end{equation}
+有限维空间中的基、坐标与内积的关系可参考\BookChapterRef{chap:linear-representation}{卷二"线性空间"章}。
+
+给定一张图之后，重新编号相当于对顶点施加一个置换。比如把$1,2,3,4$的次序换成$3,1,4,2$，向量的坐标随之重排，但每个测点上的读数本身并没有改变。只要在做计算之前先固定顶点次序，坐标就能始终与测点对应。以下按$1,2,3,4$排列图中的读数，得到
+\[
+\bm{f}=(3,2,1,0)^\top.
+\]
+这组读数将在后续的计算中反复使用。
+
+\subsection{边函数}
+\label{sec:incidence-edge-functions}
+顶点函数给每个顶点赋值，\term{边函数}（edge function）则给每条边赋值。四点图有$m=5$条边。固定边的顺序为$12,23,34,41,13$，一个边函数就写成$\bm{q}\in\mathbb{R}^5$。
+
+但边上的数值有一个顶点函数没有的问题：方向。沿图~\ref{fig:incidence-running-example}的箭头，我们约定$1\to2$、$2\to3$、$3\to4$、$4\to1$和$1\to3$为各条边的正方向。在边$41$上，如果流量记为$q_{41}=-2$，实际含义是从$1$到$4$流了$2$个单位——数值为负，表示实际流向与参考方向相反。对无向图来说，箭头只是一种坐标约定：同一股流改用反向记录时，数值变号，大小不变。
+
+流量$q_e$和边权$w_e$是两种不同的数据，二者的区别在于对方向的响应不同。流量是随输入和约定而变的量，改变参考方向就让$q_e$变号。边权是图本身的结构参数——它可以表示电导、距离或相似度——把参考方向倒过来，非负的边权仍取原值。后续可以把各边的权重排成对角矩阵$\bm{C}=\operatorname{diag}(w_e)$。
+
+在边空间$\mathbb{R}^E$上定义普通内积
+\begin{equation}
+\langle\bm{q},\bm{r}\rangle_E=\sum_{e\in E}q_e\,r_e.
+\label{eq:incidence-edge-inner-product}
+\end{equation}
+本节和下一节讨论环空间与割空间时使用这个内积。到第~\ref{chap:graph-electrical-networks}章讨论电网络时，为了按电阻计量耗散，每一项还要乘以对应的电阻，得到的是另一种加权内积。两种内积下的正交关系不一样，不能直接互换。
+
+\subsection{关联矩阵的作用}
+\label{sec:incidence-matrix-actions}
+
+有了两类函数和它们的坐标，下面用一张矩阵把它们连接起来。
+
+一条边$e\colon u\to v$有两个端点和一个记录方向。我们在矩阵的第$e$列中，用$+1$标记尾端$u$，用$-1$标记头端$v$，其余行填$0$。这样定义的矩阵$\bm{B}\in\mathbb{R}^{n\times m}$称为\term{关联矩阵}（incidence matrix），其第$e$列为
+\begin{equation}
+\bm{B}_{:,e}=\bm{e}_u-\bm{e}_v.
+\label{eq:incidence-oriented-column}
+\end{equation}
+$\bm{e}_u$与$\bm{e}_v$都是顶点空间的标准基向量。每一列恰好有一个$+1$和一个$-1$，其余全为零。
+
+依次填写五条边的端点信息，四点图的关联矩阵为
+\[
+\bm{B}=
+\begin{pmatrix}
+ 1 & 0 & 0 & -1 & 1\\
+ -1 & 1 & 0 & 0 & 0\\
+ 0 & -1 & 1 & 0 & -1\\
+ 0 & 0 & -1 & 1 & 0
+\end{pmatrix}.
+\]
+矩阵的行按顶点排，列按边排。以边$41$所在的第四列为例：第$4$行的$+1$标记尾端，第$1$行的$-1$标记头端，其余为零。
+
+\paragraph{沿边取差}
+
+关联矩阵的第一种作用是把顶点读数变成沿边的差值。以边$41$为例：它的第四列转成一行后与顶点读数相乘，取出的就是第$4$个读数减去第$1$个读数。对每条边重复这个运算，等价于用$\bm{B}^\top$乘顶点向量。结果按边编号排列，第$e$个分量是
+\begin{equation}
+(\bm{B}^\top\bm{f})_e=f(u)-f(v),\qquad e\colon u\to v.
+\label{eq:incidence-edge-difference}
+\end{equation}
+
+我们用四点图逐边算一遍。边$12$的差值是$f(1)-f(2)=3-2=1$。边$23$是$f(2)-f(3)=2-1=1$。边$34$是$f(3)-f(4)=1-0=1$。边$41$是$f(4)-f(1)=0-3=-3$。边$13$是$f(1)-f(3)=3-1=2$。汇总起来，
+\[
+\bm{B}^\top\bm{f}=(1,1,1,-3,2)^\top.
+\]
+
+如果给每个顶点的读数都加上同一个常数$c$，每条边上的差值变成
+\[
+(f(u)+c)-(f(v)+c)=f(u)-f(v),
+\]
+增量在两端互相抵消。特别地，常值函数$f\equiv c$的沿边差分全为零——所有顶点都相同，自然没有沿边变化。
+
+\paragraph{按顶点汇总}
+
+关联矩阵的另一种作用方向相反：从边上的流量出发，回到每个顶点记一笔账。按行读取$\bm{B}$，一个顶点对从它出发的边取正号，对以它为头端的边取负号。将带符号的流量乘上这些系数再相加，就得到该顶点的\term{净流出量}，
+\begin{equation}
+(\bm{B}\bm{q})_v=\sum_{e:\,v\text{ 是尾端}}q_e
+              -\sum_{e:\,v\text{ 是头端}}q_e.
+\label{eq:incidence-net-outflow}
+\end{equation}
+
+以顶点$1$为例。$\bm{B}$的第一行在边$12,41,13$上非零：$12$和$13$从$1$出发（系数$+1$），$41$进入$1$（系数$-1$），因此
+\[
+(\bm{B}\bm{q})_1=q_{12}-q_{41}+q_{13}.
+\]
+
+为了看清单条边的效果，我们取$\bm{q}=(1,0,0,0,0)^\top$，只有边$12$上有一个单位的正向流量。代入关联矩阵，
+\[
+\bm{B}(1,0,0,0,0)^\top=(1,-1,0,0)^\top.
+\]
+尾端$1$净流出$+1$，头端$2$净流出$-1$，其余顶点不受影响。
+
+这个例子说明了一条重要的性质：每条边在全体顶点的净流出总和中恰好贡献$+q_e$和$-q_e$，二者抵消。所以无论各边的流量取什么值，净流出总和始终为零。
+
+图~\ref{fig:incidence-matrix-actions}把两种计算放在同一条参考边$1\to2$上并排展示。观察左图：两端各有一个读数，作差得到一个边坐标。观察右图：只有这条边携带流量，尾端记录净流出$+1$，头端记录$-1$。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/incidence-matrix-actions/figure.pdf}
+  \caption{同一条参考边$1\to2$上的两种计算。(a) 两个端点的读数作差，得到一个边坐标。(b) 只有这条边有一个单位的正向流量，尾端净流出为$1$，头端净流出为$-1$。}
+  \label{fig:incidence-matrix-actions}
+\end{BookInlineFigure}
+
+\paragraph{差分与汇总互为伴随}
+
+沿边取差和按顶点汇总看起来是两种不同的运算，但它们之间存在一个精确的联系。我们先求差再与边流量作内积：
+\[
+\langle\bm{B}^\top\bm{f},\bm{q}\rangle_E
+=\sum_{e\colon u\to v}(f(u)-f(v))\,q_e.
+\]
+把每一项拆成两个端点的贡献——$f(u)\cdot q_e$和$-f(v)\cdot q_e$——再按顶点重新分组。同一个顶点$w$出现在多条边中，它收到的总贡献是$f(w)$乘以它作为尾端或头端时带来的$q_e$之和，而这个和恰好就是$(\bm{B}\bm{q})_w$。因此
+\begin{equation}
+\langle\bm{B}^\top\bm{f},\bm{q}\rangle_E
+=\langle\bm{f},\bm{B}\bm{q}\rangle_V.
+\label{eq:incidence-adjoint-pairing}
+\end{equation}
+这个等式说明：先按边求和再按顶点分组，和先按顶点求和再乘以读数，给出同一个数。用线性代数的语言说，沿边差分$\bm{B}^\top$与按顶点汇总$\bm{B}$互为伴随。下一节判断两类边向量何时正交时，正是这个等式起关键作用。
+
+最后讨论记录方向的影响。如果把一条边的参考方向反转，$\bm{B}$的对应列变号，同时这条边的流量坐标也要变号——两个符号变化相消，所以该边对净流出的贡献保持原值。差分坐标本身也随方向变号，但在伴随等式中总与流量坐标配对出现。因此，虽然矩阵坐标里的符号可以变动，但顶点处实际发生的流入和流出，以及下面要建立的子空间结构，都不依赖记录方向的选择。
