@@ -1,4 +1,4 @@
-% 第4章：最小生成树（问题与最短路树的区别；割性质与安全选边；Kruskal、Prim；方法比较与结果检验）。
+% 第4章：最小生成树（问题与最短路树的区别；割性质与安全选边；Kruskal、Prim；贪心精确最优的拟阵条件；方法比较与结果检验）。
 
 \chapter{最小生成树}
 \label{sec:graph-minimum-spanning-tree}
@@ -6,9 +6,13 @@
 
 要在若干城镇之间修路，使任意两个城镇都能互相到达，每条候选道路都有建造成本。这时关心的不是某两点之间怎样走最近，而是整张网络的总造价。第~\ref{sec:graph-trees-forests}节说明，连通且无环的边集恰好连接全部顶点而没有多余的边，即生成树；多一条边便形成环，环上任意一条边都可以拆掉而不破坏连通。于是问题化为：在所有生成树中找总边权最小的一棵。
 
-生成树的个数可以随顶点数指数增长，无法逐一比较。本章要回答的是：能否逐条选边，并且只看局部就能断定每一步没有选错？第~\ref{sec:graph-opt-mst-problem}节先定义问题，并用一个三角形说明它与上一章的最短路树不同。第~\ref{sec:graph-opt-cut-property}节给出判断选边安全的割性质：与已选边相容的任何割上，最轻的跨割边都可以放心选入。
+生成树的个数可以随顶点数指数增长，无法逐一比较。本章要回答的是：能否逐条选边，并且只看局部就能断定每一步没有选错？第~\ref{sec:graph-opt-mst-problem}节先定义问题，并用一个三角形说明它与第~\ref{chap:shortest-paths}章的最短路树不同。第~\ref{sec:graph-opt-cut-property}节给出判断选边安全的割性质：与已选边相容的任何割上，最轻的跨割边都可以放心选入。
 
-Kruskal算法与Prim算法是同一条规则的两种组织方式。第~\ref{sec:graph-opt-kruskal}节按全局边权次序合并分量，用第~\ref{sec:graph-trav-union-find}小节的并查集判断成环；第~\ref{sec:graph-opt-prim}节只让一棵树生长，用与Dijkstra算法相同的优先队列维护每个外部顶点的最便宜接入边。第~\ref{sec:graph-opt-mst-comparison}节比较两者，并给出一份不依赖算法过程的最优性检验。本章的图是无向图，顶点数为$n$，边数为$m$。
+Kruskal算法与Prim算法是同一条规则的两种组织方式。第~\ref{sec:graph-opt-kruskal}节按全局边权次序合并分量，用第~\ref{sec:graph-trav-union-find}小节的并查集判断成环；第~\ref{sec:graph-opt-prim}节只让一棵树生长，用与Dijkstra算法相同的优先队列维护每个外部顶点的最便宜接入边。
+
+第~\ref{sec:mst-greedy-matroid}节研究Kruskal式贪心选边对所有边权都能达到全局最优所需的结构条件。通过引入拟阵与图拟阵并证明Rado--Edmonds定理，说明在满足非空性与遗传性的独立集系统中，交换公理等价于按权排序的贪心算法对任意非负线性权函数都能求得最大权独立集。
+
+第~\ref{sec:graph-opt-mst-comparison}节比较两种最小生成树算法，并给出一份不依赖算法过程的最优性检验。本章的图是无向图，顶点数为$n$，边数为$m$。
 
 \section{最小生成树问题}
 \label{sec:graph-opt-mst-problem}
@@ -175,7 +179,7 @@ $ce$连接两个分量，选入后只剩一个分量，已选满$4=n-1$条边，
 \end{proof}
 
 \paragraph{复杂度}
-排序需要$O(m\log m)$时间。之后至多处理$m$条边，每条边做两次$\operatorname{find}$，选入时再做一次$\operatorname{union}$，共$O(m)$次并查集操作。只用按大小合并时，由定理~\ref{thm:graph-trav-union-by-size}，每次操作$O(\log n)$，这部分为$O(m\log n)$；由于$m\leq n^2$，$\log m\leq2\log n$，总时间为$O(m\log n)$，空间为边表与并查集的$O(n+m)$。若再配合路径压缩，并查集操作的摊还开销几乎为常数，此时排序成为主要开销。算法的正确性只依赖割性质，与并查集采用哪种实现无关。
+排序需要$O(m\log m)$时间。之后至多处理$m$条边，每条边做两次$\operatorname{find}$，选入时再做一次$\operatorname{union}$，共$O(m)$次并查集操作。只用按大小合并时，由定理~\ref{thm:graph-trav-union-by-size}，每次操作$O(\log n)$，这部分为$O(m\log n)$；由于$m\leq n^2$，$\log m\leq2\log n$，计入$n$个单元素集合的初始化，总时间为$O(n+m\log n)$，空间为边表与并查集的$O(n+m)$。若再配合路径压缩，并查集操作的摊还开销几乎为常数，此时排序成为主要开销。算法的正确性只依赖割性质，与并查集采用哪种实现无关。
 
 \section{Prim算法}
 \label{sec:graph-opt-prim}
@@ -262,6 +266,87 @@ $S=V$时停止。
 \paragraph{非连通情形}
 图不连通时，一棵树长满所在分量后，外部顶点的键全为$+\infty$，这时从任一尚未访问的顶点重新开始，得到最小生成森林，各分量的父边与成本分别保留。
 
+\section{贪心精确最优的条件}
+\label{sec:mst-greedy-matroid}
+
+回顾第~\ref{sec:graph-opt-kruskal}节的Kruskal算法：它按边权从小到大检查各边，只要加入后不形成环就保留该边，后续不再撤销这一选择。割性质已经证明，这一规则能够求出最小生成树。但相似的逐步选边规则在匹配问题中可能停在非最优的极大匹配上；在归一化单调次模函数的基数约束最大化问题中，逐步贪心一般也只能保证一定的近似比例，不能保证精确最优。本节要说明森林族具有什么结构，使按权排序的贪心算法能够对任意边权求出最优生成树。
+
+为了看清贪心会在哪里失败，我们先观察一个简单的反例：在含四个顶点、三条边的路径图$P_4$（依次为边$e_1=\{v_1,v_2\}$、$e_2=\{v_2,v_3\}$、$e_3=\{v_3,v_4\}$）上求\emph{最大权匹配}。合法的候选子集是两两不共端点的边集（匹配），即$\mathcal I=\{\varnothing,\{e_1\},\{e_2\},\{e_3\},\{e_1,e_3\}\}$。若赋予边权$w(e_2)=3$、$w(e_1)=w(e_3)=2$，按权值从大到小贪心选边时，第一步选入权最大的中间边$e_2$（权$3$）；然而$e_2$与两端的$e_1,e_3$都共享顶点，选入$e_2$后便无法再添入任何边，贪心停在$\{e_2\}$（总权$3$），而全局最优匹配是$\{e_1,e_3\}$（总权$2+2=4$）。这一例子中，大小为$1$的匹配$A=\{e_2\}$与大小为$2$的匹配$B=\{e_1,e_3\}$不满足扩充性质：不存在$e\in B\setminus A$使$A\cup\{e\}$仍为匹配。
+
+在生成树问题中，逐步选边时允许的集合是森林。若森林$A$与$B$具有相同的顶点集，且$|A|<|B|$，则$(V,A)$比$(V,B)$有更多的连通分量。因此，$B\setminus A$中存在连接$(V,A)$两个不同分量的边，加入这条边后仍为森林。\term{拟阵}（matroid）将这种扩充性质与非空性、遗传性一起作为公理。
+
+\begin{definition}[独立集系统与拟阵]
+\label{def:matroid}
+设$E$为有限底集，$\mathcal I\subseteq 2^E$为$E$的一族子集。若二元组$\mathcal M=(E,\mathcal I)$满足前两条公理，则称为\emph{独立集系统}（或遗传系统），$\mathcal I$中的子集称为\emph{独立集}（independent set）：
+\begin{enumerate}
+  \item \textbf{非空性}：空集是独立集，即$\varnothing\in\mathcal I$。
+  \item \textbf{\term{遗传性}}（hereditary property）：独立集的任何子集仍是独立集，即若$B\in\mathcal I$且$A\subseteq B$，则$A\in\mathcal I$。
+\end{enumerate}
+若独立集系统$\mathcal M=(E,\mathcal I)$还满足第三条公理，则称$\mathcal M$为一个\term{拟阵}（matroid）：
+\begin{enumerate}
+  \setcounter{enumi}{2}
+  \item \textbf{\term{交换公理}}（exchange axiom，亦称扩充公理）：若$A,B\in\mathcal I$且$|A|<|B|$，则存在元素$e\in B\setminus A$，使得$A\cup\{e\}\in\mathcal I$。
+\end{enumerate}
+拟阵中极大（不可再扩充）的独立集称为拟阵的\emph{基}（base）。
+\end{definition}
+
+由交换公理立即得出一个重要推论：同一个拟阵的所有基必定具有完全相同的元素个数（若存在两个基$A,B$满足$|A|<|B|$，由交换公理可将某个$e\in B\setminus A$并入$A$仍保持独立，与$A$的极大性矛盾）。这个共同的大小称为拟阵的\emph{秩}（rank）。在上面的反例$P_4$匹配系统中，$\varnothing\in\mathcal I$且匹配的子集仍是匹配，故它满足非空性与遗传性，是一个独立集系统；但极大匹配$\{e_2\}$（大小$1$）与$\{e_1,e_3\}$（大小$2$）基数不等，违反了交换公理，因此匹配系统不是拟阵。
+
+下面我们证明，任意无向图上的森林族都严格满足拟阵的三条公理，从而把最小生成树纳入拟阵框架。
+
+\begin{theorem}[图拟阵]
+\label{thm:graphic-matroid}
+设$\mathcal G=(V,E)$是有限无向图，令$\mathcal I=\{F\subseteq E:\text{子图 }(V,F)\text{ 无环（即为森林）}\}$。则$\mathcal M(\mathcal G)=(E,\mathcal I)$是一个拟阵，称为图$\mathcal G$的\term{图拟阵}（graphic matroid，亦称环拟阵）。当$\mathcal G$连通时，$\mathcal M(\mathcal G)$的基恰好是$\mathcal G$的全部生成树。
+\end{theorem}
+
+\begin{proof}
+逐条验证定义~\ref{def:matroid}的三条公理。第一，空边集$(V,\varnothing)$不含任何边，自然无环，故$\varnothing\in\mathcal I$。第二，从无环边集$B$中删去若干条边不会凭空创造出环，故若$B\in\mathcal I$且$A\subseteq B$，必有$A\in\mathcal I$，遗传性成立。
+
+第三，验证交换公理。设$A,B\in\mathcal I$为两个森林，且$|A|<|B|$。由第~\ref{sec:graph-trees-forests}节的森林边数与连通分量关系，在共有$n=|V|$个顶点的图上，每向无环图中加入一条边，连通分量数恰好减少$1$，因此森林$(V,A)$有$n-|A|$个连通分量，森林$(V,B)$有$n-|B|$个连通分量。因为$|A|<|B|$，$(V,A)$的连通分量数严格大于$(V,B)$的连通分量数。
+
+假如$B$中的每一条边$e=\{u,v\}\in B$，其两个端点$u,v$在$(V,A)$中都属于同一个连通分量，那么沿$B$中边能够连通的任意两个顶点在$(V,A)$中也必定连通，这意味着$(V,A)$的每个连通分量都是$(V,B)$若干连通分量的并，从而$(V,A)$的分量数不可能多于$(V,B)$的分量数，矛盾。
+
+因此，必存在至少一条边$e=\{u,v\}\in B\setminus A$，其两端$u,v$落在森林$(V,A)$的两个不同连通分量中。将这条跨分量的边$e$加入$A$，不会在$(V,A)$中闭合出任何环，故$A\cup\{e\}\in\mathcal I$。交换公理得证。当$\mathcal G$连通时，极大无环子图就是包含$n-1$条边的生成树。
+\end{proof}
+
+在一般独立集系统$(E,\mathcal I)$上，给定权函数$w:E\to\mathbb R_+$，求总权$w(I)=\sum_{e\in I}w(e)$最大的独立集$I\in\mathcal I$，标准的\emph{贪心算法}（即Kruskal算法的一般形式）按如下步骤运行：先将元素按权值从大到小排序为$w(e_1)\geq w(e_2)\geq\cdots\geq w(e_m)$，令初始集合$G=\varnothing$；再按$i=1,\ldots,m$依次检查$e_i$，只要$G\cup\{e_i\}\in\mathcal I$就令$G\gets G\cup\{e_i\}$。（若要在所有基中求最小权基，如最小生成树，只需定义互补权$\tilde w(e)=M-w(e)$，其中常数$M>\max_e|w(e)|$；因为所有基的元素个数同为秩$r$，最大化$\sum_{e\in B}\tilde w(e)=rM-w(B)$与最小化$w(B)$完全等价。）下面的Rado--Edmonds定理证明：交换公理不仅是贪心算法最优的充分条件，而且是必要条件。
+
+\begin{theorem}[Rado--Edmonds贪心最优性定理]
+\label{thm:mst-matroid-greedy}
+设$(E,\mathcal I)$是满足非空性与遗传性的独立集系统。则对于任意非负权函数$w:E\to\mathbb R_+$，按权从大到小逐个选取的贪心算法都能输出权值最大的独立集，当且仅当$(E,\mathcal I)$满足交换公理（即$(E,\mathcal I)$是拟阵）。
+\end{theorem}
+
+\begin{proof}
+\textbf{充分性（拟阵$\implies$贪心对一切权函数最优）}：设$(E,\mathcal I)$是拟阵，$w:E\to\mathbb R_+$为任意非负权函数。由于权值非负，必存在一个本身是基的最大权独立集。设贪心算法依次选出的元素构成基$G=\{g_1,g_2,\ldots,g_r\}$，其中按选入顺序有$w(g_1)\geq w(g_2)\geq\cdots\geq w(g_r)$；任取一个全局最优基$O=\{o_1,o_2,\ldots,o_r\}$，同样将其元素按权从大到小排列为$w(o_1)\geq w(o_2)\geq\cdots\geq w(o_r)$。我们断言：对每个下标$k\in\{1,\ldots,r\}$，都有$w(g_k)\geq w(o_k)$。
+
+若不然，设$k$是第一个出现$w(g_k)<w(o_k)$的下标。考察贪心集的前$k-1$个元素$A=\{g_1,\ldots,g_{k-1}\}\in\mathcal I$，以及最优集的前$k$个元素$B=\{o_1,\ldots,o_k\}\in\mathcal I$（由遗传性，$A,B$均为独立集）。由于$|A|=k-1<k=|B|$，根据拟阵的交换公理，必存在某个元素$o_j\in B\setminus A$（其中$1\leq j\leq k$），使得$A\cup\{o_j\}\in\mathcal I$。注意$o_j$的权值满足
+\[
+  w(o_j) \geq w(o_k) > w(g_k).
+\]
+这意味着在全部元素的降序排列中，$o_j$排在$g_k$之前。当贪心算法在此前扫描到$o_j$时，当时已选入的集合$A'\subseteq A$，既然$A\cup\{o_j\}\in\mathcal I$，由遗传性其子集$A'\cup\{o_j\}$也必定属于$\mathcal I$。于是贪心算法当时就应当把$o_j$选入$A$中，这与$o_j\notin A$矛盾。因此对所有$k=1,\ldots,r$都有$w(g_k)\geq w(o_k)$，求和即得$w(G)=\sum_{k=1}^r w(g_k)\geq\sum_{k=1}^r w(o_k)=w(O)$，故贪心解$G$必为全局最优。
+
+\textbf{必要性（贪心对一切权函数最优$\implies$交换公理）}：采用反证法。假设独立集系统$(E,\mathcal I)$不满足交换公理，即存在两个独立集$A,B\in\mathcal I$，满足$|A|<|B|$，但对于任意$e\in B\setminus A$都有$A\cup\{e\}\notin\mathcal I$。记$p=|A|$。由遗传性，若$A=\varnothing$，则$B$中任一元素都能加入$A$，与反设矛盾，故$p\geq1$。取$0<\varepsilon<1/p$，使$p(1+\varepsilon)<p+1\leq|B|$，并构造如下非负权函数$w:E\to\mathbb R_+$：
+\begin{equation}
+  w(e) = \begin{cases}
+    1+\varepsilon, & e\in A,\\
+    1, & e\in B\setminus A,\\
+    0, & e\in E\setminus(A\cup B).
+  \end{cases}
+  \label{eq:matroid-counterexample-weights}
+\end{equation}
+在这个权函数下，集合$A$中的所有元素权值最高（均为$1+\varepsilon$）。由于$A\in\mathcal I$及其全部子集均独立，贪心算法在第一阶段会把$A$中的$p$个元素全部选入，此时当前已选集合恰好等于$A$。接下来，贪心算法依次检查次高权值（权为$1$）的集合$B\setminus A$中的元素；然而根据反设，对每一个$e\in B\setminus A$都有$A\cup\{e\}\notin\mathcal I$，因此$B\setminus A$中的元素被贪心算法全部跳过。至于剩余权值为$0$的元素，即便选入也不会增加总权值。于是贪心算法输出的独立集总权值为
+\[
+  w(G) = p(1+\varepsilon) = p + p\varepsilon < p + 1.
+\]
+另一方面，$B$本身就是一个合法的独立集（$B\in\mathcal I$），且$B$中每个元素的权值至少为$1$（在$A\cap B$上为$1+\varepsilon\geq1$，在$B\setminus A$上为$1$），故$B$的总权值满足
+\[
+  w(B) \geq |B|\cdot 1 \geq p + 1 > w(G).
+\]
+这说明贪心算法在该权函数$w$下未能找到最大权独立集，与题设矛盾。故交换公理必然成立。
+\end{proof}
+
+定理~\ref{thm:mst-matroid-greedy}刻画的是非负线性权函数下的最大权独立集问题。若独立集系统构成拟阵，按权排序的贪心规则对所有这类权函数都最优；若不满足交换公理，则至少存在一个权函数使该规则失效。这个结论不适用于任意非线性目标，也不把其他问题的求解方式限制为增广算法或近似算法。对于本章的最小生成树，图拟阵的所有基大小相同，因此通过前述权值变换即可应用该定理。
+
 \section{方法比较与结果检验}
 \label{sec:graph-opt-mst-comparison}
 
@@ -298,8 +383,8 @@ $S=V$时停止。
 
 章首的问题是：能否逐条选边，只看局部就断定没有选错。割性质给出肯定的回答：若已选边集包含在某棵最小生成树中，那么在任何与它相容的割上，选入一条轻边后仍包含在某棵最小生成树中。证明靠交换论证，即加入轻边、删去环上另一条跨割边，成本不增。安全不等于必选：权相同时轻边可能有多条，不同选择通向不同的最优树，最优成本却相同。
 
-两种算法只是选取的割不同。Kruskal算法按全局边权次序检查，以当前森林的一个分量为割的一侧，用并查集判断成环，总时间为$O(m\log n)$，配合路径压缩时主要开销是排序；它自然地给出不连通图的最小生成森林。Prim算法只让一棵树生长，以树内与树外为割，键记录每个外部顶点的最便宜接入边。数组实现为$O(n^2+m)$，适合稠密图；二叉堆实现为$O((n+m)\log n)$，适合稀疏图。
+两种算法只是选取的割不同。Kruskal算法按全局边权次序检查，以当前森林的一个分量为割的一侧，用并查集判断成环，计入$n$个单元素集合的初始化，总时间为$O(n+m\log n)$，配合路径压缩时主要开销是排序；它自然地给出不连通图的最小生成森林。Prim算法只让一棵树生长，以树内与树外为割，键记录每个外部顶点的最便宜接入边。数组实现为$O(n^2+m)$，适合稠密图；二叉堆实现为$O((n+m)\log n)$，适合稀疏图。
 
 最小生成树最小化的是整组边的总造价，不是两点间路线的长度，树上两点间的路径未必是最短路，键也不同于Dijkstra算法的累计距离。负权不造成困难，因为每棵生成树的边数都是$n-1$，所有边权同加一个常数不改变比较结果。结果的检验分两步：先核对所选边构成生成森林，再核对每条非树边都不轻于它在树上所对应路径中的边，后者足以保证最优。
 
-把选边次序改为从大到小，同样的论证就求出最大生成树。下一章转向另一种选择对象：不再挑出一组边，而是给每条弧分配一个流量。
+把选边次序改为从大到小，同样的论证就求出最大生成树。从更一般的视角看，无向图的森林族满足非空性、遗传性与交换公理，构成图拟阵；Rado--Edmonds定理表明，交换公理正是贪心选边对任意非负线性权函数都能求得最大权独立集的充要条件。下一章转向另一种选择对象：不再挑出一组边，而是给每条弧分配一个流量。

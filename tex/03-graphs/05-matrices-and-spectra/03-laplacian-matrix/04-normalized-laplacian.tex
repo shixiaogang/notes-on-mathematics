@@ -1,12 +1,29 @@
 \section{归一化拉普拉斯}
 \label{sec:graph-normalized-laplacian}
 
-组合拉普拉斯的二次型衡量顶点读数沿边的绝对变化。但同样大小的变化在度高的顶点被更多边统计，度低的顶点被更少边统计。能否消除度的影响，只比较"相对于连接量的变化"？这就是归一化拉普拉斯要回答的问题。
+前面几节讨论的组合拉普拉斯矩阵$\bm L=\bm D-\bm W$在标准欧氏内积下给每个顶点相同的单位权重$1$。它可描述以边权为跳转速率的连续时间扩散；若采用每步跳转一次、按边权比例选择邻居的离散随机游走，则应使用按度归一化的算子。两种模型的时间尺度不同。下面通过两个例子说明归一化的作用（图~\ref{fig:laplacian-diffusion-bottleneck}）。
+
+第一个例子是图~\ref{fig:laplacian-diffusion-bottleneck}(a)所示的“双团哑铃图”：两个各含$m$个顶点的稠密完全图团$K_m$之间仅通过一条单位权桥边$u\!-\!v$相连。在桥端点$u$处，共有$m-1$条边连向同侧团内部，只有$1$条桥边连向对侧团（度数为$d_u=m$）。当一个随机游走粒子到达$u$时，它在下一步等概率地从$m$条关联边中任选一条迈出，因此只有$\frac{1}{m}$的概率跨过桥边进入右侧团，而有$\frac{m-1}{m}$的概率退回左侧团内部。当团规模$m$很大时，尽管桥边的绝对权重仍为$1$，粒子在桥端点跨团转移的概率却因团内邻接边增多而降为$\frac{1}{m}$，全图的跨团混合速度随团规模增大而变慢。
+
+第二个例子是图~\ref{fig:laplacian-diffusion-bottleneck}(b)所示的含高连接度枢纽的网络：中心枢纽顶点$h$连接了$D\gg 1$条边，而右侧普通顶点$i$只连接$2$条边。粒子从普通顶点$i$出发时，每条关联边分到$\frac{1}{2}$的转移概率；而从枢纽顶点$h$出发时，每条边分到的转移概率$w_{h,j}/d_h$为$\frac{1}{D}$。
+
+若把全图所有边权同时乘以$10$，每个正度顶点按权重比例选择邻居的转移概率$w_{i,j}/d_i$保持不变，离散随机游走也保持不变；组合拉普拉斯及其特征值则乘以$10$，对应连续时间扩散加速$10$倍。若只缩放局部边权，边界顶点的转移概率一般会改变，不能作相同推断。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=111.633mm]{figures/03-graphs/05-matrices-and-spectra/tikz/laplacian-diffusion-bottleneck/figure.pdf}
+  \caption{度数分布对一步随机游走转移概率的稀释效应。（a）双团哑铃图中，桥端点$u$有$m-1$条团内边和$1$条跨团桥边，粒子跨过桥边的概率仅为$1/m$，以$(m-1)/m$的概率退回原团。（b）度数为$D\gg 1$的枢纽顶点$h$将每条关联边上的转移概率稀释为$1/D$，而度数为$2$的普通节点$i$在每条边上分配$1/2$的转移概率。}
+  \label{fig:laplacian-diffusion-bottleneck}
+\end{BookInlineFigure}
+
+在每步跳转一次的离散随机游走模型中，转移概率取决于边权占顶点加权度的比例，跨区瓶颈则与割权占集合体积$\operatorname{vol}(S)=\sum_{i\in S}d_i$的比例有关。归一化谱与这一时间尺度相适应。
+
+为研究上述离散随机游走，使用度矩阵$\bm D$对拉普拉斯矩阵作归一化。本节先引入以度数计权的度加权内积与集合体积，再分别构造对称归一化拉普拉斯$\mathcal L=\bm D^{-1/2}\bm L\bm D^{-1/2}$和随机游走拉普拉斯$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$，对比两种归一化算子的联系与分工，最后证明归一化拉普拉斯谱的性质。
 
 \subsection{度加权内积}
 \label{sec:graph-degree-weighted-inner-product}
 
-普通欧氏长度的平方$\sum_ix_i^2$给每个坐标位置相同的权重$1$。现在把第$i$个位置的权重改为该顶点的加权度$d_i$，得到
+标准欧氏长度平方$\sum_i x_i^2$给每个顶点相同的权重$1$。为了按每个顶点的连接量计权，将第$i$个坐标的权重替换为该顶点的加权度$d_i$，在正度顶点集$V_+=\{i\in V:d_i>0\}$上定义\term{度加权内积}（degree-weighted inner product）及其诱导范数：
 \begin{equation}
   \langle \bm x,\bm y\rangle_{\bm D}
   =\bm x^\top\bm D\bm y
@@ -15,19 +32,30 @@
   \lVert\bm x\rVert_{\bm D}^2=\bm x^\top\bm D\bm x.
   \label{eq:graph-degree-weighted-inner-product}
 \end{equation}
-这里$V_+=\{i\in V:d_i>0\}$是正度顶点集合。由于所有$d_i>0$，任意非零向量的度加权长度平方都严格为正，这确实是$V_+$上的\term{度加权内积}（degree-weighted inner product）。
+在$V_+$上所有$d_i>0$，故任意非零向量的度加权长度平方$\lVert\bm x\rVert_{\bm D}^2>0$，式~\eqref{eq:graph-degree-weighted-inner-product}确实构成$V_+$上的内积。
 
-回到刚才的比较。顶点$1$的单位脉冲的能量是$d_1=3$，度加权长度平方也是$d_1=3$，两者之比为$1$。顶点$2$的单位脉冲的能量是$d_2=2$，度加权长度平方也是$d_2=2$，比值同样为$1$。用度加权长度代替欧氏长度后，每份连接承担的变化在两个顶点上一致了。
+用度加权范数衡量单点脉冲$\bm e_i$（$i\in V_+$）时，其沿边变化能量为$\bm e_i^\top\bm L\bm e_i=d_i$，度加权长度平方同样为$\lVert\bm e_i\rVert_{\bm D}^2=d_i$，两者之比对任意正度顶点都恒等于
+\[
+  \frac{\bm e_i^\top\bm L\bm e_i}{\lVert\bm e_i\rVert_{\bm D}^2}=\frac{d_i}{d_i}=1.
+\]
+例如在四点五边单位权图上，度为$3$的顶点$1$与度为$2$的顶点$2$在标准欧氏范数下的单位脉冲能量分别为$3$和$2$，而在度加权范数下，每单位连接量所承担的变化比值完全一致，均为$1$。
 
-度加权长度平方还有一个组合意义。对顶点子集$S\subseteq V$，将指示函数$\bm1_S$的度加权长度平方展开，
+将任意顶点子集$S\subseteq V$的指示向量$\bm 1_S$代入度加权长度平方，立得子集内各顶点的加权度总和：
 \begin{equation}
   \operatorname{vol}(S)=\sum_{i\in S}d_i
   =\lVert\bm1_S\rVert_{\bm D}^2.
   \label{eq:graph-laplacian-vertex-volume}
 \end{equation}
-这个和称为$S$的\emph{体积}。直观地说，它等于$S$内部各顶点分别数完邻边后得到的总量。内部边在两端各数一次，所以计两次；跨出$S$的边只在$S$一端计一次。在四点图中取$S=\{1,2\}$，体积为$3+2=5$。后续的谱划分（第~\ref{chap:spectral-partition}章）将用体积衡量两侧的大小。
+这个和称为顶点子集$S$的\emph{体积}（volume），它精确计量了$S$所关联的边权容量：两端都在$S$内部的边在两个端点各计一次共两倍权重，跨出$S$的边计一倍权重。例如四点五边图中$S=\{1,2\}$的体积为$d_1+d_2=3+2=5$。
 
-孤点的度为零。如果在度加权长度平方的求和中包含孤点，它的贡献是$0\cdot x_i^2=0$。一个只在孤点上取值$1$的非零向量得到零长度。因此，在包含孤点的全空间上，这个式子不再是内积。后面的推导先在$V_+$上进行，孤点的处理在扩展矩阵时单独说明。
+结合第~\ref{sec:graph-laplacian-energy}节的割权公式$\bm 1_S^\top\bm L\bm 1_S=c(S,V\setminus S)$，指示向量$\bm 1_S$的度加权Rayleigh商为
+\[
+  \frac{\bm 1_S^\top\bm L\bm 1_S}{\bm 1_S^\top\bm D\bm 1_S}
+  =\frac{c(S,V\setminus S)}{\operatorname{vol}(S)}.
+\]
+这一比值直接给出了切开$S$的跨割边权重占$S$总连接体积的比例——这正是第~\ref{chap:spectral-partition}章导通率与归一化割（NCut）的核心度量。
+
+需要注意，孤立顶点的加权度$d_i=0$，一个只在孤点上取$1$的非零向量在$\bm x^\top\bm D\bm x$下得零值，因此在包含孤点的全空间上$\sqrt{\bm x^\top\bm D\bm x}$只是半范数，相应双线性型不构成正定内积。下面的推导先在正度顶点集$V_+$上进行，再约定孤点在全空间矩阵中的零扩展。
 
 \subsection{对称归一化拉普拉斯}
 \label{sec:graph-symmetric-normalized-laplacian}
@@ -85,83 +113,106 @@
 \subsection{随机游走拉普拉斯}
 \label{sec:graph-random-walk-laplacian}
 
-归一化邻居平均提供了第二种视角。对正度顶点$i$，将每个邻居的边权除以总量$d_i$，所得$P_{i,j}=w_{i,j}/d_i$是邻居$j$在顶点$i$出发时所占的份额。所有份额非负且相加为$1$，因此
+归一化邻居平均提供了第二种视角。对正度顶点$i\in V_+$，将每个邻居的边权除以该点的总加权度$d_i$，所得$P_{i,j}=w_{i,j}/d_i$是邻居$j$在顶点$i$的所有连接中所占的权重份额。所有份额非负且总和为$\sum_j P_{i,j}=1$，因此
 \begin{equation}
-  (\bm P\bm x)_i=\sum_j\frac{w_{i,j}}{d_i}x_j
+  (\bm P\bm x)_i=\sum_{j=1}^n\frac{w_{i,j}}{d_i}x_j
   \label{eq:graph-random-walk-neighbor-average}
 \end{equation}
-是邻居读数的加权平均。如果某个顶点没有正权邻边，我们规定它的下一步保持原值，即$P_{i,i}=1$，其余条目为零。
+正是顶点$i$的邻居读数的加权平均。若某个顶点$i$是零度孤点（$d_i=0$），约定其保持原读数不变，即令$P_{i,i}=1$且$P_{i,j}=0$（$j\ne i$）。
 
-用本点读数减去这个平均，就得到\term{随机游走拉普拉斯}（random-walk Laplacian）：
+\begin{definition}[随机游走拉普拉斯]
+\label{def:graph-random-walk-laplacian}
+设$\bm P$为按上述规则定义的邻域平均矩阵。图的\term{随机游走拉普拉斯}（random-walk Laplacian）定义为
 \begin{equation}
   \bm L_{\mathrm{rw}}=\bm I-\bm P.
   \label{eq:graph-random-walk-laplacian}
 \end{equation}
-在$V_+$上，$\bm P=\bm D^{-1}\bm W$就是逐行除以该行顶点的度。从$\bm I$减去它，得到$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$。它用原顶点读数作为输入，输出的是每个顶点相对邻居平均的偏离。在孤点处，保持原值再减去自己，输出为零。
+在正度顶点集$V_+$上，$\bm P=\bm D^{-1}\bm W$，从而$\bm L_{\mathrm{rw}}=\bm I-\bm D^{-1}\bm W=\bm D^{-1}\bm L$。
+\end{definition}
 
-在四点图上核验。取$\bm x=(1,0,1,0)^\top$，组合拉普拉斯的输出为$(2,-2,2,-2)^\top$。将各项除以度$3,2,3,2$，得到
+随机游走拉普拉斯直接以原顶点读数$\bm x$为输入，在每个正度顶点$i$处输出本点读数$x_i$减去邻居加权平均$(\bm P\bm x)_i$的偏离量；在孤点处，因$(\bm P\bm x)_i=x_i$，输出恒为零。
+
+在四点五边单位权图上取$\bm x=(1,0,1,0)^\top$核对：组合拉普拉斯输出为$\bm L\bm x=(2,-2,2,-2)^\top$，逐行除以各点度数$(3,2,3,2)$即得
 \[
   \bm L_{\mathrm{rw}}\bm x=(2/3,-1,2/3,-1)^\top.
 \]
-逐点检查：顶点$1$的三个邻居读数为$0,1,0$，平均为$1/3$，本点$1$减去$1/3$得$2/3$。顶点$2$的两个邻居都是$1$，平均为$1$，本点$0$减去$1$得$-1$。
+逐点检查：顶点$1$的三个邻居$2,3,4$读数为$0,1,0$，平均值为$1/3$，本点读数$1$减去$1/3$得$2/3$；顶点$2$的两个邻居$1,3$读数均为$1$，平均值为$1$，本点读数$0$减去$1$得$-1$。
 
-虽然逐行除以不同度使$\bm P$在普通内积下不对称，但在度加权内积下它是自伴的。因为$\bm D\bm P=\bm W=\bm P^\top\bm D$，移项可得
+虽然在度数不均匀的图上，$\bm P=\bm D^{-1}\bm W$与$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$在标准欧氏内积下一般不对称，但在正度空间$V_+$的度加权内积$\langle\cdot,\cdot\rangle_{\bm D}$下，它们都是自伴算子。事实上，由$\bm D\bm P=\bm W=\bm W^\top=\bm P^\top\bm D$，对任意$\bm x,\bm y\in\mathbb R^{V_+}$有
 \[
-  \langle \bm x,\bm P\bm y\rangle_{\bm D}
-  =\bm x^\top\bm D\bm P\bm y
-  =\bm x^\top\bm W\bm y
-  =(\bm P\bm x)^\top\bm D\bm y
-  =\langle \bm P\bm x,\bm y\rangle_{\bm D}.
+  \begin{aligned}
+    \langle \bm x,\bm P\bm y\rangle_{\bm D}
+    &=\bm x^\top\bm D\bm P\bm y\\
+    &=\bm x^\top\bm W\bm y\\
+    &=(\bm P\bm x)^\top\bm D\bm y
+     =\langle \bm P\bm x,\bm y\rangle_{\bm D}.
+  \end{aligned}
 \]
-名称中的"随机游走"来自$P_{i,j}$的另一种用途：把它当作从$i$出发下一步选择$j$的概率。邻居平均等于下一步读数的期望值。第~\ref{chap:graph-walks}章会用$\bm P$研究多步分布与收敛。
 
-\subsection{归一化谱的性质}
-\label{sec:graph-normalized-laplacian-spectrum}
+名称中的“随机游走”源于$P_{i,j}=w_{i,j}/d_i$的概率解释：将其视为从顶点$i$出发下一步随机移向邻居$j$的转移概率时，$(\bm P\bm x)_i$恰好是下一步所在顶点读数的条件期望。第~\ref{chap:graph-walks}章将围绕转移矩阵$\bm P$展开图上随机游走的分布演化与收敛分析。
 
-两种归一化矩阵在正度空间上有相同的特征值。谱落在$[0,2]$中，端点$2$恰好对应含边的二部连通分量。
+\subsection{两种归一化拉普拉斯的对比}
+\label{sec:graph-normalized-laplacian-comparison}
 
-先看相似关系。在正度坐标上，对称归一化拉普拉斯$\mathcal L$可以理解为三步操作：先用$\bm D^{-1/2}$把新坐标还原成实际读数，再应用随机游走拉普拉斯$\bm L_{\mathrm{rw}}$，最后用$\bm D^{1/2}$转回新坐标。由于$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$，左侧的$\bm D^{1/2}$与$\bm D^{-1}$合起来是$\bm D^{-1/2}$，于是
+对称归一化拉普拉斯$\mathcal L=\bm D^{-1/2}\bm L\bm D^{-1/2}$与随机游走拉普拉斯$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L=\bm I-\bm P$从不同方式对度数作了归一化，二者在相似关系、对称性与应用场景上既有紧密联系，又有明确分工。
+
+\paragraph{相似关系}
+在正度空间$V_+$上，先用$\bm D^{-1/2}$把缩放坐标还原为原顶点读数，再作用$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$，最后用$\bm D^{1/2}$转回缩放坐标，合并左侧的$\bm D^{1/2}\bm D^{-1}=\bm D^{-1/2}$即得相似恒等式
 \begin{equation}
-  \mathcal L=\bm D^{1/2}\bm L_{\mathrm{rw}}\bm D^{-1/2}.
+  \mathcal L=\bm D^{-1/2}\bm L\bm D^{-1/2}=\bm D^{1/2}\bm L_{\mathrm{rw}}\bm D^{-1/2}.
   \label{eq:graph-normalized-laplacian-similarity}
 \end{equation}
-如果原坐标中有$\bm L_{\mathrm{rw}}\bm x=\mu\bm x$，令$\bm y=\bm D^{1/2}\bm x$，代入上式得到$\mathcal L\bm y=\mu\bm y$。这个坐标变换在正度空间上可逆，因此两个矩阵有相同的特征值。扩展到全空间时，每个孤点各补一个特征值$0$。
+因此，$\mathcal L$与$\bm L_{\mathrm{rw}}$在$V_+$上互为相似矩阵，拥有完全相同的特征值（连同每个零度孤点在两个矩阵中各自贡献的一个零特征值，两者在全空间上的谱也完全一致）。
 
-接下来确定特征值的范围。将归一化特征值记为$\mu$。若$\bm x\ne\bm0$满足$\bm L_{\mathrm{rw}}\bm x=\mu\bm x$，等式$\bm D^{-1}\bm L\bm x=\mu\bm x$可改写为$\bm L\bm x=\mu\bm D\bm x$。两边与$\bm x$作内积，除以$\bm x^\top\bm D\bm x>0$，得到$\mu$等于能量与度加权长度之比。
+两者的特征向量之间相差一个度平方根缩放因子：若$\bm x\in\mathbb R^{V_+}$满足$\bm L_{\mathrm{rw}}\bm x=\mu\bm x$，左乘$\bm D^{1/2}$即知$\bm y=\bm D^{1/2}\bm x$满足$\mathcal L\bm y=\mu\bm y$。特别地，对于零特征值$\mu=0$，$\bm L_{\mathrm{rw}}$在连通分量上的零特征向量是处处相等的常值向量$\bm 1_{V_a}$，而$\mathcal L$对应的零特征向量则是按度平方根加权的$\bm D^{1/2}\bm 1_{V_a}$。
 
-能量的非负性给出$\mu\geq0$。上界来自逐边的平方差控制：
-\[
-  \bm x^\top\bm L\bm x
-  =\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2
-  \leq \sum_{\{i,j\}\in E}w_{i,j}\cdot2(x_i^2+x_j^2)
-  =2\sum_id_ix_i^2
-  =2\bm x^\top\bm D\bm x.
-\]
-除以正的$\bm x^\top\bm D\bm x$，加上孤点的零特征值，得到如下结论。
+\paragraph{对称性}
+$\mathcal L$从左右两侧对称地乘上$\bm D^{-1/2}$，在标准欧氏内积$\langle\bm y,\bm y'\rangle=\bm y^\top\bm y'$下是实对称矩阵（$\mathcal L^\top=\mathcal L$），其不同特征子空间关于标准欧氏内积正交。
+
+$\bm L_{\mathrm{rw}}=\bm D^{-1}\bm L$只在左侧乘以$\bm D^{-1}$，一般不对称；只有每条正权边的两端加权度相等时才对称（不同连通分量可以有不同的度）；但它在度加权内积$\langle\bm x,\bm x'\rangle_{\bm D}=\bm x^\top\bm D\bm x'$下自伴，可选取关于度加权内积$\bm D$-正交的特征向量基，这恰好对应缩放后的向量$\bm y=\bm D^{1/2}\bm x$关于标准欧氏内积正交。
+
+\paragraph{应用场景}
+当需要利用实对称矩阵的正交谱分解、Courant--Fischer极小极大原理或矩阵范数工具（例如第~\ref{chap:spectral-partition}章求解归一化割NCut的谱松弛与第~\ref{chap:graph-sparsification}章的谱稀疏化）时，采用实对称的$\mathcal L$最为直接。
+
+当需要直接对原顶点函数作局部邻域加权平均、或追踪概率分布在图上一步步扩散的马尔可夫链演化（例如第~\ref{chap:graph-walks}章的随机游走与PageRank）时，采用保持行和为零的$\bm L_{\mathrm{rw}}=\bm I-\bm P$更为自然。当图为正度$d$正则图时，$\bm D=d\bm I$，两种归一化矩阵合二为一，均简化为$\mathcal L=\bm L_{\mathrm{rw}}=\bm L/d$。
+
+\subsection{归一化拉普拉斯谱的性质}
+\label{sec:graph-normalized-laplacian-spectrum}
+
+由于$\mathcal L$与$\bm L_{\mathrm{rw}}$具有相同的特征值，我们统称其为图的\emph{归一化拉普拉斯谱}。下面的定理证明，按度归一化后，任意图的全部特征值都被收束在无量纲的固定区间$[0,2]$内，且上界$\mu=2$直接刻画了图的二部性。
 
 \begin{theorem}[归一化拉普拉斯谱的范围]
 \label{prop:graph-normalized-spectrum-bound}
-对称归一化拉普拉斯$\mathcal L$（及随机游走拉普拉斯$\bm L_{\mathrm{rw}}$）的全部特征值满足$0\leq\mu\leq2$。特征值$2$出现当且仅当正权支撑含有至少一条边的二部连通分量。
-\end{theorem}
-
+有限无向非负加权图的对称归一化拉普拉斯$\mathcal L$（以及随机游走拉普拉斯$\bm L_{\mathrm{rw}}$）的全部特征值$\mu$均满足
 \begin{equation}
   0\leq\mu\leq2.
   \label{eq:graph-normalized-spectrum-bound}
 \end{equation}
+其中零特征值的重数等于正权支撑$\mathcal G_+$的连通分量个数$c$；最大特征值达到上界$\mu=2$当且仅当正权支撑$\mathcal G_+$至少含有一个带正权边的二部连通分量。
+\end{theorem}
 
-上界什么时候能达到？把实际能量与上界之差写出来：
+\begin{proof}
+第一步，将特征值写为度加权Rayleigh商并确定下界与零特征值重数。孤立顶点在$\mathcal L$和$\bm L_{\mathrm{rw}}$上均对应零特征值且自成无边的连通分量，故只需在正度顶点集$V_+$上分析。设非零向量$\bm x\in\mathbb R^{V_+}$满足$\bm L_{\mathrm{rw}}\bm x=\mu\bm x$，即$\bm D^{-1}\bm L\bm x=\mu\bm x$。左乘$\bm x^\top\bm D$并除以$\bm x^\top\bm D\bm x>0$，得
+\[
+  \mu=\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm D\bm x}
+  =\frac{\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2}{\sum_{i\in V_+}d_i x_i^2}.
+\]
+分子非负给出$\mu\geq 0$；且$\mu=0\iff\bm x^\top\bm L\bm x=0$，由定理~\ref{thm:graph-laplacian-components}知这等价于$\bm x$在每个正权连通分量上取常值，连同孤点在内零特征值重数恰为$c$。
+
+第二步，证明上界$\mu\leq 2$。将$2\bm x^\top\bm D\bm x=2\sum_{i\in V_+}d_i x_i^2=\sum_{\{i,j\}\in E}2w_{i,j}(x_i^2+x_j^2)$与分子$\bm x^\top\bm L\bm x=\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2$作差，利用代数恒等式$2(x_i^2+x_j^2)-(x_i-x_j)^2=(x_i+x_j)^2$，得到
 \[
   2\bm x^\top\bm D\bm x-\bm x^\top\bm L\bm x
-  =\sum_{\{i,j\}\in E}w_{i,j}(x_i+x_j)^2.
+  =\sum_{\{i,j\}\in E}w_{i,j}(x_i+x_j)^2\geq 0.
 \]
-若$\mu=2$，这个差为零，于是每条正权边满足$x_i+x_j=0$。从一个读数非零的顶点出发沿正权边走一步，邻点必须取相反数。再走一步又回到原来的符号。沿路径重复，同一分量内所有顶点的读数绝对值相同、相邻符号相反。
+两端除以$\bm x^\top\bm D\bm x>0$即得$2-\mu\geq 0$，即$\mu\leq 2$。
 
-这意味着：把正读数的顶点分在一侧、负读数的顶点分在另一侧，每条正权边都跨越两侧。这个分量是二部图。
+第三步，分析取等号$\mu=2$的充要条件。上式取等号当且仅当存在非零向量$\bm x\in\mathbb R^{V_+}$使得$\sum_{\{i,j\}\in E}w_{i,j}(x_i+x_j)^2=0$，即对每条正权边$\{i,j\}\in E_+$都有$x_i+x_j=0$（$x_j=-x_i$）。
 
-反过来，如果某个含边的正权连通分量是二部图，在两侧分别赋值$+1$和$-1$、分量外赋$0$，每个正度顶点的邻居平均恰好是本点值的相反数。因此$\bm P\bm x=-\bm x$，即$\bm L_{\mathrm{rw}}\bm x=2\bm x$。由相似关系，$\mathcal L$也有特征值$2$。条件"含边"排除了只贡献零方向的孤点。
+若$\mu=2$，任取$\bm x$的一个非零分量顶点$u\in V_+$，其所在正权连通分量$C$至少含有一条正权边。沿$C$中的任意正权路径每走一步，顶点读数变为相反数，故$C$中所有顶点的读数均取$\pm|x_u|\neq 0$，且每条正权边都连接一个取$+|x_u|$的顶点和一个取$-|x_u|$的顶点；将$C$按读数的正负号划分为两部分，即知$C$为含边的二部连通分量。
 
-在四点图上验证。单位权四环是二部图，沿环交替取$+1,-1$可以达到上界$2$。加入对角边$13$后，顶点$1$和$3$在交替模式下取值相同而非相反，这条新边破坏了交替关系。图中出现了三角形，整个连通分量不再是二部图，归一化谱中也不再有$2$。
+反之，若$\mathcal G_+$含有一个带边的二部连通分量$C=A\cup B$，令$\bm x$在$A$上取$+1$、在$B$上取$-1$、在其余分量上取$0$，则$\bm x\in\mathbb R^{V_+}$非零且在每条正权边上满足$x_i+x_j=0$，其度加权Rayleigh商达到$\mu=2$。
+\end{proof}
 
-最后看边权整体缩放的效果。将全部边权同时乘$a>0$，$\bm L$和$\bm D$都乘$a$。在式~\eqref{eq:graph-symmetric-normalized-laplacian}中，$\bm D^{-1/2}$两侧各产生一个$a^{-1/2}$因子，正好抵消中间的$a$。随机游走矩阵$\bm P$的每行是边权除以度，也不受缩放影响。归一化谱只反映图的连接结构，与权重的绝对单位无关。
+这一结论可与第~\ref{sec:adjacency-bipartite-symmetry}小节二部图邻接谱的对称性对照：在四点单位权图上，四元环$C_4$是二部图，沿环交替赋$+1,-1$即可使每条边两端互为相反数，达到$\mu=2$；添入对角边$13$后，顶点$1$和$3$被连入同一个三角形，无法再为三个两两相邻的顶点同时赋予互为相反数的非零值，故四点五边图的归一化拉普拉斯最大特征值严格小于$2$。
 
-在正则图上，这个结论的表现尤为简洁。所有顶点具有相同正度$d$时，$\bm D=d\bm I$，两个归一化矩阵都等于$\bm L/d$。例如四环的组合谱为$0,2,2,4$，除以$d=2$得到归一化谱$0,1,1,2$。非正则图中各点度不同，除以同一个常数无法完成归一化。
+最后考察边权整体缩放：若将全图所有边权同时乘以正数$a>0$，则$\bm L$和$\bm D$同时乘以$a$，$\mathcal L=\bm D^{-1/2}\bm L\bm D^{-1/2}$中两侧的$a^{-1/2}$与中间的$a$恰好抵消，随机游走矩阵$\bm P=\bm D^{-1}\bm W$也保持不变，说明归一化谱完全消除了边权的整体量纲尺度。例如四元环$C_4$的组合拉普拉斯谱为$0,2,2,4$，除以正则度数$d=2$即得归一化谱$0,1,1,2$，无论把四条边的权重同时改为何种正数，这一归一化谱始终不变。

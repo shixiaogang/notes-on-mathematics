@@ -1,276 +1,279 @@
 \section{有效电阻}
 \label{sec:graph-effective-resistance}
 
-从外面看一个电网络，只能给两个端点施加电流并测量电势差。内部各条路径如何分流，被网络整体消化了。把单位电流下的两端电势差记录下来，就得到一个数——有效电阻。
+从外部观察一个电网络时，如果只在两个选定端点$a$和$b$之间接入一单位电流并测量这两点之间的电势差，网络内部复杂的串并联与环路分流就被浓缩为一个标量——两点之间的有效电阻。本节依次介绍有效电阻的定义与三种等价表达、不同复杂度网络上有效电阻的精确计算方法、大规模网络上有效电阻的三种近似计算方法，以及有效电阻作为图上距离度量的基本性质。
 
 \subsection{有效电阻的定义}
 \label{sec:electrical-resistance-definition}
 
-一条电阻为$r$的边，在单位电流下产生压降$r$。如果端点之间不是一条边，而是一整张网络，也可以用同样的方式来定义等效的阻值。
+单条电阻为$r$的边在通过$1$单位电流时产生压降$r$。把这一测量方式推广到整张网络中的任意一对顶点$a,b$，就得到有效电阻的定义。
 
 \begin{definition}[有效电阻]
 \label{def:graph-effective-resistance}
-设$a,b$是同一正权连通分量中的两个不同顶点。取注入向量$\bm b_{a,b} = \bm e_a - \bm e_b$，即在$a$注入一单位电流、从$b$引出一单位。解$\bm L\bm v = \bm b_{a,b}$，定义从$a$到$b$的\term{有效电阻}（effective resistance）为
+设$a,b$是同一正权连通分量中的两个不同顶点。取单位偶极注入向量$\bm b_{a,b} = \bm e_a - \bm e_b$（即在顶点$a$注入$1$单位电流、从顶点$b$引出$1$单位电流，其余顶点注入为零）。设$\bm v\in\mathbb R^n$为拉普拉斯方程$\bm L\bm v = \bm b_{a,b}$的任一电势解，定义顶点$a$与$b$之间的\term{有效电阻}（effective resistance）为
 \begin{equation}
   R_{a,b} = v_a - v_b.
   \label{eq:electrical-resistance-definition}
 \end{equation}
-另外约定$R_{a,a} = 0$。
+此外，约定同一点的有效电阻为$R_{a,a} = 0$；若$a,b$分属不同的正权连通分量，约定$R_{a,b} = +\infty$。
 \end{definition}
 
-内部其余顶点的注入量都是零。单位电流怎样在各条边之间分配，由网络自己按拉普拉斯方程决定。测量者只看两端的电势差。
+由定理~\ref{thm:electrical-laplacian-solvability}(2)，不同电势解在每个正权连通分量上分别相差一个常数；对包含$a,b$的分量记这一常数为$c$，相减后$(v_a+c)-(v_b+c)=v_a-v_b$，故定义~\ref{def:graph-effective-resistance}完全不依赖接地点的选取。若将注入电流从$1$单位改为任意$I$单位（即右端取$I\bm b_{a,b}$），由方程的线性性，两端电势差变为$v_a - v_b = I\cdot R_{a,b}$，说明整张网络对外部端点$a,b$的端口响应完全等价于在$a,b$之间单独连接一个阻值为$R_{a,b}$的电阻器。
 
-这个定义不依赖接地点。将电流从一单位改为任意$I$时，方程右端乘以$I$，线性性使电势也乘以$I$。因此$v_a - v_b = I \cdot R_{a,b}$，整张网络在$a,b$两点之间的表现和一条阻值为$R_{a,b}$的单独边完全一样。
+除了定义式~\eqref{eq:electrical-resistance-definition}外，有效电阻还有两种常用的等价代数与变分表达：
 
-要从电势向量取出两端差，只需用$\bm b_{a,b}^\top$左乘：它在第$a$项乘$+1$，第$b$项乘$-1$，其余为零。取零均值解$\bm v = \bm L^\dagger \bm b_{a,b}$，得到
+第一种是\emph{伪逆二次型表达}。在连通分量上取零均值电势解$\bm v = \bm L^\dagger \bm b_{a,b}$，由于$v_a - v_b = (\bm e_a - \bm e_b)^\top\bm v = \bm b_{a,b}^\top\bm v$，代入即得
 \begin{equation}
-  R_{a,b} = \bm b_{a,b}^\top \bm L^\dagger \bm b_{a,b}.
+  R_{a,b}
+  = \bm b_{a,b}^\top \bm L^\dagger \bm b_{a,b}
+  = (\bm e_a - \bm e_b)^\top \bm L^\dagger (\bm e_a - \bm e_b)
+  = L^\dagger_{a,a} + L^\dagger_{b,b} - 2L^\dagger_{a,b}.
   \label{eq:electrical-resistance-pseudoinverse}
 \end{equation}
-这是有效电阻的\emph{伪逆二次型}表达。
 
-从能量角度，Thomson原理说明实际电流的耗散最小。对单位注入$\bm b_{a,b}$，最小耗散为$\bm b_{a,b}^\top \bm v$。注入端贡献$1 \times v_a$，引出端贡献$(-1) \times v_b$，因此最小耗散恰好等于电势差$v_a - v_b$。写成优化的形式：
+第二种是\emph{Thomson最小耗散表达}。在定理~\ref{thm:electrical-thomson}的式~\eqref{eq:electrical-minimum-dissipation}中取$\bm b = \bm b_{a,b} = \bm e_a - \bm e_b$，最小总耗散为$\bm b_{a,b}^\top\bm L^\dagger\bm b_{a,b} = v_a - v_b = R_{a,b}$，因此有效电阻恰好等于从$a$向$b$输送$1$单位守恒流所需的最小总耗散：
 \begin{equation}
-  R_{a,b} = \min_{\bm B\bm f = \bm b_{a,b}} \bm f^\top \bm C^{-1} \bm f.
+  R_{a,b} = \min_{\bm B\bm f = \bm e_a - \bm e_b} \bm f^\top \bm C^{-1} \bm f.
   \label{eq:electrical-resistance-energy}
 \end{equation}
-这是有效电阻的\emph{能量}表达。
+式~\eqref{eq:electrical-resistance-pseudoinverse}便于通过线性代数直接计算单对或多对顶点的有效电阻；式~\eqref{eq:electrical-resistance-energy}则便于分析网络结构变化（如添边或增大电导）对有效电阻的单调影响。
 
-两种表达各有用途。式~\eqref{eq:electrical-resistance-pseudoinverse}适合计算单个点对的电阻：解方程、取电势差。式~\eqref{eq:electrical-resistance-energy}适合比较网络改变后的电阻：增加一条边意味着多出一个分流选择；把新边电流设为零，原来的最优流仍是候选，因此新图的最小耗散不会更大。
-
-例~\ref{ex:electrical-four-vertex-network}已经算过从$1$到$3$的单位注入。电势从$1/2$降到$0$，所以$R_{1,3} = 1/2$。
-
-现在换一对端点，从$1$注入、从$2$引出，令$v_2 = 0$。顶点$4$无注入，它连接$1$和$3$两个邻居，度为$2$：
-\[
-  2v_4 - v_1 - v_3 = 0, \quad\text{即}\quad v_4 = \frac{v_1 + v_3}{2}.
-\]
-
-顶点$3$也无注入，它连接$1$、$2$和$4$，度为$3$：
-\[
-  3v_3 - v_1 - v_2 - v_4 = 0.
-\]
-代入$v_2 = 0$和$v_4 = (v_1 + v_3)/2$，化简得$5v_3 = 3v_1$，即$v_3 = 3v_1/5$。
-
-进而$v_4 = (v_1 + 3v_1/5)/2 = 4v_1/5$。
-
-最后看顶点$1$，它有三个邻居且注入为$1$：
-\[
-  3v_1 - v_2 - v_3 - v_4 = 1.
-\]
-代入$v_2 = 0$、$v_3 = 3v_1/5$、$v_4 = 4v_1/5$，得到
-\[
-  3v_1 - \frac{3v_1}{5} - \frac{4v_1}{5}
-  = \frac{8v_1}{5} = 1.
-\]
-因此$v_1 = 5/8$，$v_3 = 3/8$，$v_4 = 1/2$。电势为
-\[
-  \bm v = (5/8, \; 0, \; 3/8, \; 1/2)^\top.
-\]
-有效电阻$R_{1,2} = v_1 - v_2 = 5/8$。
-
-这个值不同于$R_{1,3} = 1/2$。两对顶点都由一条单位电阻的边直接连接，但其余支路的接法不同。有效电阻衡量的是整张网络给这对端点提供的通路总和，而不仅仅是直接边的电阻。
-
-若两端分属不同分量，不存在从$a$到$b$的可行单位流。此时没有可以测量的有限电阻，约定$R_{a,b} = +\infty$。注意，即使对不相容的$\bm b_{a,b}$，伪逆二次型也会给出一个有限数值——在使用式~\eqref{eq:electrical-resistance-pseudoinverse}之前，必须先确认两端连通。
-
-\subsection{串联与并联}
+\subsection{有效电阻的计算}
 \label{sec:electrical-series-parallel}
 
-对于连接方式简单的网络，可以逐步替换局部支路来计算两端电阻。每次替换都保持支路两端的电流与电势差关系不变。
+针对结构复杂度不同的电网络，可以按由简入繁的顺序选用三种精确计算方法：对串并联简单结构直接作局部归约；对含桥式结构的小规模网络考虑星-三角（$\text{Y--}\Delta$）变换；对一般中等规模网络直接求解接地拉普拉斯线性方程组。
 
-\paragraph{串联}
+\subsubsection{简单结构：串联、并联与悬空支路}
+\label{sec:electrical-simple-reductions}
 
-两条边首尾相接，中间顶点没有外部注入，也没有别的支路连入。这时守恒方程强制两条边流过同一个电流$I$。两段压降分别是$Ir_1$和$Ir_2$，总压降为$I(r_1 + r_2)$。因此串联的等效电阻是
+当网络局部只包含串联路径、并联重边或无源悬空支路时，可以逐步将局部子网替换为单条等效边，同时保持端口的电势差与电流关系不变。
+
+\paragraph{串联归约}
+设两条边$e_1=\{u,w\}$与$e_2=\{w,v\}$在内部顶点$w$处首尾相接，且中间顶点$w$的度数为$2$、没有外部电流注入（$b_w=0$）。此时Kirchhoff电流定律要求流过两条边的电流大小完全相同，记为$I$。两段边上的压降分别为$I r_1$与$I r_2$，从$u$到$v$的总压降为$I(r_1 + r_2)$，因此可将两条串联边合并为一条连接$u,v$的等效边，其等效电阻等于两段电阻之和：
 \begin{equation}
-  r_{\mathrm{series}} = r_1 + r_2.
+  r_{\mathrm{series}} = r_1 + r_2, \qquad
+  c_{\mathrm{series}} = \frac{c_1 c_2}{c_1 + c_2}.
   \label{eq:electrical-series}
 \end{equation}
-如果中间顶点还连着其他支路，两条边上的电流一般不同，就不能使用这个替换。
+需要注意，若中间顶点$w$还连接着第三条边或有外部电流注入，流过两段的电流一般不同，不能直接套用串联公式。
 
-\paragraph{并联}
-
-多条支路连接同一对端点，共用相同的电势差$\Delta v$。第$i$条支路的电导为$c_i$，流过的电流为$c_i \Delta v$。总电流是各支路之和：
+\paragraph{并联归约}
+设连接同一对端点$u,v$的多条支路具有电导$c_1,c_2,\ldots,c_k$。由于它们共用相同的两端压降$\Delta v = v_u - v_v$，第$i$条支路流过的电流为$c_i\Delta v$，总电流为$\bigl(\sum_i c_i\bigr)\Delta v$。因此可将多条并联支路合并为一条等效边，其等效电导等于各支路电导之和（等效电阻为总电导的倒数）：
 \begin{equation}
-  c_{\mathrm{parallel}} = \sum_i c_i.
+  c_{\mathrm{parallel}} = \sum_i c_i, \qquad
+  r_{\mathrm{parallel}} = \left(\sum_i \frac{1}{r_i}\right)^{-1}.
   \label{eq:electrical-parallel}
 \end{equation}
-等效电阻是总电导的倒数。若原图有两点之间的多条平行边，可以把它们的电导合并为一条边，得到同样的拉普拉斯矩阵。
-
-\paragraph{四点图的复核}
-
-在四点图中，从$1$到$3$有三条支路。对角边电阻为$1$。经过顶点$2$的支路由两条串联边组成，电阻为$1 + 1 = 2$。经过顶点$4$的支路同理，电阻也是$2$。三条支路并联，总电导为$1 + 1/2 + 1/2 = 2$，得到
-\[
-  R_{1,3} = \frac{1}{1 + 1/2 + 1/2} = \frac{1}{2}.
-\]
-用$\Delta v = 1/2$分别乘三条支路的电导$1$、$1/2$、$1/2$，恢复出对角边电流$1/2$和两条外侧支路各$1/4$，与图~\ref{fig:electrical-current-split}一致。
-
-图~\ref{fig:electrical-series-parallel-reduction}画出了两步简化过程。先在各支路内部串联，合并出三条独立支路；再将它们并联为一条等效边。
+此外，若网络中存在不包含查询端点$a,b$的悬空叶节点（度为$1$且无外部注入），由电流守恒知该悬空边上的电流必为零，可直接将其删去而不影响$R_{a,b}$。
 
 \begin{BookInlineFigure}
   \centering
   \includegraphics[scale=1]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-series-parallel-reduction/figure.pdf}
-  \caption{四点网络在端点$1,3$之间的等效简化。数字是边或支路的电阻。(a)~五条单位电阻边，(b)~分别合并经过顶点$2$和顶点$4$的两组串联边，得到阻值为$2,1,2$的三条并联支路，(c)~再合并为阻值$1/2$的单条边。}
+  \caption{四点网络在端点$1,3$之间的串并联简化。数字是边或支路的电阻。(a)~五条单位电阻边，(b)~分别合并经过顶点$2$和顶点$4$的两组串联边，得到阻值为$2,1,2$的三条并联支路，(c)~再合并为阻值$1/2$的单条边。}
   \label{fig:electrical-series-parallel-reduction}
 \end{BookInlineFigure}
 
-\subsection{有效电阻的基本性质}
-\label{sec:electrical-resistance-properties}
+以四点五边单位电阻图（每条边$r_e=1$）计算$R_{1,3}$为例（图~\ref{fig:electrical-series-parallel-reduction}）。当查询端点为$1$和$3$时，中间顶点$2$和$4$的度数均为$2$且无外部注入：
 
-有效电阻在连通顶点集上构成一个度量。三角不等式的证明需要用到网络中电势的加权平均性质。增加电导或增添新边，则会使有效电阻不增大。
+第一步，作串联归约（图~\ref{fig:electrical-series-parallel-reduction}(b)）。经过顶点$2$的两条边$12,23$串联，合并为连接$1,3$、阻值为$1+1=2$（电导$1/2$）的上支路；经过顶点$4$的两条边$14,43$同样串联，合并为阻值为$1+1=2$（电导$1/2$）的下支路。
 
-\begin{theorem}
-\label{thm:electrical-resistance-metric}
-在任一正权连通分量内，有效电阻$R_{a,b}$是顶点集上的度量。增大边的电导或增添正电导边，原先连通的两点之间的有效电阻不会增大。
+第二步，作并联归约（图~\ref{fig:electrical-series-parallel-reduction}(c)）。现在端点$1,3$之间共有三条并联支路，电阻分别为$2,1,2$，电导分别为$1/2,1,1/2$。将三者电导相加得总电导$c_{\mathrm{parallel}} = 1/2 + 1 + 1/2 = 2$，取倒数立得
+\[
+  R_{1,3} = \frac{1}{1/2 + 1 + 1/2} = \frac{1}{2},
+\]
+与例~\ref{ex:electrical-four-vertex-network}通过解方程算出的$v_1 - v_3 = 1/2 - 0 = 1/2$完全一致。
+
+\subsubsection{小规模桥式结构：星-三角变换}
+\label{sec:electrical-wye-delta}
+
+单纯依靠串联和并联归约并不能化简所有双端网络。例如在四点环加对角边$13$的五边图上，以$2,4$为查询端点时，两个内部顶点$1,3$的度数都为$3$，既没有可消去的二度无源顶点，也没有平行重边。这是一个桥式结构；若各臂阻值恰好平衡，还可另用对称性化简，但一般边权下不能作此假设。
+
+对于度为$3$的内部接点，可用\emph{星-三角变换}（$\text{Y--}\Delta$ transformation）：把以无源顶点$w$为中心的三条星形支路替换为三个外围顶点之间的三角形支路，或反向操作，同时保持端口电势与电流关系（图~\ref{fig:electrical-wye-delta-bridge}(a)）。下文选取仍可串并联化简的$R_{1,2}$作为计算示例，以便交叉核验变换结果。
+
+\begin{theorem}[星-三角（$\text{Y--}\Delta$）等效变换]
+\label{thm:electrical-wye-delta}
+设中心顶点$w$不接入外部电流（$b_w=0$），且仅与三个外围顶点$u_1,u_2,u_3$相连，三条星形支路的电导分别为$c_1,c_2,c_3>0$（对应电阻为$r_1,r_2,r_3$）。消去中心顶点$w$后，该星形子网对$u_1,u_2,u_3$的端口电势与电流关系，完全等价于在$u_1,u_2,u_3$之间两两连接一条三角形边，其中连接$u_i$与$u_j$（$1\leq i<j\leq 3$，记第三个下标为$k$）的等效电导$c_{i,j}$与等效电阻$r_{i,j}$分别为
+\begin{equation}
+  c_{i,j} = \frac{c_i c_j}{c_1 + c_2 + c_3}, \qquad
+  r_{i,j} = \frac{r_1 r_2 + r_2 r_3 + r_3 r_1}{r_k}.
+  \label{eq:electrical-y-to-delta}
+\end{equation}
+反之，若已知$u_1,u_2,u_3$之间的三角形边电阻为$r_{1,2},r_{2,3},r_{3,1}>0$，将其等价变换为以新增无源顶点$w$为中心的星形支路（$\Delta\to\text{Y}$变换）时，连接$u_i$与$w$的星形支路电阻为
+\begin{equation}
+  r_i = \frac{r_{i,j}\,r_{i,k}}{r_{1,2} + r_{2,3} + r_{3,1}} \qquad (\{i,j,k\}=\{1,2,3\}).
+  \label{eq:electrical-delta-to-y}
+\end{equation}
 \end{theorem}
 
 \begin{proof}
-先检查度量的前三个条件。$R_{a,a} = 0$由定义给出。对称性来自二次型：$\bm b_{a,b} = -\bm b_{b,a}$，而$\bm x^\top \bm L^\dagger \bm x = (-\bm x)^\top \bm L^\dagger (-\bm x)$。正定性来自$\bm L^\dagger$在$\bm 1^\perp$上正定：若$a \ne b$，$\bm e_a - \bm e_b$在这个子空间中非零，所以$R_{a,b} > 0$。
-
-三角不等式需要更多准备。取同一正权连通分量中的三个顶点$a,b,c$，考虑从$a$到$b$注入单位电流产生的电势$\bm v = \bm L^\dagger \bm b_{a,b}$。除$a$和$b$以外的顶点$i$没有外部注入，拉普拉斯方程的第$i$行给出
+在星形网络中，中心顶点$w$无外部注入（$b_w=0$），其Kirchhoff电流守恒方程为
 \[
-  v_i = \frac{\sum_j w_{i,j} v_j}{d_i}.
+  (c_1 + c_2 + c_3)v_w - (c_1 v_1 + c_2 v_2 + c_3 v_3) = 0,
 \]
-也就是说，非端点的电势等于其邻居电势的加权平均。
-
-假设某个非端点$i$达到了最低电势。若它有任何正权邻居的电势更高，加权平均就会严格大于$v_i$，与$v_i$等于邻居平均相矛盾。因此它的所有正权邻居都与它取同一最低值。沿正权路径一步步传播，最低值会到达至少一个端点。
-
-顶点$a$有正注入。方程给出$d_a v_a - \sum_j w_{a,j} v_j = 1 > 0$，即$v_a$严格大于其邻居的加权平均。所以$a$不可能取最低电势。于是最低电势只能在引出端$b$达到。对于第三个顶点$c$，这给出了关键的符号关系：
+解出中心电势为外围三点电势的加权平均：
 \[
-  v_b - v_c \leq 0.
+  v_w = \frac{c_1 v_1 + c_2 v_2 + c_3 v_3}{c_1 + c_2 + c_3}.
 \]
 
-现在展开$R_{a,c}$。把$\bm e_a - \bm e_c = (\bm e_a - \bm e_b) + (\bm e_b - \bm e_c)$代入伪逆二次型，得到
+将$v_w$代入外围顶点$u_1$从星形子网流出的电流$I_1 = c_1(v_1 - v_w)$，通分整理得
 \[
-  R_{a,c} = R_{a,b} + R_{b,c}
-    + 2(\bm e_b - \bm e_c)^\top \bm L^\dagger (\bm e_a - \bm e_b).
+  \begin{aligned}
+    I_1
+    &= c_1\left(v_1 - \frac{c_1 v_1 + c_2 v_2 + c_3 v_3}{c_1 + c_2 + c_3}\right)\\
+    &= \frac{c_1 c_2}{c_1 + c_2 + c_3}(v_1 - v_2) + \frac{c_1 c_3}{c_1 + c_2 + c_3}(v_1 - v_3).
+  \end{aligned}
 \]
-交叉项是$2(v_b - v_c)$，其中$\bm v = \bm L^\dagger \bm b_{a,b}$正是从$a$到$b$单位注入的电势。由上面的符号关系$v_b - v_c \leq 0$，得到
-\begin{equation}
-  R_{a,c} = R_{a,b} + R_{b,c} + 2(v_b - v_c) \leq R_{a,b} + R_{b,c}.
-  \label{eq:electrical-resistance-triangle}
-\end{equation}
-
-最后证明单调性。在旧图中取从$a$到$b$的实际电流。增大某条边的电导后，同一组电流仍满足守恒，而在电导增大的那条边上，电阻$r_e$变小了，耗散也变小了。如果是新增一条正电导边，可以先让新边电流为零——这组流量仍满足原来的注入条件，耗散没有增加。
-
-新图可以在所有守恒流中重新选最优的。旧电流是一个候选，它的耗散不超过原来的最小耗散。因此新图的最小耗散不超过旧图，由式~\eqref{eq:electrical-resistance-energy}得到有效电阻不增大。
+对$u_2$和$u_3$同理。这恰与在$u_i,u_j$之间连接电导为$c_{i,j} = \frac{c_i c_j}{c_1+c_2+c_3}$的三角形边所产生的端口电流完全相同。将$c_i = 1/r_i$代入$r_{i,j}=1/c_{i,j}$并上下同乘$r_1 r_2 r_3$，即得式~\eqref{eq:electrical-y-to-delta}的第二式；求解式~\eqref{eq:electrical-y-to-delta}关于$r_1,r_2,r_3$的代数反演即得$\Delta\to\text{Y}$公式~\eqref{eq:electrical-delta-to-y}。
 \end{proof}
 
-例如，四点环未加对角边时，两条阻值为$2$的支路并联得$R_{1,3} = 1$。加上单位电阻的对角边后降至$1/2$。也有不变的情形：若增大一条原电流恰好为零的边的电导，原电势在那条边上仍产生零电流，方程的解不变，有效电阻保持原值。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=98.591mm]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-wye-delta-bridge/figure.pdf}
+  \caption{星-三角（$\text{Y--}\Delta$）变换及其在桥式结构化简中的应用。（a）无源中心顶点$w$的星形三支路与外围三角形三支路相互等效。（b）计算四点五边图的$R_{1,2}$时，将左下三角形$\{1,3,4\}$通过$\Delta\to\text{Y}$变换化为中心顶点$w$的星形（有效支路电阻为$1/3$），再由串并联算出$R_{1,2}=5/8$。}
+  \label{fig:electrical-wye-delta-bridge}
+\end{BookInlineFigure}
+
+下面在四点五边单位电阻图上演示如何用星-三角变换求出$R_{1,2}$（图~\ref{fig:electrical-wye-delta-bridge}(b)）。在图$\mathcal G$中，顶点$1,2,3$构成右上三角形，顶点$1,3,4$构成左下三角形：
+
+第一步，对左下角的单位电阻三角形$\{1,3,4\}$（三条边电阻均为$1$）施行$\Delta\to\text{Y}$变换~\eqref{eq:electrical-delta-to-y}。引入星形中心$w$替换该三角形后，连接$1,3,4$的三条星形支路电阻均为
+\[
+  r_1 = r_3 = r_4 = \frac{1\times 1}{1 + 1 + 1} = \frac{1}{3}.
+\]
+由于顶点$4$不是查询端点（无外部注入），变换后悬挂在$w$上的支路$w\!-\!4$成为无源悬空叶边，电流为零，直接删去（见图~\ref{fig:electrical-wye-delta-bridge}(b)）。
+
+第二步，对剩余的串并联支路直接求值。在图~\ref{fig:electrical-wye-delta-bridge}(b)中，从端点$1$到端点$2$现在只剩两条并联支路：一条是上方的直接边$1\!-\!2$（电阻为$1$）；另一条依次经过$1\to w\to 3\to 2$，由三段串联组成，总电阻为
+\[
+  r_{1\to w\to 3\to 2} = \frac{1}{3} + \frac{1}{3} + 1 = \frac{5}{3}.
+\]
+将阻值为$1$和$5/3$的两条支路并联，立得
+\[
+  R_{1,2} = \frac{1 \times \frac53}{1 + \frac53} = \frac{5}{8}.
+\]
+
+\subsubsection{中等规模网络：求解拉普拉斯方程}
+\label{sec:electrical-medium-laplacian-solve}
+
+当网络规模达到数十至数万个顶点、内部包含大量交错环路时，手工寻找星-三角变换和串并联归约不再现实。此时最通用、系统的计算方法是直接回到定义~\ref{def:graph-effective-resistance}：固定端点$b$接地（令$v_b = 0$），在端点$a$注入$1$单位电流，求解$(n-1)\times(n-1)$对称正定线性方程组
+\[
+  \overline{\bm L}\,\overline{\bm v} = \overline{\bm e}_a,
+\]
+解出电势后直接读取顶点$a$处的电势值，即有$R_{a,b} = v_a - v_b = v_a$。若需要查询多对顶点之间的有效电阻，可先对$\overline{\bm L}$作一次Cholesky分解（或求出伪逆$\bm L^\dagger$），再利用式~\eqref{eq:electrical-resistance-pseudoinverse}计算$R_{a,b} = L^\dagger_{a,a} + L^\dagger_{b,b} - 2L^\dagger_{a,b}$。
+
+下面用求解拉普拉斯方程的方法重新计算四点五边单位电阻图上的$R_{1,2}$（图~\ref{fig:electrical-r12-potential-flow}），与上一小节的星-三角化简结果核对。设从顶点$1$注入$1$单位电流、从顶点$2$引出$1$单位电流，令顶点$2$接地（$v_2 = 0$）：
+
+第一步，利用无源顶点$4$的守恒方程消去$v_4$。顶点$4$无外部注入，连接邻居$1$和$3$，度为$2$，故
+\[
+  2v_4 - v_1 - v_3 = 0 \quad\Longrightarrow\quad v_4 = \frac{v_1 + v_3}{2}.
+\]
+
+第二步，利用无源顶点$3$的守恒方程求出$v_3$与$v_1$的比例关系。顶点$3$无外部注入，连接邻居$1,2,4$，度为$3$，故
+\[
+  3v_3 - v_1 - v_2 - v_4 = 0.
+\]
+将$v_2 = 0$和$v_4 = (v_1 + v_3)/2$代入上式，化简得$5v_3 = 3v_1$，即
+\[
+  v_3 = \frac{3}{5}v_1, \qquad v_4 = \frac{1}{2}\Bigl(v_1 + \frac{3}{5}v_1\Bigr) = \frac{4}{5}v_1.
+\]
+
+第三步，代入注入端顶点$1$的守恒方程解出$v_1$。顶点$1$连接邻居$2,3,4$，度为$3$，外部注入为$1$，故
+\[
+  3v_1 - v_2 - v_3 - v_4 = 1.
+\]
+代入$v_2 = 0$、$v_3 = \frac35 v_1$、$v_4 = \frac45 v_1$，得
+\[
+  3v_1 - 0 - \frac{3}{5}v_1 - \frac{4}{5}v_1 = \frac{8}{5}v_1 = 1
+  \quad\Longrightarrow\quad v_1 = \frac{5}{8}.
+\]
+由此得到全部顶点的接地电势向量为
+\[
+  \bm v = \Bigl(\frac{5}{8}, \; 0, \; \frac{3}{8}, \; \frac{1}{2}\Bigr)^\top,
+\]
+两端有效电阻为$R_{1,2} = v_1 - v_2 = 5/8$，与星-三角变换算出的结果完全一致。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=46.718mm]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-r12-potential-flow/figure.pdf}
+  \caption{在四点单位电阻网络中求解$\bm L\bm v=\bm e_1-\bm e_2$（令$v_2=0$接地）计算有效电阻$R_{1,2}=5/8$。顶点旁标注电势值，边上箭头与数字标出五条边的实际分流大小：直接边$1\to 2$承载$5/8$，经由$1\to 3\to 2$和$1\to 4\to 3\to 2$的旁路合流$1/4+1/8=3/8$注入终点$2$。}
+  \label{fig:electrical-r12-potential-flow}
+\end{BookInlineFigure}
+
+对比$R_{1,2} = 5/8$与$R_{1,3} = 1/2$可以发现：虽然顶点对$(1,2)$和$(1,3)$之间都有一条单位电阻的边直接相连，但$(1,3)$之间有两条对称的二步旁路分担电流，而$(1,2)$之间的旁路需要绕行更远的路径，因此$R_{1,2} > R_{1,3}$。有效电阻综合反映了整张网络在两点之间提供的全体并行通路容量，而不仅仅是直接相连边的电阻。
 
 \subsection{有效电阻的近似计算}
 \label{sec:electrical-approximate-resistance}
 
-在四点图中，换一对查询端点就要换一个右端重新求电势。对于一张有$m$条正权边的图，如果要查询每条边两端的有效电阻，需要解$m$个不同的方程——每对端点一个。有没有办法先做一些预处理，之后不管查哪一对顶点，都只需做简单的运算？
+在包含百万级顶点和边的大规模图（例如社交网络、道路网或第~\ref{chap:graph-sparsification}章的图稀疏化问题，其中需要求出全部$m$条边两端点的有效电阻）上，若直接按定义对每条边求解一次拉普拉斯线性系统，总共需要求解$m$次方程。若每次求解的成本为$T_{\mathrm{solve}}$，这部分总成本为$O(mT_{\mathrm{solve}})$，因所用求解器、精度和预处理复用方式而异。为此，本小节介绍大规模图上批量或快速近似计算有效电阻的三种常见方法：欧氏嵌入与随机投影降维法、谱展开与低频主模态截断法，以及基于随机游走与生成树的蒙特卡洛采样法。
 
-基本思路是给每个顶点预先计算一列坐标。查询两点时，取出两列、相减、求平方长度。先找到能给出精确电阻的坐标，再用随机投影把坐标压短，从而减少需要求解的方程数量。
+\subsubsection{欧氏嵌入与随机投影降维}
+\label{sec:electrical-resistance-embedding}
+\label{sec:electrical-resistance-jl}
+\label{sec:electrical-resistance-solver-error}
 
-\paragraph{精确坐标}
+第一种方法是Spielman与Srivastava提出的随机投影法\scite{spielman2011graph}，它将全部点对的有效电阻转化为低维欧氏空间中的两点距离平方，使全图所有边的有效电阻只需通过求解$k=O(\varepsilon^{-2}\log n)$个拉普拉斯线性系统即可在高概率下获得$(1\pm\varepsilon)$相对精度的批量估计，前提是线性求解误差也得到控制。该方法分三步实现：
 
-设网络连通。从$a$到$b$送一单位电流，零均值电势为$\bm u = \bm L^\dagger \bm b_{a,b}$。沿每条记录边取两端电势差，得到压降$\Delta v_e$。该边的电流为$c_e \Delta v_e$，耗散为$c_e (\Delta v_e)^2 = (\sqrt{c_e}\,\Delta v_e)^2$。
-
-对所有边的缩放压降$\sqrt{c_e}\,\Delta v_e$求平方和，就得到总耗散，即有效电阻。把求电势、取边差、按$\sqrt{c_e}$缩放这三步合成一个矩阵：
+\paragraph{第一步：精确欧氏嵌入}
+设网络连通。从顶点$a$向$b$注入$1$单位电流时，零均值电势解为$\bm u = \bm L^\dagger \bm b_{a,b}$，每条边$e$上的耗散为$c_e\bigl((\bm B^\top\bm u)_e\bigr)^2 = \bigl((\bm C^{1/2}\bm B^\top\bm L^\dagger\bm b_{a,b})_e\bigr)^2$。将“求零均值电势$\bm L^\dagger$—取沿边差分$\bm B^\top$—按$\sqrt{c_e}$缩放$\bm C^{1/2}$”合成为一个$m\times n$矩阵：
 \begin{equation}
   \bm Z = \bm C^{1/2} \bm B^\top \bm L^\dagger \in \mathbb R^{m \times n}.
   \label{eq:electrical-resistance-embedding}
 \end{equation}
-$\bm Z$有$n$列，每列$m$个分量。第$a$列就是顶点$a$的坐标。查询$a,b$两点时，取两列之差$\bm Z(\bm e_a - \bm e_b) = \bm Z\bm b_{a,b}$，再求平方长度。
-
-为什么这样做能给出精确的电阻？直接验证：
+矩阵$\bm Z$的第$a$列$\bm Z\bm e_a\in\mathbb R^m$即为顶点$a$的$m$维精确嵌入坐标。利用$\bm L=\bm B\bm C\bm B^\top$以及伪逆恒等式$\bm L^\dagger\bm L\bm L^\dagger=\bm L^\dagger$，有
 \[
   \bm Z^\top \bm Z
   = \bm L^\dagger \bm B\bm C \bm B^\top \bm L^\dagger
   = \bm L^\dagger \bm L \bm L^\dagger
   = \bm L^\dagger.
 \]
-第二个等号用了$\bm L = \bm B\bm C\bm B^\top$，第三个等号是伪逆的性质：对非零特征值$\lambda$，$\lambda^{-1} \cdot \lambda \cdot \lambda^{-1} = \lambda^{-1}$；在零特征方向上，三者都给零。因此
+因此，任意两个顶点$a,b$之间的有效电阻精确等于它们在$\bm Z$中对应坐标列之差的欧氏长度平方：
 \[
-  \lVert \bm Z\bm b_{a,b} \rVert_2^2
+  \lVert \bm Z(\bm e_a-\bm e_b) \rVert_2^2
   = \bm b_{a,b}^\top \bm Z^\top \bm Z\bm b_{a,b}
   = \bm b_{a,b}^\top \bm L^\dagger \bm b_{a,b}
   = R_{a,b}.
 \]
 
-在四点图上核对。从$1$到$3$的单位注入电势为$(1/2, 1/4, 0, 1/4)^\top$减去均值$1/4$，得到零均值电势$(1/4, 0, -1/4, 0)^\top$。沿五条边取差并乘$\sqrt{c_e} = 1$：
+在四点单位权图上核对：从$1$到$3$单位注入的零均值电势为$(1/4, 0, -1/4, 0)^\top$，沿五条边取差得
 \[
-  \bm Z(\bm e_1 - \bm e_3) = (1/4, \; 1/4, \; -1/4, \; -1/4, \; 1/2)^\top.
+  \bm Z(\bm e_1 - \bm e_3) = (1/4, \; 1/4, \; -1/4, \; -1/4, \; 1/2)^\top,
 \]
-五项平方和为$2 \times (1/4)^2 + 2 \times (1/4)^2 + (1/2)^2 = 1/2 = R_{1,3}$。对$1,2$两点，精确列差为
+五项平方和为$4\times(1/4)^2+(1/2)^2=1/2=R_{1,3}$；同理，对顶点$1,2$，精确列差向量为
 \[
   \bm Z(\bm e_1 - \bm e_2) = (5/8, \; -3/8, \; -1/8, \; -1/8, \; 1/4)^\top,
 \]
-其平方长度为$5/8 = R_{1,2}$。
+其欧氏长度平方为$25/64+9/64+1/64+1/64+4/64=40/64=5/8=R_{1,2}$。
 
-\paragraph{随机投影压缩}
-
-精确坐标每列长$m$，与边数相同。如果$m$很大，存储和查询都很贵。我们用同一张随机矩阵$\bm Q \in \mathbb R^{k \times m}$把所有列从$m$维压缩到$k$维。记$\bm Y = \bm Q\bm Z$。$\bm Q$的每一行给出一种对原来$m$个分量的加权组合。压缩后，查询两点仍然取列差再求平方长度：
+\paragraph{第二步：随机投影降维与$k$次线性求解}
+由于$m$维嵌入矩阵$\bm Z\in\mathbb R^{m\times n}$维数过高，引入一个元素独立同分布于$\mathcal N(0,1/k)$（或$\pm 1/\sqrt{k}$ Rademacher分布）的$k\times m$随机投影矩阵$\bm Q \in \mathbb R^{k \times m}$（$k\ll m$），将所有顶点的坐标列线性压缩为$k\times n$低维坐标矩阵$\bm Y = \bm Q\bm Z$，并用低维坐标差的欧氏长度平方估计有效电阻：
 \[
   \widehat R_{a,b} = \lVert \bm Y(\bm e_a - \bm e_b) \rVert_2^2.
 \]
-只要$k$足够大，所有点对的估计都能以高概率落在精确值附近。
 
-不需要先形成稠密的$\bm Z$再乘$\bm Q$。$\bm Y$的每一行可以通过解一次拉普拉斯方程得到。设$\bm q_j^\top$是$\bm Q$的第$j$行。把$\bm q_j$的每个分量先乘该边的$\sqrt{c_e}$，再用关联矩阵$\bm B$在边的两端一加一减，得到长为$n$的右端
-\[
-  \bm d_j = \bm B\bm C^{1/2} \bm q_j.
-\]
-每条边在两个端点的贡献相消，因此$\bm d_j$的分量和为零，正好满足拉普拉斯方程的相容条件。
-
-解这个方程并取零均值解：
+计算$\bm Y=\bm Q\bm Z$无需先算出$\bm L^\dagger$或$\bm Z$。记$\bm q_j^\top\in\mathbb R^{1\times m}$为$\bm Q$的第$j$行（$j=1,\ldots,k$），先计算零和右端向量$\bm d_j = \bm B\bm C^{1/2} \bm q_j\in\bm 1^\perp$，然后求解拉普拉斯方程并取零均值解：
 \begin{equation}
   \bm L\bm y_j = \bm d_j, \qquad \bm 1^\top \bm y_j = 0.
   \label{eq:electrical-projection-systems}
 \end{equation}
-所得$\bm y_j = \bm L^\dagger \bm d_j$。把它转置，利用$\bm L^\dagger$对称：
-\[
-  \bm y_j^\top
-  = \bm q_j^\top \bm C^{1/2} \bm B^\top \bm L^\dagger
-  = \bm q_j^\top \bm Z.
-\]
-因此一次方程求解就填好$\bm Y$的一整行，给全体顶点各增加一个坐标分量。重复$k$次，$\bm Y$就完成了。
+由于$\bm y_j = \bm L^\dagger \bm d_j=\bm L^\dagger\bm B\bm C^{1/2}\bm q_j$且$\bm L^\dagger$对称，转置后即得$\bm y_j^\top = \bm q_j^\top \bm C^{1/2} \bm B^\top \bm L^\dagger = \bm q_j^\top \bm Z$，这正是$\bm Y$的第$j$行。因此，只需对$k$个随机右端各求解一次拉普拉斯系统即可得到全部顶点的$k$维坐标$\bm Y$，此后查询任意一对顶点的有效电阻仅需$O(k)$时间。
 
-计算量分解如下：$k$次拉普拉斯求解是主要开销。生成$\bm Q$的行并形成右端需要$O(km)$次运算。坐标存储$O(kn)$。建好$\bm Y$之后，单次查询只需$O(k)$次运算来取列差和求平方长度。直接法求解时，分解只做一次，$k$次回代可以共享三角因子。
-
-\paragraph{四点图的投影演示}
-
-在四点图上走一遍这个过程。取$k = 3$作演示。用Python的\texttt{random.Random(17)}建立随机数生成器，按行连续调用\texttt{gauss(0,1)}，各除以$\sqrt{3}$得到三行五列的$\bm Q$。第一行的五个系数（沿边序$12,23,34,41,13$）为
-\[
-  (-1.0368, \; -0.1441, \; 0.4628, \; -0.1173, \; 0.0910).
-\]
-
-为了形成右端$\bm d_1$，把这些系数沿每条边在两个端点一加一减。以顶点$1$为例：边$12$从$1$出发，取系数$-1.0368$的正号；边$41$到达$1$，取系数$-0.1173$的负号；边$13$从$1$出发，取系数$0.0910$的正号。三项相加得到$\bm d_1$的第一个分量约$-0.8284$。用同样的方法处理其余三个顶点，得到
-\[
-  \bm d_1 \approx (-0.8284, \; 0.8926, \; 0.5159, \; -0.5801)^\top.
-\]
-
-在顶点$3$接地。顶点$2,4$的方程给出$v_2 = (b_2 + v_1)/2$和$v_4 = (b_4 + v_1)/2$。代入顶点$1$的方程得到
-\[
-  v_1 = (2b_1 + b_2 + b_4)/4 \approx -0.3361.
-\]
-求出$v_2,v_4$，再把四个电势各减去均值，得到第一行零均值坐标
-\[
-  \bm y_1 \approx (-0.2071, \; 0.4073, \; 0.1290, \; -0.3291)^\top.
-\]
-顶点$1$和$3$对应的坐标差约为$-0.2071 - 0.1290 = -0.3361$，这是查询$R_{1,3}$的第一项。
-
-用同样的方法求解其余两个随机右端，得到第二、第三行坐标差约为$-0.2940$和$0.4107$。三项平方和为$0.3680$，是$R_{1,3} = 0.5$的一个低估。同一组坐标估计$R_{1,2}$约为$0.8263$，则是$R_{1,2} = 0.625$的一个高估。三个随机行太少，无法提供可靠的保证。要控制误差，需要为$k$选择足够大的值。
-
-图~\ref{fig:electrical-resistance-coordinate-projection}把投影前后的坐标放在一起。左乘$\bm Q$缩短了每一列，但列与顶点的对应关系不变。查询时仍然取第$1$列减第$3$列，只是从原来的五维变成了三维。
+以四点单位权图演示$k = 3$的投影计算过程（图~\ref{fig:electrical-resistance-coordinate-projection}）。使用随机数种子\texttt{random.Random(17)}按行生成标准正态随机数并除以$\sqrt{3}$得到$3\times 5$矩阵$\bm Q$，其第一行为$\bm q_1^\top\approx(-1.0368, -0.1441, 0.4628, -0.1173, 0.0910)$；左乘$\bm B\bm C^{1/2}$得$\bm d_1 \approx (-0.8284, 0.8926, 0.5159, -0.5801)^\top$，解出零均值电势即得$\bm Y$的第一行$\bm y_1^\top \approx (-0.2071, 0.4073, 0.1290, -0.3291)$。同样解出第二、第三行后，取$\bm Y$中第$1$列与第$3$列之差的平方和即得估计值$\widehat R_{1,3}\approx 0.3680$，第$1$列与第$2$列之差的平方和给出$\widehat R_{1,2}\approx 0.8263$。
 
 \begin{BookInlineFigure}
   \centering
   \includegraphics[scale=1]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-resistance-coordinate-projection/figure.pdf}
-  \caption{用两列的平方距离查询四点图中$1,3$之间的有效电阻。蓝色实框和绿色虚框分别标出对应的两列。(a)~每列五个分量，给出准确的$R_{1,3}$。(b)~用同一随机矩阵$\bm Q$把每列压为三个分量，平方距离给出本次估计。}
+  \caption{用两列坐标的欧氏距离平方查询四点图中顶点$1,3$之间的有效电阻。蓝色实框和绿色虚框分别标出顶点$1$和$3$的坐标列。(a)~五维精确坐标$\bm Z$给出$R_{1,3}=1/2$。(b)~左乘随机矩阵$\bm Q$压缩为三维坐标$\bm Y=\bm Q\bm Z$后取列差平方和。}
   \label{fig:electrical-resistance-coordinate-projection}
 \end{BookInlineFigure}
 
-\paragraph{投影的理论保证}
+下面的定理利用\term{Johnson--Lindenstrauss引理}（Johnson--Lindenstrauss lemma）证明，只需取$k=O(\varepsilon^{-2}\log n)$，就能以高概率同时保证全图所有顶点对的相对误差不超过$\varepsilon$。
 
 \begin{theorem}[高斯投影保留电阻距离]
 \label{thm:electrical-jl-resistance}
-设$n \geq 2$且正权网络连通，取$0 < \varepsilon, \delta < 1$。令$\bm Q$的元素独立服从均值为零、方差为$1/k$的正态分布。若
+设$n \geq 2$且正权网络连通，给定相对误差参数$0 < \varepsilon < 1$与失败概率上限$0 < \delta < 1$。令$\bm Q\in\mathbb R^{k\times m}$的元素独立同分布于均值为$0$、方差为$1/k$的正态分布$\mathcal N(0,1/k)$。若投影维数满足
 \begin{equation}
   k \geq \frac{8}{\varepsilon^2}\log\frac{n(n-1)}{\delta},
   \label{eq:electrical-projection-dimension}
 \end{equation}
-则以至少$1 - \delta$的概率，所有点对同时满足
+则以至少$1 - \delta$的概率，所有顶点对$a,b\in V$同时满足
 \begin{equation}
   (1 - \varepsilon)\,R_{a,b}
   \leq \lVert \bm Q\bm Z(\bm e_a - \bm e_b) \rVert_2^2
@@ -279,83 +282,279 @@ $\bm Z$有$n$列，每列$m$个分量。第$a$列就是顶点$a$的坐标。查�
 \end{equation}
 \end{theorem}
 
-$\varepsilon$控制每个平方距离允许的相对误差，$\delta$控制至少一个点对超出误差的概率上限。证明分两步：先对固定的一个向量建立集中不等式，再用联合界推广到所有点对。
-
 \begin{proof}
-取一个固定的非零向量$\bm z$。$\bm Q\bm z$的第$j$项是$\bm Q$的第$j$行与$\bm z$的内积。各行独立且条目方差为$1/k$，所以每个内积都是均值为零、方差为$\lVert\bm z\rVert_2^2/k$的正态变量。将$k$个独立内积的平方和除以$\lVert\bm z\rVert_2^2$，定义
+第一步，分析单个固定非零向量$\bm z\in\mathbb R^m$投影后的分布。由于$\bm Q$的各行独立且元素服从$\mathcal N(0,1/k)$，$\bm Q\bm z$的$k$个分量相互独立且均服从$\mathcal N(0,\lVert\bm z\rVert_2^2/k)$。将各分量除以标准差$\lVert\bm z\rVert_2/\sqrt{k}$后求平方和，所得随机变量
 \[
-  X = \frac{k\,\lVert\bm Q\bm z\rVert_2^2}{\lVert\bm z\rVert_2^2}.
+  X = \frac{k\,\lVert\bm Q\bm z\rVert_2^2}{\lVert\bm z\rVert_2^2}=\sum_{j=1}^k \xi_j^2\qquad\bigl(\xi_j\stackrel{\mathrm{i.i.d.}}{\sim}\mathcal N(0,1)\bigr)
 \]
-每一项除以标准差后变成标准高斯变量的平方。$X$是$k$个独立标准高斯变量平方之和，均值为$k$。由高斯变量的矩母函数和独立性，
-\[
-  \mathbb E[\exp(tX)] = (1 - 2t)^{-k/2}, \qquad t < 1/2.
-\]
+服从自由度为$k$的卡方分布，其矩母函数为$\mathbb E[\exp(tX)] = (1 - 2t)^{-k/2}$（$t<1/2$）。
 
-上尾估计考虑$X \geq k(1 + \varepsilon)$的概率。令$t > 0$。在事件$X \geq k(1 + \varepsilon)$上，$\exp(tX) \geq \exp(tk(1 + \varepsilon))$。Markov不等式给出
+第二步，用Chernoff界估计上下尾概率。对上尾事件$X \geq k(1 + \varepsilon)$，取$t = \varepsilon/[2(1 + \varepsilon)]\in(0,1/2)$应用Markov不等式，得
 \[
   \mathbb P\bigl(X \geq k(1 + \varepsilon)\bigr)
-  \leq \exp\bigl(-tk(1 + \varepsilon)\bigr)\,(1 - 2t)^{-k/2}.
+  \leq \exp\bigl(-tk(1 + \varepsilon)\bigr)\,(1 - 2t)^{-k/2}
+  = \exp\!\left(-\frac{k}{2}\bigl(\varepsilon - \log(1 + \varepsilon)\bigr)\right).
 \]
-选$t = \varepsilon/[2(1 + \varepsilon)]$，使$1 - 2t = 1/(1+\varepsilon)$，化简得
-\[
-  \mathbb P\bigl(X \geq k(1 + \varepsilon)\bigr)
-  \leq \exp\bigl[-k\bigl(\varepsilon - \log(1 + \varepsilon)\bigr)/2\bigr].
-\]
-
-下尾类似。令$t < 0$，$\exp(tX)$对$X$递减，事件$X \leq k(1 - \varepsilon)$使$\exp(tX) \geq \exp(tk(1 - \varepsilon))$。选$t = -\varepsilon/[2(1 - \varepsilon)]$，得
+对下尾事件$X \leq k(1 - \varepsilon)$，取$t = -\varepsilon/[2(1 - \varepsilon)] < 0$应用Markov不等式，得
 \[
   \mathbb P\bigl(X \leq k(1 - \varepsilon)\bigr)
-  \leq \exp\bigl[-k\bigl(-\varepsilon - \log(1 - \varepsilon)\bigr)/2\bigr].
+  \leq \exp\!\left(-\frac{k}{2}\bigl(-\varepsilon - \log(1 - \varepsilon)\bigr)\right).
 \]
+对$0 < \varepsilon < 1$，利用不等式$\varepsilon-\log(1+\varepsilon)\geq\varepsilon^2/4$和$-\varepsilon-\log(1-\varepsilon)\geq\varepsilon^2/2>\varepsilon^2/4$，合并上下尾可知单个向量$\bm z$的投影长度平方偏离$(1 \pm \varepsilon)\lVert\bm z\rVert_2^2$的概率至多为$2\exp(-k\varepsilon^2/8)$。
 
-为了得到简洁的界，对$0 \leq s \leq \varepsilon < 1$使用不等式$s/(1+s) \geq s/2$和$s/(1-s) \geq s$。分别积分可知上尾和下尾指数中的括号至少为$\varepsilon^2/4$和$\varepsilon^2/2$。因此，一个固定向量的平方长度超出$1 \pm \varepsilon$倍的概率至多为
+第三步，对全部顶点对应用联合界。图中不同顶点的无序对$\{a,b\}$共有$\binom{n}{2}=n(n-1)/2$对，每对对应$\bm z=\bm Z(\bm e_a - \bm e_b)$（长度平方为$R_{a,b}$）。由布尔不等式，至少有一对超出式~\eqref{eq:electrical-projection-guarantee}的概率至多为
 \[
-  2\exp(-k\varepsilon^2/8).
+  \frac{n(n-1)}{2}\cdot 2\exp\!\left(-\frac{k\varepsilon^2}{8}\right)=n(n-1)\exp\!\left(-\frac{k\varepsilon^2}{8}\right).
 \]
-
-不同顶点的无序点对共有$n(n-1)/2$个。每对对应一个固定的列差$\bm Z(\bm e_a - \bm e_b)$。对各对的失败概率求和，至少有一对超出误差的概率至多为$n(n-1)\exp(-k\varepsilon^2/8)$。要求它不超过$\delta$，解出$k$即得式~\eqref{eq:electrical-projection-dimension}。
+当$k$满足式~\eqref{eq:electrical-projection-dimension}时，该概率上界不超过$\delta$。
 \end{proof}
 
-这个结论是\term{Johnson--Lindenstrauss引理}（Johnson--Lindenstrauss lemma）在电阻计算中的应用\scite{spielman2011graph}。
-
-\paragraph{求解误差的处理}
-
-上面的保证假设每个方程都精确求解。实际计算只能给出近似解$\widetilde{\bm y}_j$。设误差$\bm h_j = \widetilde{\bm y}_j - \bm y_j$。对点对$a,b$，第$j$个坐标差的误差为
-\[
-  h_{j,a} - h_{j,b} = \bm h_j^\top \bm b_{a,b}.
-\]
-
-为了界住它，取单位注入的电势$\bm u = \bm L^\dagger \bm b_{a,b}$，满足$\bm L\bm u = \bm b_{a,b}$。因此
-\[
-  \bm h_j^\top \bm b_{a,b}
-  = \bm h_j^\top \bm L\bm u.
-\]
-右端可以看成两组"边差"的加权内积。用Cauchy--Schwarz不等式，$\bm h_j$一侧的能量范数$\lVert\bm h_j\rVert_{\bm L}^2 = \bm h_j^\top \bm L\bm h_j$，$\bm u$一侧的能量范数等于单位注入的耗散$R_{a,b}$。于是
+\paragraph{第三步：迭代求解的误差控制}
+用共轭梯度法近似求解式~\eqref{eq:electrical-projection-systems}的$k$个方程时，设第$j$个方程的近似零均值解为$\widetilde{\bm y}_j$，误差为$\bm h_j = \widetilde{\bm y}_j - \bm y_j$。记单位注入的精确电势为$\bm u = \bm L^\dagger \bm b_{a,b}$，由$\bm L\bm u = \bm b_{a,b}$及能量内积的Cauchy--Schwarz不等式，第$j$行坐标差的误差满足
 \[
   |\bm h_j^\top \bm b_{a,b}|
-  \leq \lVert\bm h_j\rVert_{\bm L}\,\sqrt{R_{a,b}}.
+  = |\bm h_j^\top \bm L\bm u|
+  \leq \lVert\bm h_j\rVert_{\bm L}\,\lVert\bm u\rVert_{\bm L}
+  = \lVert\bm h_j\rVert_{\bm L}\,\sqrt{R_{a,b}}.
 \]
-
-对全部$k$行的误差设定总预算$\sum_j \lVert\bm h_j\rVert_{\bm L}^2 \leq \eta^2$。把$k$个坐标差误差的平方加起来，列差向量的总扰动长度至多为$\eta\sqrt{R_{a,b}}$。
-
-将投影误差和求解误差合在一起。对式~\eqref{eq:electrical-projection-guarantee}开平方得到$\sqrt{R_{a,b}}$的两个乘数，再把长度至多为$\eta\sqrt{R_{a,b}}$的扰动用三角不等式加进去。令$\widehat R_{a,b} = \lVert \widetilde{\bm Y}\bm b_{a,b}\rVert_2^2$为实际估计值，对$a \ne b$有
+若将全部$k$次求解的总能量误差控制在$\sum_{j=1}^k \lVert\bm h_j\rVert_{\bm L}^2 \leq \eta^2$以内，则$\lVert(\widetilde{\bm Y}-\bm Y)\bm b_{a,b}\rVert_2\leq\eta\sqrt{R_{a,b}}$。结合式~\eqref{eq:electrical-projection-guarantee}与三角不等式，对$a\ne b$，最终估计值$\widehat R_{a,b} = \lVert \widetilde{\bm Y}\bm b_{a,b}\rVert_2^2$满足
 \begin{equation}
   \max\{0, \sqrt{1-\varepsilon} - \eta\}
-  \leq \sqrt{\widehat R_{a,b} / R_{a,b}}
+  \leq \sqrt{\frac{\widehat R_{a,b}}{R_{a,b}}}
   \leq \sqrt{1+\varepsilon} + \eta.
-  \label{eq:electrical-resistance-combined-error}
+  \label{eq:electrical-resistance-total-error}
 \end{equation}
-两端再平方，才得到对电阻本身的比例界。$\varepsilon$和$\delta$控制投影精度，$\eta$控制$k$次方程求解的总精度。
 
-最后说明如何用可计算的量来控制$\eta$。通常不知道误差$\bm h_j$本身，但可以算残差$\bm r_j = \bm d_j - \bm L\widetilde{\bm y}_j$。由$\bm L\bm y_j = \bm d_j$知$\bm r_j = -\bm L\bm h_j$。利用$\bm L\bm L^\dagger \bm L = \bm L$，
+\subsubsection{谱展开与低频主模态截断}
+\label{sec:electrical-resistance-spectral-truncation}
+
+第二种常见方法利用拉普拉斯矩阵的正交谱分解。在连通图上，设$\bm L$的特征值为$0=\lambda_1<\lambda_2\leq\cdots\leq\lambda_n$，对应的标准正交特征向量为$\bm u_1,\bm u_2,\ldots,\bm u_n$（其中$\bm u_1=\frac{1}{\sqrt n}\bm 1$）。由伪逆的谱分解
 \[
-  \lVert\bm h_j\rVert_{\bm L}^2
-  = \bm h_j^\top \bm L\bm h_j
-  = \bm r_j^\top \bm L^\dagger \bm r_j.
+  \bm L^\dagger = \sum_{i=2}^n \frac{1}{\lambda_i}\bm u_i\bm u_i^\top,
 \]
-残差的分量和为零，只涉及$\bm L$的非零特征值。若最小非零特征值的下界为$\gamma > 0$，则伪逆在该子空间上的特征值至多为$1/\gamma$，因此
+将其代入式~\eqref{eq:electrical-resistance-pseudoinverse}，可得有效电阻的\emph{谱展开公式}：
+\begin{equation}
+  R_{a,b}
+  = (\bm e_a - \bm e_b)^\top\bm L^\dagger(\bm e_a - \bm e_b)
+  = \sum_{i=2}^n \frac{1}{\lambda_i}(u_{i,a} - u_{i,b})^2.
+  \label{eq:electrical-resistance-spectral-sum}
+\end{equation}
+
+在式~\eqref{eq:electrical-resistance-spectral-sum}中，每个正交模态的贡献被特征值的倒数$1/\lambda_i$加权：较小的非零特征值（低频全局模态）权重$1/\lambda_i$最大，但单对顶点上的实际贡献还取决于坐标差$(u_{i,a}-u_{i,b})^2$，不能只据特征值断定低频项占主导；而较大的特征值（高频局部振荡模态）权重$1/\lambda_i$较小。当已通过Lanczos方法预先求出前$r$个最小非零特征对$(\lambda_i,\bm u_i)$（$i=2,\ldots,r+1$，$r\ll n$）时，只保留前$r$项即可构造低秩谱截断近似：
 \[
-  \lVert\bm h_j\rVert_{\bm L}^2
-  \leq \frac{\lVert\bm r_j\rVert_2^2}{\gamma}.
+  R_{a,b}^{(r)} = \sum_{i=2}^{r+1}\frac{1}{\lambda_i}(u_{i,a} - u_{i,b})^2.
 \]
-只需每个方程的残差平方控制在$\gamma\eta^2/k$以内，就能为该方程留下至多$\eta^2/k$的能量误差平方。$k$项相加便满足总预算$\eta^2$。
+由于被截去的余项满足$\sum_{i=r+2}^n(u_{i,a}-u_{i,b})^2 \leq \lVert\bm e_a - \bm e_b\rVert_2^2 = 2$且对所有$i\geq r+2$有$\lambda_i\geq\lambda_{r+2}$，当$1\leq r\leq n-2$时，截断误差具有显式上界（$r=n-1$时为精确展开）：
+\[
+  0 \leq R_{a,b} - R_{a,b}^{(r)} \leq \frac{2}{\lambda_{r+2}}.
+\]
+在实际大规模计算中，还可以将函数$g(\lambda)=1/\lambda$在谱区间$[\lambda_2,\lambda_n]$上用低阶Chebyshev多项式$p_m(\lambda)$逼近，通过稀疏矩阵向量乘积直接实现多项式滤波，无需显式求特征向量。
+
+用四点五边单位权图核对谱展开式~\eqref{eq:electrical-resistance-spectral-sum}。由第~\ref{sec:graph-laplacian-frequency}小节，三个非零特征值及单位特征向量分别为：$\lambda_2=2$，$\bm u_2=\frac{1}{\sqrt 2}(0,1,0,-1)^\top$；$\lambda_3=4$，$\bm u_3=\frac{1}{\sqrt 2}(1,0,-1,0)^\top$；$\lambda_4=4$，$\bm u_4=\frac12(1,-1,1,-1)^\top$。代入式~\eqref{eq:electrical-resistance-spectral-sum}计算$R_{1,2}$：
+\[
+  R_{1,2}
+  = \frac{1}{2}\Bigl(0 - \frac{1}{\sqrt 2}\Bigr)^2
+    + \frac{1}{4}\Bigl(\frac{1}{\sqrt 2} - 0\Bigr)^2
+    + \frac{1}{4}\Bigl(\frac12 - \Bigl(-\frac12\Bigr)\Bigr)^2
+  = \frac{1}{4} + \frac{1}{8} + \frac{1}{4} = \frac{5}{8},
+\]
+与前面两种精确方法的结果完全吻合。
+
+\subsubsection{随机游走与生成树蒙特卡洛估计}
+\label{sec:electrical-resistance-monte-carlo}
+
+第三种常见方法完全不求解线性代数方程组，而是利用有效电阻在图上随机游走和随机生成树中的概率解释，通过蒙特卡洛（Monte Carlo）采样进行估计。
+
+一方面，对于单对顶点$a,b$的局部查询，有效电阻与随机游走的\emph{逃逸概率}（escape probability）直接相关。设粒子从顶点$a$出发按转移概率$P_{i,j}=c_{i,j}/d_i$作随机游走，记$\mathbb P_a(\tau_b < \tau_a^+)$为粒子在首次返回起点$a$之前先到达终点$b$的概率。在边界条件$v_a=1, v_b=0$下，内部无源顶点的电势满足$v_i=\sum_j P_{i,j}v_j$，恰好等于从$i$出发在到达$b$之前先到达$a$的概率；在起点$a$处注入的电流为$\sum_j c_{a,j}(1-v_j) = d_a\mathbb P_a(\tau_b < \tau_a^+)$，由有效电阻定义立得
+\begin{equation}
+  R_{a,b} = \frac{1}{d_a\,\mathbb P_a(\tau_b < \tau_a^+)}.
+  \label{eq:electrical-resistance-escape}
+\end{equation}
+因此，从$a$出发独立模拟多条随机游走轨迹直至触碰$b$或返回$a$，用经验逃逸频率代入式~\eqref{eq:electrical-resistance-escape}可估计$R_{a,b}$；零成功样本无法给出有限估计，取倒数后的估计也一般有偏，逃逸概率很小时需要更多样本。
+
+另一方面，当需要批量估计图中各条边$e=\{a,b\}\in E$的有效电阻$R_e = R_{a,b}$时，可以利用矩阵树定理（定理~\ref{thm:graph-matrix-tree}）导出的\emph{生成树边包含概率公式}：在按生成树权重$\prod_{e'\in T}c_{e'}$成比例抽样的随机生成树分布中，任意一条边$e=\{a,b\}$被选入随机生成树$T$的边缘概率恰好等于该边的电导乘以其两端有效电阻（将在第~\ref{sec:graph-sparsification-resistance-trees}小节严格证明）：
+\begin{equation}
+  \mathbb P(e \in T) = c_e R_{a,b}.
+  \label{eq:electrical-resistance-tree-probability}
+\end{equation}
+利用基于圈擦除随机游走（loop-erased random walk）的Wilson算法，按电导比例选择下一步并使用独立随机数，可以抽取$N$棵独立随机生成树$T_1,\ldots,T_N$；其运行时间取决于游走到达已生成树的时间，一般不保证接近线性；统计每条边$e$在样本树中出现的频率$\widehat p_e = \frac1N\sum_{s=1}^N \mathbb I(e\in T_s)$，即可由$\widehat R_{a,b} = \widehat p_e / c_e$同时给出全图所有边有效电阻的无偏估计。
+
+\subsection{有效电阻的基本性质}
+\label{sec:electrical-resistance-properties}
+
+有效电阻不仅具有明确的物理意义，还在连通图的顶点集上构成一个严格满足三角不等式的距离度量（称为\emph{电阻距离}，resistance distance），且在添边或增大电导时满足Rayleigh单调性。下面分别证明这两条基本性质。
+
+\begin{theorem}[有效电阻的度量性质]
+\label{thm:electrical-resistance-metric}
+在任一正权连通分量内，有效电阻$R_{a,b}$是顶点集上的距离度量，即对任意顶点$a,b,c$满足：
+\begin{enumerate}
+  \item 非负性与非退化性：$R_{a,b}\geq 0$，且$R_{a,b}=0$当且仅当$a=b$；
+  \item 对称性：$R_{a,b} = R_{b,a}$；
+  \item 三角不等式：$R_{a,c} \leq R_{a,b} + R_{b,c}$。
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+第一步，验证非负性、非退化性与对称性。$R_{a,a} = 0$由定义给出；当$a \ne b$时，$\bm b_{a,b}=\bm e_a - \bm e_b\in\bm 1^\perp$非零，由$\bm L^\dagger$在$\bm 1^\perp$上对称正定知$R_{a,b} = \bm b_{a,b}^\top\bm L^\dagger\bm b_{a,b} > 0$。对称性由$\bm b_{b,a} = -\bm b_{a,b}$及$(-\bm b_{a,b})^\top \bm L^\dagger (-\bm b_{a,b}) = \bm b_{a,b}^\top \bm L^\dagger \bm b_{a,b}$直接得出（也可由欧氏嵌入$R_{a,b}=\lVert\bm Z(\bm e_a-\bm e_b)\rVert_2^2$直接看出）。
+
+第二步，利用电势的极值原理证明引出端达到最低电势。若$a=b$或$b=c$，三角不等式直接成立。以下设$a\ne b$且$b\ne c$，并取三点所在的正权连通分量为网络，考察从$a$注入$1$单位电流、从$b$引出$1$单位电流时的电势解$\bm v = \bm L^\dagger \bm b_{a,b}$。对除$a,b$以外的任意内部无源顶点$i\notin\{a,b\}$，拉普拉斯方程的第$i$行给出
+\[
+  d_i v_i - \sum_{j=1}^n c_{i,j} v_j = 0
+  \quad\Longrightarrow\quad
+  v_i = \sum_{j=1}^n \frac{c_{i,j}}{d_i} v_j,
+\]
+即每个无源顶点的电势等于其邻居电势的加权平均。
+
+若某个无源顶点$i$达到了全分量电势的最小值，则它的所有正电导邻居的电势都不能高于$v_i$（否则加权平均将严格大于$v_i$），故所有邻居也必须取同一最小值；沿连通分量内的正权路径传递可知，最小值必然在某个端点$a$或$b$处达到。然而在注入端$a$处，$d_a v_a - \sum_j c_{a,j} v_j = 1 > 0$，即$v_a$严格高于其邻居的加权平均，不可能取最小值。因此全分量的最低电势必在引出端$b$处达到，从而对第三个顶点$c$有
+\[
+  v_b \leq v_c \quad\Longleftrightarrow\quad v_b - v_c \leq 0.
+\]
+
+第三步，展开伪逆二次型导出三角不等式。将$\bm e_a - \bm e_c = (\bm e_a - \bm e_b) + (\bm e_b - \bm e_c)$代入伪逆二次型式~\eqref{eq:electrical-resistance-pseudoinverse}展开：
+\[
+  R_{a,c}
+  = (\bm e_a - \bm e_b)^\top\bm L^\dagger(\bm e_a - \bm e_b)
+    + (\bm e_b - \bm e_c)^\top\bm L^\dagger(\bm e_b - \bm e_c)
+    + 2(\bm e_b - \bm e_c)^\top \bm L^\dagger (\bm e_a - \bm e_b).
+\]
+前两项分别为$R_{a,b}$和$R_{b,c}$，交叉项中的$\bm L^\dagger(\bm e_a-\bm e_b)$正是电势$\bm v$，故交叉项等于$2(\bm e_b-\bm e_c)^\top\bm v = 2(v_b - v_c) \leq 0$。于是
+\begin{equation}
+  R_{a,c} = R_{a,b} + R_{b,c} + 2(v_b - v_c) \leq R_{a,b} + R_{b,c}.
+  \label{eq:electrical-resistance-triangle}
+\end{equation}
+\end{proof}
+
+\begin{theorem}[有效电阻的Rayleigh单调性]
+\label{thm:electrical-resistance-monotonicity}
+在电网络中，增大任意边的电导（即减小其电阻）或增添新的正电导边，原先连通的任意两点$a,b$之间的有效电阻$R_{a,b}$单调不增。
+\end{theorem}
+
+\begin{proof}
+设在原网络中从$a$到$b$的最小耗散单位守恒流为$\bm f_\star$，其耗散为$\mathcal E(\bm f_\star) = R_{a,b}$。
+
+若将网络中各边的电阻$r_e = 1/c_e$减小为$r'_e \leq r_e$，原流$\bm f_\star$在新网络中依然满足Kirchhoff电流守恒约束$\bm B\bm f_\star = \bm e_a - \bm e_b$，且它在新网络中的耗散满足
+\[
+  \mathcal E'(\bm f_\star) = \sum_{e\in E} r'_e f_{\star,e}^2 \leq \sum_{e\in E} r_e f_{\star,e}^2 = R_{a,b}.
+\]
+（若是在网络中增添一条新边，只需在原流$\bm f_\star$基础上对新边赋零流量，即可构成新网络上的可行单位守恒流且耗散保持$R_{a,b}$不变。）
+
+由Thomson最小耗散表达~\eqref{eq:electrical-resistance-energy}，新网络的有效电阻$R'_{a,b}$是在全体满足$\bm B\bm f = \bm e_a - \bm e_b$的守恒流上取最小耗散，而$\bm f_\star$是其中一个可行候选流，故必有
+\[
+  R'_{a,b} = \min_{\bm B\bm f = \bm e_a - \bm e_b}\mathcal E'(\bm f) \leq \mathcal E'(\bm f_\star) \leq R_{a,b}.
+\]
+\end{proof}
+
+例如在四点单位电阻环$C_4$上，未加对角边$13$时，顶点$1,3$之间由两条阻值为$2$的支路并联，有效电阻为$R_{1,3} = 1$；添入单位电阻的对角边$13$后，有效电阻单调减小至$R_{1,3} = 1/2$。反之，若在顶点$2,4$之间添入一条新边，由于在$1\to 3$注入下对称顶点$2$和$4$本来就处于同一电势$v_2 = v_4 = 1/4$，新边两端无压降、不改变原有分流，此时$R_{1,3}$保持$1/2$不变。
+
+\subsection{有效电阻与图结构}
+\label{sec:graph-sparsification-resistance-trees}
+
+除了作为顶点对之间的距离度量，单条边$e=\{u,v\}\in E$两端的有效电阻$R_e=R_{u,v}$与其自身电导$c_e=1/r_e$的乘积$c_e R_e\in(0,1]$，还可以刻画这条边在全图连通结构中的\emph{不可替代性}。从电学角度看，当向端点$u$注入$1$单位电流并从$v$引出时，$u,v$两端的电势差为$R_e$，根据Ohm定律，直接流经边$e$自身的电流恰好是$i_e = c_e(v_u-v_v) = c_e R_e$。若$e$是连接两个连通块的唯一\emph{桥边}（割边），没有其他并联支路分流，全部$1$单位电流都必须经过$e$，此时$R_e = r_e = 1/c_e$，故$c_e R_e = 1$达到最大值；反之，若$e$位于高度稠密的团内部，两端之间存在大量并联替代路径分担电流，流经$e$自身的电流占比$c_e R_e$就会很小。
+
+更进一步，Kirchhoff与定理~\ref{thm:graph-matrix-tree}（矩阵树定理）给出如下组合恒等式：无量纲乘积$c_e R_e$恰好等于边$e$出现在随机生成树中的概率。
+
+\subsubsection{生成树的边包含概率}
+\label{sec:graph-tree-edge-probability}
+
+设正权图$\mathcal G=(V,E,c)$连通。对于$\mathcal G$的一棵生成树$T$，将其包含的$n-1$条边的电导相乘，定义为生成树权重$w(T)$；将全体生成树的权重总和记为配分函数$Z$。在全体生成树集合上定义按权重成正比的概率分布：
+\begin{equation}
+w(T)=\prod_{e\in T}c_e,
+\qquad
+Z=\sum_T w(T),
+\qquad
+\mathbb P(T)=\frac{w(T)}{Z}.
+\label{eq:graph-weighted-tree-distribution}
+\end{equation}
+当所有边的电导均为$1$时，每棵生成树的权重均为$1$，式~\eqref{eq:graph-weighted-tree-distribution}退化为在所有生成树上均匀等概率抽取。
+
+一条边$e\in E$出现在随机生成树$T$中的边缘概率，等于所有包含$e$的生成树概率之和：$\mathbb P(e\in T)=\sum_{T\ni e}\mathbb P(T)$。下面的定理证明，这个概率精确等于$c_e R_e$。
+
+\begin{theorem}[生成树的边包含概率]
+\label{thm:graph-tree-edge-probability}
+对具有正边权的连通图$\mathcal G$，按式~\eqref{eq:graph-weighted-tree-distribution}抽取随机生成树$T$。则每条边$e\in E$被包含在$T$中的概率为
+\begin{equation}
+\mathbb P(e\in T)=c_eR_e.
+\label{eq:graph-tree-edge-probability}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+证明的核心思想是：将边$e$的电导微扰为$c_e+t$，分别用“生成树权重直接展开”和“矩阵树定理行列式秩一更新”两种方式计算新配分函数$Z(t)$关于$t$的一次项系数，令两者相等即可得出结论。
+
+第一步：从生成树权重定义展开$Z(t)$。将边$e$的电导从$c_e$改为$c_e+t$（其余边电导不变）。对任意不包含$e$的生成树$T\not\ni e$，其权重不受$t$影响；对任意包含$e$的生成树$T\ni e$，除去因子$c_e$后其余$n-2$条边的电导乘积为$w(T)/c_e$，故微扰后的权重变为$(c_e+t)\frac{w(T)}{c_e}=w(T)+\frac{t}{c_e}w(T)$。对全体生成树求和，得到
+\[
+Z(t)=Z(0)+\frac{t}{c_e}\sum_{T\ni e}w(T).
+\]
+
+第二步：用矩阵树定理与秩一行列式引理展开$Z(t)$。选定任一顶点接地，删去拉普拉斯矩阵$\bm L=\sum_{f\in E}c_f\bm b_f\bm b_f^\top$中对应的行与列，记所得$(n-1)\times(n-1)$接地正定矩阵为$\widetilde{\bm L}$，并将边$e$的关联向量$\bm b_e=\bm e_u-\bm e_v$删去接地点坐标后的向量记为$\tilde{\bm b}_e$。当$c_e$增加$t$时，接地矩阵变为$\widetilde{\bm L}+t\tilde{\bm b}_e\tilde{\bm b}_e^\top$。由第~\ref{sec:graph-matrix-tree}节的矩阵树定理（定理~\ref{thm:graph-matrix-tree}）可得
+\[
+Z(t)=\det(\widetilde{\bm L}+t\tilde{\bm b}_e\tilde{\bm b}_e^\top).
+\]
+
+由于原图连通，$\widetilde{\bm L}$对称正定，可在行列式左右两侧同时提出$\widetilde{\bm L}^{1/2}$：
+\[
+\widetilde{\bm L}+t\tilde{\bm b}_e\tilde{\bm b}_e^\top
+=\widetilde{\bm L}^{1/2}
+  (\bm I+t\bm v\bm v^\top)\widetilde{\bm L}^{1/2},
+\qquad \bm v=\widetilde{\bm L}^{-1/2}\tilde{\bm b}_e.
+\]
+秩一矩阵$\bm v\bm v^\top$在$\bm v$方向上的特征值为$\lVert\bm v\rVert_2^2=\tilde{\bm b}_e^\top\widetilde{\bm L}^{-1}\tilde{\bm b}_e$，在与$\bm v$正交的$n-2$维子空间上特征值全为$0$。因此$\bm I+t\bm v\bm v^\top$的行列式等于$1+t\,\tilde{\bm b}_e^\top\widetilde{\bm L}^{-1}\tilde{\bm b}_e$，结合$\det\widetilde{\bm L}=Z(0)$即得
+\[
+Z(t)=Z(0)\bigl(1+t\,\tilde{\bm b}_e^\top\widetilde{\bm L}^{-1}\tilde{\bm b}_e\bigr).
+\]
+
+第三步：识别有效电阻并比较一次项系数。将顶点接地的拉普拉斯解$\tilde{\bm v}=\widetilde{\bm L}^{-1}\tilde{\bm b}_e$代入定义~\ref{def:graph-effective-resistance}可知，二次型$\tilde{\bm b}_e^\top\widetilde{\bm L}^{-1}\tilde{\bm b}_e$正是边$e=\{u,v\}$两端的有效电阻$R_e$。比较第一步与第二步中$Z(t)$关于$t$的一次项系数：
+\[
+\frac{1}{c_e}\sum_{T\ni e}w(T)=Z(0)\,R_e
+\quad\Longrightarrow\quad
+\mathbb P(e\in T)=\frac{\sum_{T\ni e}w(T)}{Z(0)}=c_e R_e.\qedhere
+\]
+\end{proof}
+
+\begin{example}[四点五边图的全部生成树与有效电阻核对]
+\label{ex:graph-sparsification-trees}
+取四点环加对角边$13$的单位电导网络（$c_e=1$）。如图~\ref{fig:sparsification-spanning-trees}所示，该图共有$8$棵生成树：上排$4$棵不含对角边$13$（由四元环删去任一条环边得到）；下排$4$棵包含对角边$13$（顶点$2$从$12,23$中任选一条接入，顶点$4$从$34,41$中任选一条接入）。
+\end{example}
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/sparsification-spanning-trees/figure.pdf}
+  \caption{四点五边单位权图的全部$8$棵生成树。上排$4$棵不含对角边$13$，下排$4$棵包含对角边$13$。每条环边（如$12$）在$8$棵树中出现$5$次，故$R_{1,2}=5/8$；对角边$13$在$8$棵树中出现$4$次，故$R_{1,3}=4/8=1/2$。}
+  \label{fig:sparsification-spanning-trees}
+\end{BookInlineFigure}
+
+由于各边电导均为$1$，生成树包含概率$\mathbb P(e\in T)=c_e R_e$直接等于有效电阻$R_e$。观察图~\ref{fig:sparsification-spanning-trees}：以环边$12$为例，上排$4$棵树中有$3$棵包含它，下排$4$棵树中有$2$棵包含它，共计出现$5$次，故$R_{1,2}=\mathbb P(12\in T)=5/8$；对角边$13$恰好在下排$4$棵树中出现，故$R_{1,3}=\mathbb P(13\in T)=4/8=1/2$。这与第~\ref{sec:electrical-series-parallel}小节通过串并联和拉普拉斯方程算出的结果完全一致。
+
+\subsubsection{Foster定理}
+\label{sec:graph-foster-theorem}
+
+对单条边而言，$c_e R_e\in(0,1]$给出了它在随机生成树中的出现概率；如果把全图所有边的$c_e R_e$加起来，总和是多少？由于每一棵生成树都恰好包含$n-1$条边，全图所有边的包含概率之和必定恒等于生成树的边数$n-1$——这就是电网络理论中著名的\term{Foster定理}（Foster's theorem）。
+
+\begin{theorem}[Foster定理]
+\label{thm:graph-foster-theorem}
+对包含$n$个顶点的连通正权网络$\mathcal G=(V,E,c)$，全体边的电导与有效电阻乘积之和恒等于$n-1$：
+\begin{equation}
+\sum_{e\in E}c_eR_e=n-1.
+\label{eq:graph-foster-sum}
+\end{equation}
+更一般地，若网络有$k$个正权连通分量，则$\sum_{e\in E}c_e R_e = n-k$。
+\end{theorem}
+
+\begin{proof}
+我们给出两种相互印证的证明：一种利用随机生成树的期望，另一种利用拉普拉斯伪逆的矩阵迹。
+
+方法一（生成树边数期望法）：在按式~\eqref{eq:graph-weighted-tree-distribution}抽取的随机生成树$T$中，对每条边$e\in E$定义零一指示随机变量$I_e(T)=\mathbb I(e\in T)$。由于任一棵生成树$T$恒有$n-1$条边，必有恒等式$\sum_{e\in E}I_e(T)=n-1$。对等式两边取数学期望，利用期望的线性性及定理~\ref{thm:graph-tree-edge-probability}的$\mathbb E[I_e(T)]=\mathbb P(e\in T)=c_e R_e$，立得
+\[
+\sum_{e\in E}c_eR_e = \sum_{e\in E}\mathbb P(e\in T) = \mathbb E\!\left[\sum_{e\in E}I_e(T)\right] = n-1.
+\]
+
+方法二（拉普拉斯伪逆求迹法）：将$R_e=\bm b_e^\top\bm L^\dagger\bm b_e=\operatorname{tr}(\bm L^\dagger\bm b_e\bm b_e^\top)$代入求和，利用迹的线性性及$\bm L=\sum_{e\in E}c_e\bm b_e\bm b_e^\top$，可得
+\[
+\sum_{e\in E}c_eR_e
+=\operatorname{tr}\!\left(\bm L^\dagger\sum_{e\in E}c_e\bm b_e\bm b_e^\top\right)
+=\operatorname{tr}(\bm L^\dagger\bm L).
+\]
+在连通图上，$\bm L^\dagger\bm L=\bm I-\frac{1}{n}\bm 1\bm 1^\top$是向$n-1$维零和子空间$\bm 1^\perp$上的正交投影矩阵，其迹等于子空间维数$\operatorname{dim}(\bm 1^\perp)=n-1$（当图有$k$个连通分量时，$\bm L$的零空间维数为$k$，投影矩阵的秩与迹均为$n-k$）。
+\end{proof}
+
+用四点五边单位权图核对Foster定理：$4$条环边的$c_e R_e$均为$5/8$，对角边的$c_e R_e$为$1/2$，五条边相加得$4\times\frac58+\frac12=3=n-1$。又如在单位权完全图$K_n$中，全部$\binom{n}{2}$条边地位完全对称，由Foster定理无需解方程即可直接读出任意两点间的有效电阻为$R_e=(n-1)/\binom{n}{2}=2/n$。在第~\ref{chap:graph-sparsification}章中，Foster定理给出的归一化常数$\sum_{e\in E}c_e R_e=n-1$将直接把$\{c_e R_e\}_{e\in E}$转化为边抽样概率分布$p_e=\frac{c_e R_e}{n-1}$。

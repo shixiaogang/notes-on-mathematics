@@ -152,7 +152,7 @@ $\sigma$用到的每条边都取等号，式~\eqref{eq:graph-opt-assignment-lowe
 \begin{enumerate}
   \item 若某行没有允许边，报告不可行；否则置$u_i$为第$i$行最小允许成本、$v_j=0$，伙伴全为空。
   \item 若所有行都已匹配，转第6步。否则取自由行$i_0$，置$S=\{i_0\}$、$T=\varnothing$，对每列$j$置$\mathrm{slack}(j)=c_{i_0,j}-u_{i_0}-v_j$（不允许时为$+\infty$）、$\mathrm{from}(j)=i_0$。
-  \item 若有$j\notin T$使$\mathrm{slack}(j)=0$：把$j$加入$T$，前驱置为$\mathrm{from}(j)$。若$j$自由，转第5步；否则把$j$的伙伴行$i'$加入$S$，对每个$j'\notin T$，若$c_{i',j'}-u_{i'}-v_{j'}<\mathrm{slack}(j')$，就更新$\mathrm{slack}(j')$并置$\mathrm{from}(j')=i'$；重复第3步。
+  \item 若有$j\notin T$使$\mathrm{slack}(j)=0$：把$j$加入$T$，前驱置为$\mathrm{from}(j)$。若$j$自由，转第5步；否则把$j$的伙伴行$i'$加入$S$，对每个满足$j'\notin T$且$(i',j')\in E$的列，若$c_{i',j'}-u_{i'}-v_{j'}<\mathrm{slack}(j')$，就更新$\mathrm{slack}(j')$并置$\mathrm{from}(j')=i'$；重复第3步。
   \item 若所有$j\notin T$都有$\mathrm{slack}(j)=+\infty$，报告不可行；否则按式~\eqref{eq:graph-opt-hungarian-delta}求$\delta$，$S$中行标号加$\delta$、$T$中列标号减$\delta$、树外列松弛量减$\delta$，回到第3步。
   \item 从自由列$j$开始，令$i$为$j$的前驱、$j''$为$i$原来的伙伴，把$i$改配给$j$，再令$j\gets j''$，直到$i=i_0$；回到第2步。
   \item 输出伙伴数组与标号$(\bm u,\bm v)$。
@@ -221,7 +221,7 @@ $i\in S$、$j\notin T$时，剩余量减$\delta$；由$\delta$是这类边剩余
 
 报告不可行也是正确的：若树外列的松弛量全为$+\infty$，$S$中各行的允许列全部落在$T$中，$|S|$行只能使用$|T|=|S|-1$个列，不可能各配一个不同的列。
 
-有限终止由计数得到。每次调标后至少有一列入树；若它自由就立即增广，否则它的伙伴行入树。树中的列至多$r$个，所以一个自由行至多经过$r$次调标就增广。每次增广使匹配增加一对，至多$r$次。
+有限终止由计数得到。每次调标后至少有一列入树；若它自由就立即增广，否则它的伙伴行入树。树中的列至多$r$个，所以一个自由行至多经过$r$次调标便完成增广或报告不可行。每次增广使匹配增加一对，至多$r$次。
 
 对$r$阶稠密成本表，一轮建树中至多$r$行加入$S$，每行扫描并更新松弛量$O(r)$；至多$r$次扩树或调标，每次在树外列中找零或求$\delta$并统一减$\delta$为$O(r)$。一轮为$O(r^2)$，$r$轮共$O(r^3)$次实数运算。
 
@@ -384,7 +384,7 @@ $\varepsilon=0$时，它就是“匹配边是紧边”的价格写法，下面�
 \[
   C(\sigma)\leq\sum_iu_i+\sum_jv_j+r\varepsilon\leq C^\star+r\varepsilon.
 \]
-$C(\sigma)\geq C^\star$是最优值的定义。成本为整数时，$C(\sigma)-C^\star$是小于$r\varepsilon<1$的非负整数，只能为$0$。
+$C(\sigma)\geq C^\star$是最优值的定义。成本为整数时，$C(\sigma)-C^\star$是不超过$r\varepsilon<1$的非负整数，只能为$0$。
 \end{proof}
 
 一般的实数成本在固定的正$\varepsilon$下只有这个误差界。两人例中$r\varepsilon=1/2<1$，成本为整数，所以得到的成本$3$精确最优。
@@ -410,7 +410,7 @@ $C(\sigma)\geq C^\star$是最优值的定义。成本为整数时，$C(\sigma)-C
 
 按总出价次数$B$分析稠密实现：每次出价扫描一行为$O(r)$，读入矩阵为$O(r^2)$，总时间$O(r^2+rB)$；价格、持有者、指派与队列为$O(r)$，成本表另占$O(r^2)$。
 
-由上面的界，整数成本且取$\varepsilon=1/(r+1)$时，$B=O(r^2\Delta)$，总时间为$O(r^3\Delta)$，随成本范围增长，不能把KM算法的$O(r^3)$直接套用到Auction算法上。$\varepsilon$越小，误差界越紧，但需要的出价可能越多；更强的复杂度界依赖下一小节的缩放策略\scite{math-graph-bertsekas2025auction-ch2}。
+由上面的界，整数成本且取$\varepsilon=1/(r+1)$时，$B=O(r+r^2\Delta)$，总时间为$O(r^2+r^3\Delta)$，随成本范围增长，不能把KM算法的$O(r^3)$直接套用到Auction算法上。$\varepsilon$越小，误差界越紧，但需要的出价可能越多；更强的复杂度界依赖下一小节的缩放策略\scite{math-graph-bertsekas2025auction-ch2}。
 
 \subsubsection{误差缩放与适用边界}
 

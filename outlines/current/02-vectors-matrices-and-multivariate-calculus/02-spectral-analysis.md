@@ -886,6 +886,10 @@
 
 5. 称其为最小最大原理，说明Weyl界也可由它推出；$k=1,d$时化为单位球面上的极值，第18章称$\bm x^\top\bm S\bm x/\bm x^\top\bm x$为Rayleigh商并研究它；与迹极值（刻画前$k$个特征值之和）区分。
 
+6. 引入$r$阶主子矩阵$\bm S_0$，将$\mathbb R^r$补零嵌入为$\mathbb R^d$的$r$维坐标子空间$\mathcal U$，说明其上二次型与范数同原矩阵一致。
+
+7. 陈述并证明Cauchy交错定理`thm:ls-cauchy-interlacing`（式`eq:ls-cauchy-interlacing`）：分别在$\mathcal U$内与全空间$\mathbb R^d$内应用Courant--Fischer定理的第一式与第二式，由扩大可选子空间范围导出$\lambda_i\geq\mu_i\geq\lambda_{i+d-r}$及$r=d-1$时的严格交错。
+
 #### 9.2.3 谱值区间与正定性保证
 
 1. 读出误差区间$[\lambda_k(\bm S)-\varepsilon,\lambda_k(\bm S)+\varepsilon]$，适用于重特征值，但它是绝对误差界。
@@ -1087,7 +1091,7 @@
 
 2. 归纳输入误差：绝对放大$\sigma_{\max}$、相对条件数、矩阵条件数$\kappa_2$的含义与不描述的内容。
 
-3. 归纳矩阵误差下特征值与奇异值的区间、符号与正定性、秩下界、到奇异矩阵的距离与有效秩。
+3. 归纳矩阵误差下特征值与奇异值的区间、符号与正定性、主子矩阵特征值的Cauchy交错界、秩下界、到奇异矩阵的距离与有效秩。
 
 4. 归纳子空间偏转的谱隙界及重根、奇异子空间的情形。
 

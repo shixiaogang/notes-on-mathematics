@@ -1,92 +1,171 @@
 \section{遍历时间}
 \label{sec:graph-walk-cover}
 
-想象每到一个顶点就给它做上记号。走过已标记的顶点花了一步但没有新记号。遍历问题关心最后一个记号何时出现。
+上一节考察首次到达\emph{单个}指定目标顶点的等待时间；如果我们要求棋子把全图\emph{所有}$n$个顶点全部至少访问一遍（就像每到一个新顶点就盖一个章，直到集齐全部$n$个章为止），平均需要走多少步？这就是随机游走的\emph{遍历时间}问题。
 
-\subsection{遍历时间的计算}
-\label{sec:graph-walk-cover-computation}
-
-把起点计为已访问，定义\term{遍历时间}（cover time）$\tau_{\mathrm{cov}}$，分别记从$i$出发的遍历期望$C_i$和最坏起点的期望$C$，
+\begin{definition}[遍历时间]
+\label{def:graph-walk-cover}
+设$(X_t)_{t\geq 0}$为图上的随机游走。定义首次访问完全部顶点集$V$的时刻为\term{遍历时间}（cover time）：
 \begin{equation}
 \begin{aligned}
-\tau_{\mathrm{cov}}&=\inf\{t\ge0:\{X_0,\ldots,X_t\}=V\},\\
-C_i&=\mathbb{E}_i[\tau_{\mathrm{cov}}],
-\qquad C=\max_i C_i.
+\tau_{\mathrm{cov}}&=\inf\bigl\{t\ge0:\{X_0,X_1,\ldots,X_t\}=V\bigr\},\\
+C_u&=\mathbb{E}_u[\tau_{\mathrm{cov}}],
+\qquad C=\max_{u\in V} C_u,
 \end{aligned}
 \label{eq:graph-walk-cover-definition}
 \end{equation}
-遍历要求所有顶点都被访问，不要求每条边都经过。
+其中$C_u$表示从起点$X_0=u$出发的遍历时间期望（起点$u$在$t=0$时即算作已访问），最坏起点下的期望$C$称为图$\mathcal G$的遍历时间。
+\end{definition}
 
-\paragraph{完全图上的逐阶段收集}
+本节先在几类典型图上直接算出遍历时间的精确值与量级，接着建立连接遍历时间与首达时间的\emph{Matthews定理}，最后利用有效电阻与生成树深度优先巡游证明一般图的生成树遍历上界。
 
-在$K_n$的单位权游走中，若已经标记了$k$个顶点，当前顶点之外有$n-1$个等可能的去处，其中$n-k$个尚未标记。一步找到新顶点的概率为$p=(n-k)/(n-1)$。
+\subsection{典型图的遍历时间}
+\label{sec:graph-walk-cover-computation}
 
-只要这一步没有找到新顶点，记号数仍为$k$，下一步的情况完全一样。等待时间的期望$H$满足
+\paragraph{1. 完全图$K_n$（优惠券收集问题，$C=(n-1)H_{n-1}\sim n\ln n$）}
+
+在单位权完全图$K_n$上从任意顶点出发，遍历过程等价于经典的\emph{优惠券收集问题}（coupon collector's problem）。设当前已经访问过$k$个不同顶点（$1\leq k\leq n-1$），还有$n-k$个未访问顶点。由于当前顶点连接着其余全部$n-1$个顶点，下一步踩中未访问新顶点的成功概率恒为
 \[
-H=1+(1-p)H.
+  p_k = \frac{n-k}{n-1}.
 \]
-式中$1$是必走的一步，$1-p$是失败后继续等$H$步。因此$H=1/p$。
-
-将从$k$个记号增加到$k+1$个所需的平均步数$1/p=(n-1)/(n-k)$，按$k$从$1$到$n-1$相加。令$j=n-k$表示还未访问的顶点数，得到
+一旦这一步踩中已访问顶点（概率$1-p_k$），已访问集合的大小仍为$k$，下一步面对的成功概率依旧是$p_k$。因此，从已访问$k$个顶点推进到$k+1$个顶点所需的步数服从参数为$p_k$的几何分布，其期望为$\frac{1}{p_k}=\frac{n-1}{n-k}$。将$k=1,2,\ldots,n-1$这$n-1$个阶段的平均等待步数相加，并令$j=n-k$（剩余未访问顶点数），立得完全图的遍历时间：
 \begin{equation}
-C_i=(n-1)\sum_{j=1}^{n-1}\frac{1}{j}.
+C_u = C = \sum_{k=1}^{n-1}\frac{n-1}{n-k} = (n-1)\sum_{j=1}^{n-1}\frac{1}{j} = (n-1)H_{n-1} = \Theta(n\log n),
 \label{eq:graph-walk-cover-complete}
 \end{equation}
-例如$K_4$的三段期望为$3/3=1$、$3/2$、$3/1=3$，合计$11/2$步。
+其中$H_{n-1}=\sum_{j=1}^{n-1}\frac1j=\ln n+\gamma_{\mathrm{Euler}}+O(1/n)$为调和数。例如在$K_4$上，$C=3\times(1+\frac12+\frac13)=\frac{11}{2}$步。
 
-\paragraph{路径端点的遍历}
+\paragraph{2. 星图$K_{1,n-1}$（中心往返收集叶子，$C\sim 2n\ln n$）}
 
-在单位权$n$点路径上从端点$1$出发，首次到达另一端$n$之前必然经过所有中间顶点。因此$C_1=h_{1,n}$。两端之间串联了$n-1$条单位电阻边，$R_{1,n}=n-1$，总加权度$\operatorname{vol}(V)=2(n-1)$。路径反转后形状一样，所以$h_{1,n}=h_{n,1}$，由往返公式$2h_{1,n}=2(n-1)(n-1)$，得
+在含$1$个中心$c$与$n-1$片叶子的星图上（$n\geq3$），若从中心$c$出发，每访问一片叶子再退回中心恰好耗时$2$步（最后一片叶子命中即停，无须退回中心）。每次从中心出发，等概率$\frac{1}{n-1}$迈向某片叶子，因此集齐全部$n-1$片叶子所需的出发次数同样是优惠券收集问题，期望次数为$(n-1)H_{n-1}$，对应遍历期望为
 \[
-C_1=h_{1,n}=(n-1)^2.
+  C_c = 2(n-1)H_{n-1} - 1 \sim 2n\ln n.
 \]
-若起点在内部，遍历还需要覆盖两端，下一小节给出的统一上界可以处理任意起点。
+若从某片叶子出发，第一步必到中心且已顺带访问了起点叶子，剩余$n-2$片叶子的收集期望为$C_{\mathrm{leaf}}=2(n-1)H_{n-2}$，最坏遍历时间仍为$C=C_c=\Theta(n\log n)$。
 
-\subsection{生成树上界}
+\paragraph{3. 路径图$P_n$与环图$C_n$（一维区间拓宽，$C=\Theta(n^2)$）}
+
+在单位权路径$1\!-\!2\!-\!\cdots\!-\!n$上，若从左端点$1$出发，由于路径没有旁支，棋子在首次到达右端点$n$的途中必然已经顺次踩过了全部中间顶点$2,3,\ldots,n-1$。因此从端点出发的遍历时间直接等于两端首达时间：
+\[
+  C_1 = h_{1,n} = (n-1)^2.
+\]
+若从路径内部顶点出发，则需要先到达一端、再从该端跨越整条路径到达另一端，故最坏遍历时间为$\Theta(n^2)$。
+
+在$n$元环$C_n$上，已访问的顶点集始终构成环上一段连续的弧。当已访问弧包含$k$个顶点时，棋子位于弧的某个端点，要将已访问弧拓宽到$k+1$个顶点，等价于在区间$\{0,1,\ldots,k+1\}$上从$1$或$k$出发，首次命中吸收端点$0$或$k+1$。该对称游走的退出期望为$1\cdot k=k$步。对$k=1,2,\ldots,n-1$累加即得环图的精确遍历时间：
+\[
+  C(C_n) = \sum_{k=1}^{n-1} k = \frac{n(n-1)}{2} = \Theta(n^2).
+\]
+
+\paragraph{4. 棒棒糖图（Lollipop图，最坏遍历时间$C=\Theta(n^3)$）}
+
+在由$K_{n/2}$与长为$n/2$的路径拼接而成的棒棒糖图上，遍历全图至少需要到达路径最末端的叶子$v$，故$C\geq\max_{u}h_{u,v}=\Theta(n^3)$。
+
+\subsection{遍历时间与首达时间：Matthews定理}
+\label{sec:graph-walk-matthews}
+
+观察完全图$K_n$的遍历时间公式$C=(n-1)H_{n-1}$可以发现：其中因子$n-1$恰好是完全图上两点间的首达时间$h_{i,j}$，而因子$H_{n-1}=\sum_{k=1}^{n-1}\frac1k$来自优惠券收集的调和级数。Matthews定理将这一关系推广到有限连通图：遍历时间$C$都可以由两点间的最大首达时间$h_{\max}$与最小首达时间$h_{\min}$乘以调和数$H_{n-1}$从上下两侧夹住。
+
+\begin{theorem}[Matthews定理]
+\label{thm:graph-walk-matthews}
+设有限无向图$\mathcal G=(V,E,w)$的正权支撑连通，顶点数$n\geq 2$，记第$m$个调和数为$H_m=\sum_{r=1}^m\frac1r$。则：
+\begin{enumerate}
+\item \emph{Matthews上界}：记全图所有顶点对的最大首达期望为$h_{\max}=\max_{i,j\in V}h_{i,j}$，则遍历时间满足
+\begin{equation}
+  C \;\leq\; h_{\max}\,H_{n-1} \;=\; h_{\max}\sum_{k=1}^{n-1}\frac{1}{k}.
+  \label{eq:graph-walk-matthews-upper}
+\end{equation}
+\item \emph{Matthews下界}：对任意包含$k\geq 2$个顶点的子集$K\subseteq V$，记$K$内部不同顶点对的最小首达期望为$h_{\min}(K)=\min_{u,v\in K,u\neq v}h_{u,v}$，则遍历时间满足
+\begin{equation}
+  C \;\geq\; \max_{\substack{K\subseteq V\\|K|=k\geq 2}}\,h_{\min}(K)\,H_{k-1}.
+  \label{eq:graph-walk-matthews-lower}
+\end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+证明的核心思想是引入一个\emph{与随机游走相互独立的随机顶点排列}（随机指针耦合），将一般图上的遍历过程转化为$n-1$个阶段的递增停时序列。
+
+第一步：构造随机排列与阶段停时。固定任意起点$u\in V$。在$V\setminus\{u\}$的$n-1$个非起点顶点上，独立于随机游走$(X_t)_{t\geq 0}$均匀随机抽取一个排列$\sigma=(\sigma_1,\sigma_2,\ldots,\sigma_{n-1})$。对每个$k=1,2,\ldots,n-1$，定义前$k$个目标的子集$A_k=\{\sigma_1,\ldots,\sigma_k\}$，并定义游走覆盖完整个子集$A_k$的时刻：
+\[
+  T_k = \max_{1\leq r\leq k}\tau_{\sigma_r}.
+\]
+当$k=n-1$时，$A_{n-1}=V\setminus\{u\}$，由于起点$u$在$t=0$时已访问，必有$T_{n-1}=\tau_{\mathrm{cov}}$。因此，全图遍历时间可以按阶段拆解为望远镜求和：
+\begin{equation}
+  \tau_{\mathrm{cov}} = T_{n-1} = T_1 + \sum_{k=2}^{n-1}(T_k - T_{k-1}).
+  \label{eq:matthews-telescoping}
+\end{equation}
+
+第二步：分析单阶段增量$T_k-T_{k-1}$的条件期望。考察第$k$个阶段（$2\leq k\leq n-1$）：在时刻$T_{k-1}$时，子集$A_{k-1}=\{\sigma_1,\ldots,\sigma_{k-1}\}$中的所有顶点都刚刚被全部访问完毕。此时新加入的第$k$个顶点$\sigma_k$有两种可能：
+\begin{itemize}
+\item 若在时刻$T_{k-1}$或之前，游走已经顺带访问过$\sigma_k$（即$\tau_{\sigma_k}\leq T_{k-1}$），则$A_k$在时刻$T_{k-1}$就已经被完全覆盖，此时$T_k=T_{k-1}$，增量$T_k-T_{k-1}=0$。
+\item 若在时刻$T_{k-1}$时，$\sigma_k$尚未被访问，则$\sigma_k$必然是整个集合$A_k=\{\sigma_1,\ldots,\sigma_k\}$中\emph{唯一一个最后被访问的顶点}。此时在时刻$T_{k-1}$，棋子正位于$A_{k-1}$中某个顶点$X_{T_{k-1}}\in A_{k-1}$上，剩余的等待时间$T_k-T_{k-1}$恰好就是从当前位置$X_{T_{k-1}}$出发首次命中$\sigma_k$的时间，其条件期望等于$h_{X_{T_{k-1}},\sigma_k}$。
+\end{itemize}
+
+记$E_k=\{\tau_{\sigma_k}>T_{k-1}\}$。固定集合$A_k$和整条游走轨迹后，$A_k$中最后被访问的顶点已经确定；独立均匀排列使它位于第$k$个位置的概率为$1/k$，所以无条件概率$\mathbb P(E_k)=1/k$。这里不能再断言给定停时历史后的条件概率仍为$1/k$，因为是否已访问$\sigma_k$在该历史中已经可知。
+
+令$\mathcal F_{T_{k-1}}$包含完整排列及游走至$T_{k-1}$的历史。由强Markov性质，正确的条件期望等式为
+\begin{equation}
+  \mathbb E[T_k-T_{k-1}\mid\mathcal F_{T_{k-1}}]
+  =\mathbf1_{E_k}\,h_{X_{T_{k-1}},\sigma_k}.
+  \label{eq:matthews-conditional-increment}
+\end{equation}
+再取期望，并在$E_k$上使用首达期望的上下界，就可结合$\mathbb P(E_k)=1/k$估计每个阶段的平均增量。
+
+第三步：导出上下界。在式~\eqref{eq:matthews-conditional-increment}中，在事件$E_k$上有$X_{T_{k-1}}\neq\sigma_k$，一方面恒有$h_{X_{T_{k-1}},\sigma_k}\leq h_{\max}$（且第一阶段$\mathbb E[T_1]=\mathbb E[h_{u,\sigma_1}]\leq h_{\max}$），代入式~\eqref{eq:matthews-telescoping}求期望即得上界：
+\[
+  C_u = \mathbb E[T_1] + \sum_{k=2}^{n-1}\mathbb E[T_k - T_{k-1}] \leq h_{\max}\left(1 + \sum_{k=2}^{n-1}\frac{1}{k}\right) = h_{\max}\,H_{n-1}.
+\]
+另一方面，对任意子集$K\subseteq V$（$|K|=k\geq 2$），取起点$u\in K$并在$K\setminus\{u\}$的$k-1$个顶点上作随机排列，由于覆盖全图$V$的时间$\tau_{\mathrm{cov}}$必然不小于覆盖子集$K$的时间$T_{k-1}^K$，且在每一步都有$h_{X_{T_{r-1}},\sigma_r}\geq h_{\min}(K)$，同法求和即得下界：
+\[
+  C \geq C_u \geq \mathbb E[T_{k-1}^K] \geq h_{\min}(K)\sum_{r=1}^{k-1}\frac{1}{r} = h_{\min}(K)\,H_{k-1}.\qedhere
+\]
+\end{proof}
+
+用典型图核对Matthews定理：在完全图$K_n$上，取$K=V$，所有异点首达时间均为$h_{\min}=h_{\max}=n-1$，Matthews上下界同时给出$(n-1)H_{n-1}$，得到精确值式~\eqref{eq:graph-walk-cover-complete}。在星图$K_{1,n-1}$上，取$K$为全部$n-1$片叶子组成的子集（$|K|=n-1$），任意两片不同叶子间的首达时间恒为$h_{\min}(K)=2n-2$，Matthews下界直接给出$C\geq(2n-2)H_{n-2}\sim 2n\ln n$，同样渐近紧确。
+
+\subsection{遍历时间的生成树界}
 \label{sec:graph-walk-cover-tree-bound}
 
-一般图上很难直接按已访问集合分阶段计算，因为同样数量的记号可能分布在完全不同的区域。一种做法是：指定一份覆盖全图的访问次序，估计完成它所需的时间。由于实际遍历可能更早结束，这份次序给出的是遍历时间的上界。
+Matthews界在完全图上达到等号，但在路径$P_n$上，由于两端最大首达时间为$h_{\max}=(n-1)^2$，Matthews上界给出的是$O(n^2\log n)$，比真实遍历时间$\Theta(n^2)$多出了一个$\log n$因子（因为在线性路径上访问端点途中必然顺带扫过所有中间点，无须经历$\log n$次独立的优惠券收集）。为了消除这一对数因子并获得所有图上的通用多项式上界，我们可以借助\emph{生成树的深度优先巡游}与有效电阻。
 
-以起点$u$为根取一棵生成树$T$，沿深度优先次序走完这棵树。每条树边去一次、回一次，沿途列出必须依次命中的目标。
+设想以起点$u$为根在图上任取一棵生成树$T$，按照深度优先搜索（DFS）的顺序绕树走一圈回到$u$。在这趟闭合巡游中，$T$的每一条树边$\{a,b\}$都在去程$a\to b$和返程$b\to a$中各被跨越恰好一次，且沿途必然访问遍了全图所有顶点（图~\ref{fig:graph-walk-cover-tree-targets}以四点五边图为例展示了生成树$1\!-\!2\!-\!3\!-\!4$诱导的六个顺次等待目标$2\to 3\to 4\to 3\to 2\to 1$）。
 
-例如四点环加对角线$\{1,3\}$，选择树路径$1\!-\!2\!-\!3\!-\!4$，从$1$出发的目标名单为$2,3,4,3,2,1$。这份名单只规定停止条件：先等到$2$、再等到$3$，以此类推。等待期间，棋子仍在原图上随机走，可以经过对角线。图~\ref{fig:graph-walk-cover-tree-targets}把所选的树和由它生成的名单放在一起。
+由于随机游走集齐所有顶点的真实时刻$\tau_{\mathrm{cov}}$一定不会晚于按顺序依次命中这$2(n-1)$个目标的时刻，将各段等待时间的期望按树边配对，每一对去程与返程之和恰好就是树边两端的往返时间$h_{a,b}+h_{b,a}=\operatorname{vol}(V)R_{a,b}$。
 
 \begin{BookInlineFigure}
 \centering
 \includegraphics[width=106.726mm]{figures/03-graphs/05-matrices-and-spectra/tikz/walk-examples/cover-tree-targets.pdf}
-\caption{用四点环加对角线$\{1,3\}$说明遍历上界。粗实线是所选树边，虚线是原图的其余边。下方从白底的起点$1$开始，箭头依次指向六个等待目标。实际游走仍可沿原图的所有边转移。}
+\caption{用四点五边图上的生成树巡游构造遍历时间上界。粗实线为所选生成树$T$的边，虚线为其余边；下方列出从起点$1$出发按深度优先巡游依次等待命中的六个目标顶点（每条树边往返各一次）。}
 \label{fig:graph-walk-cover-tree-targets}
 \end{BookInlineFigure}
 
-命中当前目标后，棋子的位置已经确定。下一段等待的期望就是从该位置出发的首达期望，与此前走过哪些顶点无关。
-
-按名单完成全部目标时，每个顶点一定都已访问过。实际遍历可能更早结束——某些顶点在正式等到它之前已经顺路走过。因此名单给出的总等待时间是一个上界。
-
-将每条树边的去程和返程配对，利用往返公式~\eqref{eq:graph-walk-commute-time}，得到
+\begin{theorem}[遍历时间的生成树与有效电阻上界]
+\label{thm:graph-walk-cover-tree-bound}
+设有限无向图的正权支撑连通，$T$为正权支撑的任意一棵生成树。则从任意起点$u\in V$出发的遍历期望满足
 \begin{equation}
 C_u\le\sum_{\{a,b\}\in T}(h_{a,b}+h_{b,a})
-=\operatorname{vol}(V)\sum_{\{a,b\}\in T}R_{a,b}.
+=\operatorname{vol}(V)\sum_{\{a,b\}\in T}R_{a,b}
+\le\operatorname{vol}(V)\sum_{\{a,b\}\in T}\frac{1}{w_{a,b}}.
 \label{eq:graph-walk-cover-resistance}
 \end{equation}
-
-每条树边$\{a,b\}$本身已经存在于图中。将全部单位电流送过这条边，可行流的耗散为$1/w_{a,b}$。有效电阻是所有单位流的最小耗散，因此$R_{a,b}\le1/w_{a,b}$。
-
-对无权图，每条树边的$R_{a,b}\le1$，树有$n-1$条边，总加权度为$2m$，于是
+特别地，对具有$n$个顶点、$m$条边的连通简单单位权无向图，遍历时间满足
 \begin{equation}
-C\le2m(n-1).
+C\le2m(n-1) < n^3.
 \label{eq:graph-walk-cover-unweighted}
 \end{equation}
-路径图的$m=n-1$，从端点出发的下界$(n-1)^2$与上界$2(n-1)(n-1)$同阶，因此最坏起点的遍历期望为$\Theta(n^2)$。
+\end{theorem}
 
-\paragraph{三次方量级的构造}
-
-取一个$k$点完全图，在其中一个顶点$u$上接出一条含$\ell$条边的路径，末端为$v$。路径上所有边串联在$u,v$之间，完全图只在$u$处与路径相接，无法分担通往$v$的电流，因此$R_{u,v}=\ell$。
-
-完全图已有$k(k-1)/2$条边，路径增加$\ell$条，每条边两端都计入度数，总加权度为$k(k-1)+2\ell$。
-
-从$v$出发首次到达$u$以前，棋子只能在路径上行走，故$h_{v,u}=\ell^2$。利用往返公式减去这一方向，得
+\begin{proof}
+以$u$为根对生成树$T$作深度优先巡游，得到长度为$2(n-1)$的闭合顶点序列$u=v_0,v_1,\ldots,v_{2n-2}=u$，其中每条树边$\{a,b\}\in T$在正反两个方向$a\to b$与$b\to a$上各出现恰好一次。在随机游走中定义递增停时序列：$T_0=0$，对$r=1,\ldots,2n-2$令$T_r=\inf\{t\geq T_{r-1}:X_t=v_r\}$。由强Markov性质，$\mathbb E[T_r-T_{r-1}]=h_{v_{r-1},v_r}$。当到达时刻$T_{2n-2}$时，全图所有顶点均已被访问，故$\tau_{\mathrm{cov}}\leq T_{2n-2}$。两边取期望并将每条树边的去程与返程配对，结合往返时间定理~\ref{thm:graph-walk-commute-resistance}得
 \[
-h_{u,v}=\operatorname{vol}(V)\,R_{u,v}-h_{v,u}
-=(k(k-1)+2\ell)\ell-\ell^2=k(k-1)\ell+\ell^2.
+\begin{aligned}
+  C_u=\mathbb E_u[\tau_{\mathrm{cov}}]\leq\mathbb E_u[T_{2n-2}]
+  &=\sum_{r=1}^{2n-2}h_{v_{r-1},v_r}\\
+  &=\sum_{\{a,b\}\in T}(h_{a,b}+h_{b,a})
+  =\operatorname{vol}(V)\sum_{\{a,b\}\in T}R_{a,b}.
+\end{aligned}
 \]
-遍历至少要到达$v$。当$k$与$\ell$都和$n=k+\ell$同阶时，这一项给出$\Theta(n^3)$的下界，与式~\eqref{eq:graph-walk-cover-unweighted}的上界量级一致。大量边集中在一个团里，增加了找到路径入口前的等待。
+由定理~\ref{thm:electrical-resistance-monotonicity}，每条树边两端的有效电阻不超过该边自身的电阻$R_{a,b}\leq 1/w_{a,b}$，代入即得式~\eqref{eq:graph-walk-cover-resistance}。在单位权图上，$\operatorname{vol}(V)=2m$，每条边$w_{a,b}=1$，生成树共有$|E(T)|=n-1$条边，故$C_u\leq 2m(n-1)$对所有起点$u$成立。
+\end{proof}
+
+在路径图$P_n$上，$m=n-1$，定理~\ref{thm:graph-walk-cover-tree-bound}直接给出$C\leq 2(n-1)^2=\Theta(n^2)$，消去了Matthews上界中的多余对数因子；而在棒棒糖图上，真实遍历时间$\Theta(n^3)$恰好达到了式~\eqref{eq:graph-walk-cover-unweighted}的$2m(n-1)=\Theta(n^3)$量级，说明生成树上界在一般图上也是紧的。

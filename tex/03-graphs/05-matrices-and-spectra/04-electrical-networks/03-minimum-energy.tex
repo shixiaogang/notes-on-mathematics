@@ -1,95 +1,135 @@
 \section{能量最小原理}
 \label{sec:electrical-minimum-energy}
 
-同样从顶点$1$送入一单位电流、从顶点$3$取出，可以有不同的分法。一种是把整股电流全部交给对角边，沿$1\to3$直走。另一种是让一半走对角边，另一半经过顶点$2$：先从$1$到$2$输送$1/2$，再从$2$到$3$输送$1/2$，对角边也输送$1/2$。两种分法在顶点$1$和$3$的净流出都是$1$和$-1$，在顶点$2$和$4$的净流出都是零——守恒条件满足得一样好。
+如果只要求满足Kirchhoff电流守恒定律$\bm B\bm f=\bm b$，在含有环路的网络中往往存在无穷多种不同的分流方案。为什么真实电路偏偏会选择满足Ohm定律$\bm f_\star=\bm C\bm B^\top\bm v$的那一种分流？本节先引入电阻元件上的热功率耗散（焦耳定律），说明每一种电流分配方案都对应一个总体能量耗散成本，然后证明Thomson原理：真实电网络电流恰好是所有满足电流守恒的分流方案中总耗散最小的那一个。
 
-哪种分法更优？我们比较两者的总耗散。一条边的耗散是电流乘压降。由Ohm定律，电阻为$r_e$的边上，压降为$r_e f_e$，耗散因此等于$r_e f_e^2$。电流翻一倍，耗散变成四倍。全网络的总耗散是各条边的贡献之和：
+\subsection{电阻耗散}
+\label{sec:electrical-dissipation-definition}
+
+在物理学中，当电流流过电阻元件时，电荷在电场力推动下从高电势端流向低电势端，克服导体内部阻碍做功，将电能不可逆地转化为热能散发出去，这一现象称为\emph{电阻耗散}（resistive dissipation）或焦耳热效应。
+
+具体而言，考察一条电阻为$r_e = 1/c_e > 0$的边$e\colon i\to j$。若该边流过的电流为$f_e$（单位时间内通过的电荷量），为了推动这股电流通过电阻$r_e$，需要在两端维持的电势差为$\Delta v_e = r_e f_e$（单位电荷损失的电势能）。将单位时间内通过的电荷量$f_e$乘以单位电荷损失的电势能$\Delta v_e$，就得到该电阻元件在单位时间内消耗并转化为热能的功率（称为该边的\emph{耗散功率}；固定单位时间后，数值可与该时段的耗散能量对应）：
+\[
+  P_e = f_e\,\Delta v_e = r_e f_e^2 = \frac{f_e^2}{c_e}.
+\]
+这一公式即为\emph{焦耳定律}（Joule's law）。由于平方项$f_e^2\geq 0$，无论电流$f_e$沿哪个方向流动，只要$f_e\neq 0$，电阻都会产生严格为正的热耗散；而且电流扩大为原来的$2$倍时，该边上的耗散增至原来的$4$倍。
+
+把全图所有正权边的耗散功率相加，就可以为任意给定的边流向量$\bm f\in\mathbb R^m$（无论它是否由某组顶点电势生成）定义全网络的总耗散。
+
+\begin{definition}[电网络流的总耗散]
+\label{def:electrical-dissipation}
+设电网络各正权边$e\in E$的电导为$c_e>0$、电阻为$r_e=1/c_e$，记电导对角矩阵为$\bm C=\operatorname{diag}(c_e\colon e\in E)$。任意边流向量$\bm f\in\mathbb R^m$在网络上的\emph{总耗散}（total dissipation）定义为各边焦耳热功率之和：
 \begin{equation}
   \mathcal E(\bm f)
   = \sum_{e\in E} r_e f_e^2
+  = \sum_{e\in E} \frac{f_e^2}{c_e}
   = \bm f^\top \bm C^{-1} \bm f.
   \label{eq:electrical-dissipation}
 \end{equation}
+\end{definition}
 
-四点图的边电阻都为一。全部走对角边时，只有一条边有电流$1$，耗散为$1^2 = 1$。一半走对角边、一半经顶点$2$时，三条边的电流各为$1/2$，耗散为$3 \times (1/2)^2 = 3/4$。分散在更多支路上，耗散反而更低了。
+特别地，如果边流$\bm f = \bm C\bm B^\top\bm v$是由顶点电势$\bm v\in\mathbb R^n$按照Ohm定律生成的真实电网络电流，则每条边上的耗散为$r_e\bigl(c_e(v_i-v_j)\bigr)^2 = c_e(v_i-v_j)^2$。将其代入式~\eqref{eq:electrical-dissipation}，总耗散恰好等于第~\ref{sec:graph-laplacian-energy}节定义的拉普拉斯二次型（沿边变化能量）：
+\[
+  \mathcal E(\bm C\bm B^\top\bm v)
+  = (\bm C\bm B^\top\bm v)^\top\bm C^{-1}(\bm C\bm B^\top\bm v)
+  = \bm v^\top(\bm B\bm C\bm B^\top)\bm v
+  = \bm v^\top\bm L\bm v
+  = \sum_{\{i,j\}\in E} c_{i,j}(v_i - v_j)^2.
+\]
 
-\paragraph{最小耗散定理}
+用四点五边单位电阻网络（每条边$r_e=c_e=1$）比较同一注入条件下的三种守恒分流方案（图~\ref{fig:electrical-distribution-dissipation}）。设在顶点$1$注入$1$单位电流、从顶点$3$引出$1$单位电流，顶点$2,4$净流出为零：
 
-那么在给定注入条件$\bm B\bm f = \bm b$下，哪种分法的耗散最小？答案正是上一节方程给出的实际电流。
+第一种分流方案（图~\ref{fig:electrical-distribution-dissipation}(a)）将整股单位电流全部集中到对角边$1\to 3$上，其余四条环边电流为零。此时单条边承载电流$1$，总耗散为
+\[
+  \mathcal E(\bm f^{(a)}) = 1\times 1^2 = 1.
+\]
+
+第二种分流方案（图~\ref{fig:electrical-distribution-dissipation}(b)）让一半电流$1/2$走对角边$1\to 3$，另一半电流$1/2$经上侧路径$1\to 2\to 3$绕行。此时共有三条边各承载$1/2$的电流，总耗散降为
+\[
+  \mathcal E(\bm f^{(b)}) = 3\times\Bigl(\frac12\Bigr)^2 = \frac34.
+\]
+
+第三种分流方案（图~\ref{fig:electrical-distribution-dissipation}(c)）是例~\ref{ex:electrical-four-vertex-network}解出的真实电网络电流$\bm f_\star$：对角边承载$1/2$，上下两条外侧支路的四条环边各承载$1/4$。此时总耗散进一步降为
+\[
+  \mathcal E(\bm f_\star) = 1\times\Bigl(\frac12\Bigr)^2 + 4\times\Bigl(\frac14\Bigr)^2 = \frac14 + \frac14 = \frac12.
+\]
+可以看到，由于单边耗散$r_e f_e^2$关于电流是二次严格凸函数，集中电流会增加相应边上的平方项；将电流适当分散到多条并联支路上，反而能够显著降低全网络的总耗散。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[scale=1]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-distribution-dissipation/figure.pdf}
+  \caption{同一单位注入下的三种守恒分流与总耗散对比。顶点$1$注入一单位电流，顶点$3$引出一单位，各边电阻均为$1$。（a）全部走对角边，总耗散$\mathcal E=1$。（b）平分到对角边和上路，总耗散$\mathcal E=3/4$。（c）网络的真实Ohm分流，总耗散最低，为$\mathcal E=1/2$。}
+  \label{fig:electrical-distribution-dissipation}
+\end{BookInlineFigure}
+
+\subsection{Thomson原理}
+\label{sec:electrical-thomson-principle}
+
+下面的定理证明，在所有满足Kirchhoff电流守恒$\bm B\bm f=\bm b$的候选边流中，按照Ohm定律和拉普拉斯方程确定的真实电流$\bm f_\star=\bm C\bm B^\top\bm v$使全网总耗散$\mathcal E(\bm f)$达到唯一最小值。这一变分原理称为\term{Thomson原理}（Thomson's principle）。
 
 \begin{theorem}[Thomson原理]
 \label{thm:electrical-thomson}
-设网络的边电导为正，各正权连通分量内的注入总量为零。对拉普拉斯方程的任一解$\bm v$，由Ohm定律得到的电流$\bm f_\star = \bm C\bm B^\top \bm v$是满足$\bm B\bm f = \bm b$的唯一最小耗散流。最小耗散为
+设电网络各边电导$c_e>0$，且外部注入向量$\bm b\in\mathbb R^n$在每个正权连通分量内的总和为零。设$\bm v$为拉普拉斯方程$\bm L\bm v=\bm b$的任一电势解，则由Ohm定律生成的真实电流$\bm f_\star = \bm C\bm B^\top \bm v$是所有满足守恒约束$\bm B\bm f = \bm b$的边流中唯一的总耗散最小流，且对任意满足$\bm B\bm f=\bm b$的守恒流$\bm f$成立正交分解
 \begin{equation}
-  \mathcal E(\bm f_\star) = \bm b^\top \bm L^\dagger \bm b.
+  \mathcal E(\bm f) = \mathcal E(\bm f_\star) + \mathcal E(\bm f - \bm f_\star).
+  \label{eq:electrical-dissipation-decomposition}
+\end{equation}
+特别地，最小总耗散为
+\begin{equation}
+  \min_{\bm B\bm f = \bm b}\mathcal E(\bm f)
+  = \mathcal E(\bm f_\star)
+  = \bm v^\top\bm L\bm v
+  = \bm b^\top \bm v
+  = \bm b^\top \bm L^\dagger \bm b.
   \label{eq:electrical-minimum-dissipation}
 \end{equation}
 \end{theorem}
 
 \begin{proof}
-取任意另一组守恒流$\bm f$，记它与实际电流的差为$\bm z = \bm f - \bm f_\star$。两者满足同样的注入条件，因此差向量的净流出处处为零：$\bm B\bm z = \bm 0$。按第~\ref{chap:graph-incidence-matrix}章的术语，$\bm z$是一个环流。叠加环流改变各边的流量，但每个顶点的净流出保持原值。
+第一步，将任意候选守恒流分解为真实电流与环流之和。任取满足$\bm B\bm f = \bm b$的边流$\bm f\in\mathbb R^m$，记它与真实电流$\bm f_\star$之差为$\bm z = \bm f - \bm f_\star$。因为$\bm B\bm f = \bm b$且$\bm B\bm f_\star = \bm L\bm v = \bm b$，两者相减得
+\[
+  \bm B\bm z = \bm B\bm f - \bm B\bm f_\star = \bm 0,
+\]
+即差向量$\bm z\in\ker\bm B$是一个环流（叠加环流$\bm z$不改变任何顶点的净流出量）。
 
-将$\bm f = \bm f_\star + \bm z$代入总耗散并展开：
+第二步，展开$\mathcal E(\bm f_\star + \bm z)$并证明交叉项为零。将$\bm f = \bm f_\star + \bm z$代入总耗散式~\eqref{eq:electrical-dissipation}，得
 \[
   \mathcal E(\bm f_\star + \bm z)
+  = (\bm f_\star + \bm z)^\top\bm C^{-1}(\bm f_\star + \bm z)
   = \mathcal E(\bm f_\star) + \mathcal E(\bm z) + 2\bm f_\star^\top \bm C^{-1}\bm z.
 \]
-前两项分别是实际电流自身的耗散和附加环流自身的耗散。关键在于交叉项。
-
-交叉项中，$\bm C^{-1}\bm f_\star$的第$e$项是$r_e f_{\star,e}$，也就是该边的压降$v_i - v_j$。所以
+在交叉项中，代入$\bm f_\star = \bm C\bm B^\top\bm v$，利用$\bm C\bm C^{-1}=\bm I$以及$\bm B\bm z=\bm 0$，得
 \[
   \bm f_\star^\top \bm C^{-1}\bm z
+  = (\bm C\bm B^\top \bm v)^\top \bm C^{-1}\bm z
   = (\bm B^\top \bm v)^\top \bm z
-  = \bm v^\top \bm B\bm z.
+  = \bm v^\top (\bm B\bm z)
+  = 0.
 \]
-第一个等号把每条边上的电阻乘电流换成电势差，第二个等号用到转置。由于$\bm B\bm z = \bm 0$，这个内积等于零。
+从物理上看，$\bm C^{-1}\bm f_\star = \bm B^\top\bm v$是满足Kirchhoff电压定律的压降向量（属于割空间$\operatorname{im}\bm B^\top$），而$\bm z$是守恒环流（属于环空间$\ker\bm B$），割空间与环空间的正交性保证了电势差无法从闭合环流中提取或消耗净功率。
 
-直观地说，这是因为每个顶点$i$的贡献是$v_i \times (\bm B\bm z)_i = 0$。环流在每处进出相抵，电势无论取什么值都无法从中提取出功率。
+第三步，导出唯一极小性与顶点表达式。消去为零的交叉项即得正交分解式~\eqref{eq:electrical-dissipation-decomposition}。由于各边电阻$r_e>0$，只要$\bm f\neq\bm f_\star$（即$\bm z\neq\bm 0$），就有$\mathcal E(\bm z)=\sum_e r_e z_e^2 > 0$，从而$\mathcal E(\bm f)>\mathcal E(\bm f_\star)$，故$\bm f_\star$是唯一的最小耗散流。
 
-去掉为零的交叉项后，
-\begin{equation}
-  \mathcal E(\bm f_\star + \bm z)
-  = \mathcal E(\bm f_\star) + \mathcal E(\bm z).
-  \label{eq:electrical-dissipation-decomposition}
-\end{equation}
-各边电阻为正，非零环流的耗散严格为正。因此任何不同于$\bm f_\star$的守恒流都有更大的耗散，极小流存在且唯一。
-
-最后用顶点数据表示最小耗散。实际电流的耗散可以改写为
+最后，将$\bm f_\star = \bm C\bm B^\top\bm v$代入$\mathcal E(\bm f_\star)$，并利用$\bm L\bm v=\bm b$及零均值解$\bm v_{\mathrm{zm}}=\bm L^\dagger\bm b$，得
 \[
   \mathcal E(\bm f_\star)
-  = (\bm B^\top \bm v)^\top \bm C (\bm B^\top \bm v)
-  = \bm v^\top \bm L\bm v.
+  = \bm v^\top(\bm B\bm C\bm B^\top)\bm v
+  = \bm v^\top\bm L\bm v
+  = \bm b^\top\bm v
+  = \bm b^\top\bm L^\dagger\bm b,
 \]
-再用$\bm L\bm v = \bm b$，得到$\mathcal E(\bm f_\star) = \bm b^\top \bm v$。每个顶点的贡献是注入量乘电势：注入端电势高，取出端电势低，正注入乘正电势给出正的功率。
-
-若某个分量的电势整体平移$c$，多出来的一项$c \cdot \bm 1^\top \bm b = 0$，所以耗散不依赖电势基准。取各分量内零均值的解$\bm v = \bm L^\dagger \bm b$，便得到式~\eqref{eq:electrical-minimum-dissipation}。
+其中$\bm b^\top\bm v = \sum_i b_i v_i$表明全网内部电阻消耗的总热功率恰好等于外部电源在各接点注入的总电功率。
 \end{proof}
-
-这个结论称为\term{Thomson原理}（Thomson's principle）。
-
-\paragraph{算例验证}
-
-回到四点图的实际电流。四条环边各载$1/4$，耗散各为$(1/4)^2 = 1/16$。对角边载$1/2$，耗散为$(1/2)^2 = 1/4$。总耗散为$4 \times 1/16 + 1/4 = 1/2$。
-
-现在取第~\ref{sec:incidence-cycle-space}节的基本环$\bm c_1$，它沿$1\to2\to3\to4\to1$的四条环边各送$1/4$个单位。叠加之后，看各条边的变化：
-
-边$12$和$23$上原来各有$1/4$的电流，加上$1/4$变成$1/2$。
-
-边$34$和$41$上原来各有$-1/4$的电流（实际从$4$流向$3$和从$1$流向$4$），加上$1/4$后恰好抵消为零。
-
-对角边不在这个环上，仍然流过$1/2$。
-
-这恰好就是本节开头的第二种分法：一半走对角边，一半经顶点$2$。由式~\eqref{eq:electrical-dissipation-decomposition}，附加环流使耗散增加$4 \times (1/4)^2 = 1/4$。已知实际耗散$1/2$，加上这一项得到$3/4$，与直接计算一致。
-
-图~\ref{fig:electrical-distribution-dissipation}并排画出三种分流。(a)所有电流只走一条边，耗散为$1$。(b)分到两条路径后耗散降至$3/4$。(c)是网络自行选择的实际分流，耗散最低，为$1/2$。
 
 \begin{BookInlineFigure}
   \centering
-  \includegraphics[scale=1]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-distribution-dissipation/figure.pdf}
-  \caption{同一单位注入下的三种分流。顶点$1$注入一单位电流，顶点$3$引出一单位，各边电阻都为一。箭头和数值给出有流量的边，虚线为零电流的边。(a)~只走对角边，(b)~平分到对角边和上路，(c)~网络的实际分流。}
-  \label{fig:electrical-distribution-dissipation}
+  \includegraphics[width=95.871mm]{figures/03-graphs/05-matrices-and-spectra/tikz/electrical-thomson-orthogonality/figure.pdf}
+  \caption{Thomson原理的正交分解示意。（a）真实Ohm电流$\bm f_\star$的总耗散为$\mathcal E(\bm f_\star)=1/2$。（b）沿外圈四元环$1\to2\to3\to4\to1$逆时针叠加流量为$1/4$的环流$\bm z\in\ker\bm B$，其自身耗散为$\mathcal E(\bm z)=4\times(1/4)^2=1/4$。（c）叠加后的守恒流$\bm f=\bm f_\star+\bm z$抵消了下路电流、使上路电流加倍为$1/2$，总耗散恰为$\mathcal E(\bm f_\star)+\mathcal E(\bm z)=1/2+1/4=3/4$。}
+  \label{fig:electrical-thomson-orthogonality}
 \end{BookInlineFigure}
 
-\paragraph{与最小费用流的比较}
+以图~\ref{fig:electrical-thomson-orthogonality}在四点网络上核对正交分解式~\eqref{eq:electrical-dissipation-decomposition}。在真实电流$\bm f_\star=(1/4,1/4,-1/4,-1/4,1/2)^\top$（图~\ref{fig:electrical-thomson-orthogonality}(a)，耗散$1/2$）的基础上，叠加一个沿外圈四元环$1\to2\to3\to4\to1$流动的环流$\bm z=(1/4,1/4,1/4,1/4,0)^\top\in\ker\bm B$（图~\ref{fig:electrical-thomson-orthogonality}(b)，自身耗散为$4\times(1/4)^2=1/4$）。叠加后，边$12$和$23$的电流变为$1/4+1/4=1/2$，边$34$和$41$的电流变为$-1/4+1/4=0$，对角边$13$保持$1/2$，恰好得到图~\ref{fig:electrical-thomson-orthogonality}(c)（即图~\ref{fig:electrical-distribution-dissipation}(b)）的候选守恒流$\bm f$，其总耗散恰好满足$\mathcal E(\bm f)=\mathcal E(\bm f_\star)+\mathcal E(\bm z)=1/2+1/4=3/4$。
 
-第~\ref{chap:min-cost-flow}章的最小费用流也在守恒条件下选流量，但目标函数是线性的，通常还有容量约束。这里的耗散是严格凸的二次函数，不存在容量限制，边流可以取任意实数。正因为严格凸，极小点唯一——不需要另外检查是否有多个最优解。即使注入量为整数，最优的边流量也可能是分数，如本例中的$1/4$和$1/2$。
+\paragraph{与线性最小费用流的对比}
+
+将Thomson原理与第~\ref{chap:min-cost-flow}章（及第~\ref{sec:graph-incidence-total-unimodularity}节）的最小费用流对照：两者都在守恒约束$\bm B\bm f=\bm b$下寻找最优流，但最小费用流的目标函数$\bm c^\top\bm f$是线性的且带有边容量上下界$\bm 0\leq\bm f\leq\bm u$，其最优解倾向于沿最便宜的路径满载输送，并在整数输入下取得整数极点解；而电网络的总耗散$\bm f^\top\bm C^{-1}\bm f$是无容量限制的严格凸二次函数，电流在守恒约束下使二次耗散最小；只有共用相同两端压降的并联支路才按支路等效电导比例分流，等势边还可能没有电流，因此最优解唯一且通常为分数（如上例中的$1/2$与$1/4$）。

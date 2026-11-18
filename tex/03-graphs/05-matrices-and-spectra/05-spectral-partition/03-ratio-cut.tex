@@ -1,94 +1,164 @@
 \section{RatioCut谱划分}
 \label{sec:graph-ratiocut}
 
-给定一张图，要把顶点分成两个非空组。边的两个端点分在不同组时，需要付出这条边的权重。如果只求割权最小，把一个度最低的顶点单独切出来往往就够了，但这样的分组并不平衡。\term{RatioCut}用两侧的顶点数量调整割权，使得切出很小一组的方案被放大惩罚。
+若只最小化跨割边权$c(A,B)$，得到的最小割未必符合均衡分组的要求。例如，在一个连通的单位权图中附接单个叶子，删除叶子的唯一关联边就得到割权为$1$的最小割；图有$1000$个顶点时，这个割将两侧分成$1$个和$999$个顶点。它是正确的最小割，但可能不适合要求两侧规模接近的任务。
+
+为了在割权之外考虑两侧的规模，可以将$c(A,B)$分别除以$|A|$和$|B|$后相加，得到\term{比例割}（RatioCut）。这一目标在割权相同时偏好更均衡的两侧，但不会强制两侧等大。
 
 \subsection{RatioCut的谱松弛}
 \label{sec:graph-ratiocut-relaxation}
 
-设第一组为$S$，第二组为$\bar S=V\setminus S$，两组的顶点数分别为$s=|S|$和$t=|\bar S|$，满足$s+t=n$。将割权分别除以两组大小，再相加，定义
+\begin{definition}[RatioCut目标]
+\label{def:graph-ratiocut}
+设非空真子集$A\subsetneq V$及其补集$B=V\setminus A$的顶点个数分别为$|A|$和$|B|$（满足$|A|+|B|=n$）。划分$(A,B)$的RatioCut目标定义为
 \begin{equation}
 \label{eq:graph-ratiocut}
-\operatorname{RatioCut}(S)=c(S,\bar S)\left(\frac{1}{s}+\frac{1}{t}\right).
+\operatorname{RatioCut}(A,B)
+=\frac{c(A,B)}{|A|}+\frac{c(A,B)}{|B|}
+=c(A,B)\left(\frac{1}{|A|}+\frac{1}{|B|}\right).
 \end{equation}
-若两种切法的割权相同，其中一种只留下很小的一组，那个组对应的倒数$1/s$就会很大，整体代价随之增大。
+\end{definition}
 
-在四点路径上，切下端点$1$得到一对三的分组，割权为$1$，代价为$1\cdot(1+1/3)=4/3$。切断中间边得到二对二的分组，割权也为$1$，代价为$1\cdot(1/2+1/2)=1$。中间割在RatioCut意义下更优。
+在割权相同的条件下，因子$1/|A|+1/|B|=n/(|A||B|)$在两侧大小尽可能接近时最小。若$n$为偶数，等分时该因子为$4/n$；若$n$为奇数，则最小值在两侧大小分别为$\lfloor n/2\rfloor$与$\lceil n/2\rceil$时取得。以$n=1000$为例，$1$对$999$的因子约为$1.001$，约是等分时$0.004$的$250.25$倍。在单位权四点路径上，端点割与中间割的割权均为$1$，RatioCut分别为$4/3$与$1$，因此中间割更优。
 
-目标是在所有非空二分中找出代价最小的分组。为了用拉普拉斯的谱工具求解，我们先把分组编码为一个向量。
+然而，在全部$2^{n-1}-1$种离散二分中精确求解最小RatioCut是NP-Hard难题。为了将它转化为可计算的矩阵特征值问题，我们分四步推导RatioCut的拉普拉斯二次型表示与连续谱松弛。
 
-给$S$上的顶点赋$1$，$\bar S$上的赋$0$，得到指示向量$\bm 1_S$。跨边的两端相差$1$，组内边的两端相差$0$，因此沿边能量$\bm 1_S^\top\bm L\bm 1_S$恰好等于割权$c(S,\bar S)$。
+\paragraph{1. 构造两值指示向量$\bm f$}
 
-但这个向量的坐标和为$s$，不满足式~\eqref{eq:graph-algebraic-connectivity}的正交条件$\bm x\perp\bm 1$。将每个坐标减去均值$s/n$，得到
+对任意给定的非空二分$(A,B)$，我们不像第~\ref{sec:graph-laplacian-cut-quadratic-form}小节那样简单赋$\pm 1$，而是将两侧子图的规模比值编码进顶点坐标中，构造向量$\bm f=(f_1,\ldots,f_n)^\top\in\mathbb R^n$如下：
+\begin{equation}
+\label{eq:ratiocut-indicator-vector}
+  f_i = \begin{cases}
+    \sqrt{\dfrac{|B|}{|A|}}, & i\in A,\\[10pt]
+    -\sqrt{\dfrac{|A|}{|B|}}, & i\in B.
+  \end{cases}
+\end{equation}
+在这个向量中，$A$侧顶点全部取同一个正数，$B$侧顶点全部取同一个负数；哪一侧的节点数越少，它所分配到的坐标绝对值就越大（图~\ref{fig:graph-ratiocut-mincut-indicator}）。
+
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=111.354mm]{figures/03-graphs/05-matrices-and-spectra/tikz/ratiocut-mincut-and-indicator/figure.pdf}
+  \caption{RatioCut对退化解的惩罚机制与两值指示向量$\bm f$的构造。(a) 图中的单叶割（红色虚线）说明最小割可能隔离少数顶点；绿色虚线示意较均衡的候选划分，是否由RatioCut选中还取决于两种割的边权。(b) 对$|A|=1,|B|=3$的不对称切分，指示向量在小侧赋大幅值$+\sqrt{3}$、在大侧赋小幅值$-\sqrt{1/3}$，使总和恰好相消为$0$。}
+  \label{fig:graph-ratiocut-mincut-indicator}
+\end{BookInlineFigure}
+
+\paragraph{2. 代入二次型分子$\bm f^\top\bm L\bm f$}
+
+将上述向量$\bm f$代入组合拉普拉斯二次型$\bm f^\top\bm L\bm f=\sum_{\{i,j\}\in E}w_{i,j}(f_i-f_j)^2$。若边$\{i,j\}$的两个端点同在$A$内或同在$B$内，两端取值相同，$f_i-f_j=0$，不产生任何贡献；只有一端在$A$、另一端在$B$的跨割边才产生非零差值。
+
+对每一条跨割边，两端坐标差的平方恰好为
 \[
-\bm y=\bm 1_S-\frac{s}{n}\bm 1.
+\begin{aligned}
+  \left(\sqrt{\frac{|B|}{|A|}} - \left(-\sqrt{\frac{|A|}{|B|}}\right)\right)^{\!2}
+  &= \frac{|B|}{|A|} + \frac{|A|}{|B|} + 2 \\
+  &= \frac{|A|+|B|}{|A|} + \frac{|A|+|B|}{|B|}
+  = n\left(\frac{1}{|A|}+\frac{1}{|B|}\right).
+\end{aligned}
 \]
-$\bm y$在$S$上取$t/n$，在$\bar S$上取$-s/n$。两侧之差仍为$t/n-(-s/n)=1$，跨边的能量不变，组内边仍无贡献。因此$\bm y^\top\bm L\bm y=c(S,\bar S)$。
+将这一公因子提出并对全体跨割边权重求和，二次型分子恰好还原出RatioCut目标：
+\begin{equation}
+\label{eq:ratiocut-quadratic-numerator}
+  \bm f^\top\bm L\bm f
+  = c(A,B)\cdot n\left(\frac{1}{|A|}+\frac{1}{|B|}\right)
+  = n\,\operatorname{RatioCut}(A,B).
+\end{equation}
 
-向量的长度平方按两侧计算：
+\paragraph{3. 验证分母和正交条件}
+
+接下来检查向量$\bm f$所满足的两个代数约束。第一，将$\bm f$的所有分量相加（即与全一常向量$\bm 1$作内积）：
 \[
-\bm y^\top\bm y
-=s\left(\frac{t}{n}\right)^{\!2}+t\left(\frac{s}{n}\right)^{\!2}
-=\frac{st}{n}.
+  \bm f^\top\bm 1
+  = \sum_{i=1}^n f_i
+  = |A|\sqrt{\frac{|B|}{|A|}} + |B|\left(-\sqrt{\frac{|A|}{|B|}}\right)
+  = \sqrt{|A||B|} - \sqrt{|A||B|}
+  = 0.
 \]
-将$\bm y$归一化为$\bm x=\bm y/\|\bm y\|$，它的长度变为$1$，坐标和仍为$0$。能量被除以$\|\bm y\|^2=st/n$，得到
+这说明无论划分$(A,B)$两侧的大小如何，向量$\bm f$恒与常向量$\bm 1$正交（$\bm f\perp\bm 1$）。
+
+第二，计算$\bm f$的欧氏长度平方（即Rayleigh商的分母$\bm f^\top\bm f$）：
 \[
-\bm x^\top\bm L\bm x
-=\frac{n}{st}\,c(S,\bar S)
-=c(S,\bar S)\left(\frac{1}{s}+\frac{1}{t}\right)
-=\operatorname{RatioCut}(S).
+  \bm f^\top\bm f
+  = \sum_{i=1}^n f_i^2
+  = |A|\cdot\frac{|B|}{|A|} + |B|\cdot\frac{|A|}{|B|}
+  = |B| + |A|
+  = n.
 \]
-最后一步用到$n/(st)=1/s+1/t$。这就解释了两组顶点数的倒数之和为什么会出现。
+将分子式~\eqref{eq:ratiocut-quadratic-numerator}除以分母$\bm f^\top\bm f=n$，常数$n$恰好约去，得到精确的Rayleigh商恒等式：
+\begin{equation}
+\label{eq:ratiocut-rayleigh-identity}
+  \operatorname{RatioCut}(A,B) = \frac{\bm f^\top\bm L\bm f}{\bm f^\top\bm f}.
+\end{equation}
 
-以四点路径的中间割为例，$s=t=2$，归一化后的向量为$(1/2,1/2,-1/2,-1/2)^\top$。唯一的非零边差等于$1$，能量为$1$，恰好等于这个割的RatioCut值。
+\paragraph{4. 等价变换与连续松弛}
 
-到此为止，向量$\bm x$只能取由分组确定的两个值。这个离散限制使得问题在组合意义上是困难的。谱松弛去掉两值限制，只保留$\bm x\perp\bm 1$和$\|\bm x\|=1$这两个条件。松弛后的最小值就是组合拉普拉斯的第二小特征值$\lambda_2$。
+经过上面三步，原本的离散RatioCut最小化问题可以等价地改写为：
+\[
+  \min_{\varnothing\neq A\subsetneq V}\operatorname{RatioCut}(A,B)
+  = \min_{\substack{\bm f\perp\bm 1,\;\lVert\bm f\rVert_2^2=n\\ f_i\text{ 按式~\eqref{eq:ratiocut-indicator-vector} 取两值}}}
+    \frac{\bm f^\top\bm L\bm f}{\bm f^\top\bm f}.
+\]
+上述等价表达仍要求向量取与划分对应的两个离散值。\emph{谱松弛}（spectral relaxation）去掉这一限制，允许$\bm f$取任意与$\bm1$正交的非零实向量。这样得到可由特征值求解的连续问题；离散问题的困难性不能仅由“含有离散限制”这一点推断。
 
-原来的每个分组向量都满足这两个条件，因而$\lambda_2$不超过任何实际RatioCut值。它是离散最优值的一个下界。
+一旦允许$\bm f$取任意实数，右边的目标函数就变成了组合拉普拉斯矩阵$\bm L$的标准Rayleigh商变分公式（定义~\ref{def:graph-algebraic-connectivity}）：
+\begin{equation}
+\label{eq:ratiocut-spectral-relaxation}
+  \min_{\substack{\bm f\perp\bm 1\\\bm f\neq\bm 0}}\frac{\bm f^\top\bm L\bm f}{\bm f^\top\bm f} = \lambda_2(\bm L).
+\end{equation}
+由此我们得到如下核心结论：连续松弛问题的最优值就是图的\emph{代数连通度}$\lambda_2(\bm L)$，而达到该最小值的最优连续解向量$\bm f^\star=\bm v_2$正是第~\ref{sec:graph-fiedler-vector}小节的\emph{Fiedler向量}。
 
-图~\ref{fig:graph-ratiocut-relaxation}对比了实际分组和松弛解。中间割的两值向量只在一条边上有变化，所有能量集中在那里。松弛解允许数值在多条边上逐步过渡，沿边能量因此更小。
+\begin{theorem}[RatioCut的二次型表示与谱松弛下界]
+\label{prop:graph-ratiocut-relaxation}
+对任意非空二分$(A,B)$，按式~\eqref{eq:ratiocut-indicator-vector}定义的指示向量$\bm f$（或其单位化向量$\bm x_A=\bm f/\sqrt{n}$）满足$\bm f\perp\bm 1$且$\operatorname{RatioCut}(A,B)=\frac{\bm f^\top\bm L\bm f}{\bm f^\top\bm f}$。因而，离散最优值$\operatorname{OPT}_R=\min_{\varnothing\neq A\subsetneq V}\operatorname{RatioCut}(A,B)$以代数连通度$\lambda_2(\bm L)$为下界：
+\[
+  \lambda_2(\bm L) = \min_{\substack{\bm f\perp\bm 1\\\bm f\neq\bm 0}}\frac{\bm f^\top\bm L\bm f}{\bm f^\top\bm f} \leq \operatorname{OPT}_R,
+\]
+且最优方向为$\bm1^\perp$中对应$\lambda_2$的特征向量；连通时即为Fiedler向量。
+\end{theorem}
+
+以单位权四点路径的中间割$A=\{1,2\},B=\{3,4\}$为例，单位化后的两值向量为$\bm x_A=(\frac12,\frac12,-\frac12,-\frac12)^\top$，能量为$\bm x_A^\top\bm L\bm x_A=1=\operatorname{RatioCut}(A,B)$。图~\ref{fig:graph-ratiocut-relaxation}直观对比了该离散两值向量与连续松弛解（Fiedler向量$\bm v_2$）：离散向量被迫在中间边$23$上发生突变，而Fiedler向量允许坐标沿整条路径平滑过渡，因而获得了更低的连续松弛能量$\lambda_2=2-\sqrt 2\approx 0.586$。
 
 \begin{BookInlineFigure}
   \centering
   \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/ratiocut-relaxation/figure.pdf}
-  \caption{单位权四点路径的两种赋值。横轴按路径顺序标出顶点，纵轴是赋值。(a) 中间割的两值向量，能量为$1$。(b) 松弛后得到的第二特征向量，能量为$2-\sqrt2$。两者的坐标和都为零，长度都为一。}
+  \caption{单位权四点路径的两种单位长度零和赋值。(a) 中间割的离散两值向量，能量为$\operatorname{RatioCut}=1$。(b) 连续松弛得到的Fiedler向量$\bm v_2$，能量为$\lambda_2=2-\sqrt2\approx 0.586$。}
   \label{fig:graph-ratiocut-relaxation}
 \end{BookInlineFigure}
-
-松弛给出了下界和一个连续方向，但这个方向本身不是合法的分组。下一步要把实数值的特征向量转换成可以在原图中使用的两组顶点。
 
 \subsection{算法实现}
 \label{sec:graph-ratiocut-sweep}
 
-思路是按特征向量的分量从大到小排序，在相邻不同值之间逐个试切，并为每个候选分组计算原始的RatioCut目标。
+\paragraph{主要思路}
 
-\begin{algorithm}[RatioCut阈值扫描]
-\label{alg:graph-ratiocut-sweep}
-给定有限非负加权图，输出非空二分及其RatioCut值。
+连续松弛通过求解Fiedler向量$\bm v_2$绕开了NP-Hard组合搜索，但求出的$\bm v_2$是一个连续实向量，不能直接作为离散集合输出。算法的核心思路是：将拉普拉斯矩阵的低频特征向量看作顶点在低维欧氏空间中的“谱嵌入坐标”（连接紧密的顶点在谱坐标下彼此靠拢，瓶颈两侧的顶点彼此拉开），最后通过阈值切分或聚类将连续的谱坐标\emph{离散化还原}为原图的顶点划分。
+
+具体执行流程分为以下四步：
 \begin{enumerate}
-\item 若图不连通，选一个连通分量为一侧，另一侧为其余顶点。两侧之间没有正权边，割权为零，返回零代价的分组。
-\item 否则求组合拉普拉斯的第二特征向量。按分量从大到小排序。分量相同的顶点作为一组，不能拆开。
-\item 从空集开始逐组加入顶点。加入时更新割权：从当前割权中减去新顶点连向已选顶点的边权（这些边从跨边变为组内边），加上连向仍未入选顶点的边权（这些边从组内边变为跨边）。
-\item 每组加入后，若两侧均非空，按式~\eqref{eq:graph-ratiocut}计算RatioCut。比较所有候选，返回目标值最小的分组。
+\item \emph{构建未归一化拉普拉斯矩阵}：由图的加权邻接矩阵$\bm W$和度对角矩阵$\bm D$计算组合拉普拉斯矩阵$\bm L = \bm D - \bm W$。
+\item \emph{求解特征向量}：计算$\bm L$的第二小特征值$\lambda_2$及其对应的Fiedler特征向量$\bm v_2\in\mathbb R^n$（若需将图划分为$k\geq 2$个子块，则求前$k$个最小特征值$0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_k$对应的标准正交特征向量$\bm v_1,\bm v_2,\ldots,\bm v_k$）。
+\item \emph{构建特征矩阵}：将求得的特征向量按列排成特征矩阵$\bm V\in\mathbb R^{n\times k}$（在二分问题中即为单列矩阵$\bm V=\bm v_2\in\mathbb R^{n\times 1}$）。$\bm V$的第$i$行给出了顶点$i$在低维谱空间中的坐标表示。
+\item \emph{离散化还原（还原为最终切分）}：将顶点在特征矩阵$\bm V$中的连续坐标还原为离散划分。在二分问题中，最简单的做法是以$0$为界按$(\bm v_2)_i$的正负号切分；更稳健的做法是执行\emph{阈值扫描}（sweep cut）——将顶点按$(\bm v_2)_i$从大到小排序，依次扫描全部$n-1$个前缀切口$S_r=\{i_1,\ldots,i_r\}$，计算各自的原始$\operatorname{RatioCut}(S_r,\bar S_r)$并取最小值对应的切分输出（在$k$路划分中，则对特征矩阵$\bm V$的$n$个行向量运行$k$-means聚类算法）。
+\end{enumerate}
+
+下面给出二分情形下完整的RatioCut谱划分算法。
+
+\begin{algorithm}[RatioCut谱划分]
+\label{alg:graph-ratiocut-sweep}
+给定有限无向非负加权图$\mathcal G=(V,E,w)$，输出非空二分$(A,B)$及其RatioCut值。
+\begin{enumerate}
+\item \textbf{构建矩阵与连通性检查}：构建组合拉普拉斯矩阵$\bm L=\bm D-\bm W$。若图不连通（$\lambda_2=0$），直接取一个连通分量为$A$、其余顶点为$B=V\setminus A$，返回零代价划分（$\operatorname{RatioCut}(A,B)=0$）。
+\item \textbf{求解Fiedler向量与构建特征表示}：求$\bm L$的第二小特征值$\lambda_2$对应的特征向量$\bm v_2$，将每个顶点$i$映射为一维谱坐标$f_i=(\bm v_2)_i$。
+\item \textbf{按谱坐标排序}：将全部顶点按$f_i$从大到小排序（分量值完全相同的并列顶点归为同一组，同时跨过阈值）。
+\item \textbf{离散化还原（增量阈值扫描）}：从空集$S=\varnothing$开始，按排序顺序逐组将顶点并入$S$。每并入一个顶点$u$时，增量更新割权：从当前割权中减去$u$连向已在$S$中顶点的边权（这些边由跨割边变为组内边），加上$u$连向尚未进入$S$顶点的边权（这些边由组内边变为跨割边）。对每个非空真子集候选$S$，按式~\eqref{eq:graph-ratiocut}计算$\operatorname{RatioCut}(S,V\setminus S)$，返回目标值最小的划分$(A,B)$。
 \end{enumerate}
 \end{algorithm}
 
-\paragraph{执行过程}
+在单位权四点路径$1\!-\!2\!-\!3\!-\!4$上演示算法~\ref{alg:graph-ratiocut-sweep}：第二步求得Fiedler向量为$\bm v_2=(a,b,-b,-a)^\top$，其中$a=\cos(\pi/8)>b=\cos(3\pi/8)>0$，故第三步顶点按$1,2,3,4$的顺序排列。
 
-在单位权四点路径上，第二特征向量可取为
-\[
-\bm x=(a,b,-b,-a)^\top,
-\qquad a=\cos(\pi/8),\quad b=\cos(3\pi/8).
-\]
-因为$a>b>0$，顶点按$1,2,3,4$的顺序入选。
-
-第一步放入顶点$1$。它只有一条边连向尚未入选的顶点$2$，割权变为$1$。第二步放入$2$时，边$12$从跨边变成组内边（割权减$1$），但边$23$从组内变为跨边（割权加$1$），割权仍为$1$。第三步放入$3$时，类似地跨边改成$34$。
-
-三个候选的计算如下。
+第四步依次扫描三个前缀切口：先放入顶点$1$，切断边$12$，割权为$1$；再放入顶点$2$，边$12$变为组内边（割权减$1$）而边$23$变为跨割边（割权加$1$），割权保持$1$；再放入顶点$3$，跨割边变为$34$，割权仍为$1$。三个候选切口的指标汇总如下：
 \begin{center}
 \begin{tabular}{lccc}
 \toprule
-已选集合 & 两侧大小 & 割权 & RatioCut\\
+前缀候选集合$S$ & 两侧节点数$|S|,|\bar S|$ & 割权$c(S,\bar S)$ & $\operatorname{RatioCut}(S,\bar S)$\\
 \midrule
 $\{1\}$ & $1,3$ & $1$ & $4/3$\\
 $\{1,2\}$ & $2,2$ & $1$ & $1$\\
@@ -97,7 +167,7 @@ $\{1,2,3\}$ & $3,1$ & $1$ & $4/3$\\
 \end{tabular}
 \end{center}
 
-图~\ref{fig:ratiocut-sweep-candidates}按排序顺序画出四个顶点，并标出三种切分位置。每条竖线对应一种候选，线两侧的集合、割边及RatioCut值都标在旁边。观察中间切法如何同时使两侧大小均匀且割权不增。
+图~\ref{fig:ratiocut-sweep-candidates}展示了沿Fiedler向量排序后的三种切分位置，算法最终选出代价最低的中间割$\{1,2\}\mid\{3,4\}$（$\operatorname{RatioCut}=1$）。
 
 \begin{figure}[!htb]
 \centering
@@ -123,28 +193,23 @@ $\{1,2,3\}$ & $3,1$ & $1$ & $4/3$\\
   \draw[cutline] (40,7) -- (40,-7);
   \node[clabel,above] at (40,7.5) {$\frac{4}{3}$};
   % vertex ordering label
-  \node[vlabel] at (24,-12) {按特征向量分量从大到小排序};
+  \node[vlabel] at (24,-12) {按Fiedler向量分量从大到小排序};
 \end{tikzpicture}
-\caption{四点路径上的RatioCut阈值扫描。四个顶点按第二特征向量分量递减排列。红色虚线标出三种切分位置，上方数字是对应的RatioCut值。中间割的代价最低。}
+\caption{四点路径上的RatioCut阈值扫描。四个顶点按Fiedler向量分量递减排列，红色虚线标出三种候选切口及对应的RatioCut值，中间割代价最低（$1$）。}
 \label{fig:ratiocut-sweep-candidates}
 \end{figure}
-
-中间割的代价最小，为$1$。这是扫描得到的实际分组代价，可以和松弛下界$\lambda_2=2-\sqrt2\approx0.586$放在一起比较。
 
 \subsection{算法分析}
 \label{sec:graph-ratiocut-guarantee}
 
-记所有非空二分中的RatioCut最小值为$\operatorname{OPT}_R$，扫描返回的分组为$S_R$。松弛扩大了可行域，给出下界；扫描提供了一个具体的可行割，给出上界：
+记全图所有非空二分中的RatioCut真实最小值为$\operatorname{OPT}_R$，算法~\ref{alg:graph-ratiocut-sweep}扫描输出的划分为$(A_R,B_R)$。连续松弛扩大了可行域，故$\lambda_2(\bm L)$给出了$\operatorname{OPT}_R$的下界；而阈值扫描构造了一个具体的合法划分，给出了$\operatorname{OPT}_R$的可行上界：
 \begin{equation}
 \label{eq:graph-ratiocut-bounds}
-\lambda_2\leq\operatorname{OPT}_R
-\leq\operatorname{RatioCut}(S_R).
+\lambda_2(\bm L)\leq\operatorname{OPT}_R
+\leq\operatorname{RatioCut}(A_R,B_R).
 \end{equation}
+在四点路径上，$\lambda_2=2-\sqrt 2\approx 0.586$，而任何连通二分至少切断$1$条边且$\frac{1}{|A|}+\frac{1}{|B|}\geq\frac{1}{2}+\frac{1}{2}=1$，故$\operatorname{OPT}_R=1$，扫描输出的中间割精确达到了全局最优。
 
-四点路径上可以直接验证$\operatorname{OPT}_R=1$。任何非空二分至少切过一条边（路径是连通的），且两侧顶点数之积$st$至多为$\lfloor n/2\rfloor\cdot\lceil n/2\rceil=4$。因此$1/s+1/t=n/(st)\geq 4/4=1$，任何割的RatioCut都不低于$1$。中间割恰好达到了这个值。
+在时间复杂度方面，求得Fiedler向量后，对$n$个顶点排序耗时$O(n\log n)$；在增量阈值扫描中，每个顶点恰好进入集合$S$一次，更新割权只需遍历该顶点的邻接表，因此每条边在两个端点各被访问一次，整个扫描过程仅耗时$O(n+m)$。
 
-排序$n$个顶点需要$O(n\log n)$时间。扫描过程中每个顶点加入一次，加入时检查它的邻接表，因此所有边在两个端点各被访问至多一次，扫描耗时$O(n+m)$。求特征向量的代价另行计算，取决于所用的迭代方法和精度要求。
-
-一次扫描只比较沿一个排序方向切开的嵌套集合，没有覆盖全部$2^{n-1}-1$个无序二分。选择不同的最优方向（当$\lambda_2$为重根时）或近似方向可能给出不同的候选。相同分量作为一组处理，减少了切点数量。
-
-精确的$\lambda_2$是有效的下界。但如果使用的是数值迭代得到的近似特征向量，代入Rayleigh商所得的值大于或等于$\lambda_2$，不一定仍是离散最优值的下界。报告结果时应区分：认证过误差的下界和数值估计值。扫描得到的分组及其原目标代价可以直接在原图上核对，不受特征向量精度的影响。
+RatioCut用顶点数衡量两侧规模。若任务更关心各侧承担的连接量，可以改用度数总和作为分母，得到下一节的NCut。其归一化拉普拉斯松弛与Cheeger不等式采用相同的度加权度量，因此可直接利用该不等式得到扫描结果的上界。

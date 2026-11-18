@@ -1,133 +1,177 @@
 \section{首达时间}
 \label{sec:graph-walk-hitting}
 
-前面固定时刻，考察棋子落在何处。现在换一个角度：固定目的地，问棋子在第几步首次到达。每次行走可能走不同的步数。我们先把这个步数当作一个随机量，再计算它的期望。
+前两节固定步数$t$，考察棋子在时刻$t$落在各顶点的位置分布。从本节开始，我们调转视角——固定一个目标顶点$j\in V$，问棋子从起点$i\in V$出发，\emph{首次到达目标$j$平均需要走多少步？}
 
-\subsection{首达期望的方程}
-\label{sec:graph-walk-hitting-equation}
-
-在四点路径上从顶点$1$出发，目标是$4$。一种可能是直走三步$1\to2\to3\to4$，另一种可能是走了五步$1\to2\to1\to2\to3\to4$，还有更长的情况。$\tau_4$记录的是某一次试验中实际走出的步数，$h_{1,4}$则是对所有可能步数按概率求出的平均值。
-
-若起点已经是目标，一步也不用走。一般地，对目标$j$定义\term{首达时间}（hitting time）$\tau_j$，并用$h_{i,j}$表示从$i$出发的首达期望，
+\begin{definition}[首达时间与首达期望]
+\label{def:graph-walk-hitting}
+设$(X_t)_{t\geq 0}$为图上的随机游走。对指定目标顶点$j\in V$，定义首次命中$j$的步数（停时）为\term{首达时间}（hitting time）：
 \begin{equation}
-\tau_j=\inf\{t\ge0:X_t=j\},
-\qquad h_{i,j}=\mathbb{E}_i[\tau_j].
+\tau_j=\inf\{t\ge0:X_t=j\}.
 \label{eq:graph-walk-hitting-definition}
 \end{equation}
-$\mathbb{E}_i$表示固定$X_0=i$后的期望，且$h_{j,j}=0$。
+在给定起点$X_0=i$的条件下，$\tau_j$的数学期望记为$h_{i,j}=\mathbb{E}_i[\tau_j]$，称为从$i$到$j$的\term{首达时间期望}（简称首达期望）。当起点本身就是目标时，一步也不用走，即$h_{j,j}=0$。
+\end{definition}
 
-先检查期望是否有限。对每个非目标顶点选一条通往$j$的简单路径，长度至多$n-1$。沿这些路径逐步走完的最小概率为某个$p>0$。
+对于非目标起点$i\neq j$，棋子第一步必须耗时$1$步并以概率$P_{i,k}=w_{i,k}/d_i$跳到某个邻居$k$；此后由Markov无记忆性，从$k$继续等待首次命中$j$的平均步数就是$h_{k,j}$。因此首达期望满足直观的\emph{首步条件期望递推式}：
+\[
+  h_{i,j} = 1 + \sum_{k=1}^n P_{i,k}\,h_{k,j}\qquad(i\neq j).
+\]
+在一般图上建立线性方程组之前，我们先在六类典型图上直接算出$h_{i,j}$，直观认识图拓扑如何决定首达时间的量级与方向不对称性。
 
-将行走按每$n-1$步分块。不论上一块结束在什么位置，只要尚未到达目标，下一块命中它的概率至少为$p$。连续$k$块均未命中的概率至多$(1-p)^k$，几何级数求和给出等待的块数期望不超过$1/p$。每块最多$n-1$步，因此$h_{i,j}\le(n-1)/p$。
+\subsection{典型图的首达时间}
+\label{sec:graph-walk-typical-hitting}
 
-\paragraph{首步分解}
+图~\ref{fig:graph-walk-hitting-six-archetypes}汇总了六类代表性图结构及其首达期望的渐近量级：从$\Theta(n)$的完全图与超立方体，到$\Theta(n^2)$的路径与环，再到高达$\Theta(n^3)$的棒棒糖图。下面给出可直接推导的典型情形，并说明高维图上的量级结果。
 
-从$i\ne j$出发，第一步总要花一步。若这一步走到$k$，剩余等待时间的期望正是$h_{k,j}$，因为以后的转移只取决于当前位置。按第一步的去向加权求和，得到
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=99.818mm]{figures/03-graphs/05-matrices-and-spectra/tikz/walk-hitting-six-archetypes/figure.pdf}
+  \caption{六类典型图上的首达时间期望对比（黄色节点为起点，红色双圈节点为目标）。(a) 完全图$K_n$每步有$1/(n-1)$概率直达目标，$h_{i,j}=n-1$；(b) 星图叶子一步到中心（$h_{u,c}=1$），中心到指定叶子需反复试错（$h_{c,v}=2n-3$）；(c) 路径图$P_n$两端首达呈二次方律$h_{1,n}=(n-1)^2$；(d) 环图$C_n$相隔$k$步的两点满足$h_{i,j}=k(n-k)$；(e) 超立方体$Q_d$多路分流使$h_{i,j}=\Theta(n)$；(f) 棒棒糖图因团内困滞与路径折返叠加，达到最坏量级$\Theta(n^3)$。}
+  \label{fig:graph-walk-hitting-six-archetypes}
+\end{BookInlineFigure}
+
+\paragraph{1. 完全图$K_n$（几何分布等待，$h_{i,j}=n-1$）}
+
+在单位权完全图$K_n$上，由对称性可知，所有非目标顶点$i\neq j$到目标$j$的首达期望都等于同一个常数$h$。从任意$i\neq j$出发，下一步有$\frac{1}{n-1}$的概率直接命中目标$j$（耗时$1$步），有$\frac{n-2}{n-1}$的概率跳到其余某个非目标顶点（耗时$1$步后仍需继续平均等待$h$步）。代入首步递推式：
+\[
+  h = 1 + \frac{1}{n-1}\cdot 0 + \frac{n-2}{n-1}\,h
+  \quad\Longrightarrow\quad
+  \frac{1}{n-1}\,h = 1
+  \quad\Longrightarrow\quad
+  h_{i,j} = n-1.
+\]
+
+\paragraph{2. 星图$K_{1,n-1}$（叶子与中心的不对称性，$h_{u,c}=1$而$h_{c,v}=2n-3$）}
+
+设星图包含$1$个中心顶点$c$（度为$n-1$）和$n-1$片叶子（度均为$1$）。从任意叶子$u$出发前往中心$c$，由于$u$只有唯一一条边连向$c$，第一步必达，故$h_{u,c}=1$。
+
+反过来，从中心$c$出发前往某片指定叶子$v$：第一步有$\frac{1}{n-1}$的概率直接命中$v$（耗时$1$步）；另有$\frac{n-2}{n-1}$的概率误入其他某片叶子$u\neq v$，而一旦到了叶子$u$，下一步又必然退回中心$c$（白白浪费$2$步后回到原点$c$）。因此
+\[
+  h_{c,v} = \frac{1}{n-1}\cdot 1 + \frac{n-2}{n-1}(2 + h_{c,v})
+  \quad\Longrightarrow\quad
+  h_{c,v} = 2n - 3.
+\]
+进而，从一片叶子$u$前往另一片叶子$v$的首达期望为$h_{u,v}=h_{u,c}+h_{c,v}=1+(2n-3)=2n-2$。这一算例鲜明地展示了：\emph{尽管无向边$\{u,c\}$是对称的，单向首达期望$h_{u,c}=1$与$h_{c,u}=2n-3$却可以相差$\Theta(n)$倍。}
+
+\paragraph{3. 路径图$P_n$（一维扩散的二次方律，$h_{1,n}=(n-1)^2$）}
+
+在单位权路径$1\!-\!2\!-\!\cdots\!-\!n$上，先考察从顶点$k$向右走一步首次到达右邻居$k+1$的期望步数$h_{k,k+1}$。当$k=1$时，左端点$1$只有向右的一条边，故$h_{1,2}=1$；当$k\geq 2$时，从$k$出发各有$\frac12$概率向右直接到达$k+1$，或向左退到$k-1$（退到$k-1$后，必须先花平均$h_{k-1,k}$步回到$k$，再花平均$h_{k,k+1}$步到达$k+1$）：
+\[
+  h_{k,k+1} = \frac12\cdot 1 + \frac12(1 + h_{k-1,k} + h_{k,k+1})
+  \quad\Longrightarrow\quad
+  h_{k,k+1} = h_{k-1,k} + 2.
+\]
+结合初值$h_{1,2}=1$，立得奇数等差数列$h_{k,k+1}=2k-1$（例如在$P_4$上，$h_{1,2}=1,h_{2,3}=3,h_{3,4}=5$；反向则有$h_{4,3}=1,h_{3,2}=3,h_{2,1}=5$）。由于从$1$到$n$必须顺次首次经过$2,3,\ldots,n$，将各段相加即得两端首达期望：
 \begin{equation}
-h_{i,j}=1+\sum_k P_{i,k}h_{k,j},\qquad i\ne j.
+  h_{1,n} = \sum_{k=1}^{n-1} h_{k,k+1} = \sum_{k=1}^{n-1}(2k-1) = (n-1)^2.
+  \label{eq:graph-walk-path-hitting}
+\end{equation}
+
+\paragraph{4. 环图$C_n$（双侧合围，$h_{i,j}=k(n-k)$）}
+
+在$n$元环$C_n$上固定目标顶点$0$，沿环顺时针将顶点编号为$0,1,\ldots,n-1$。记与目标相距$k$步的顶点首达期望为$f(k)=h_{k,0}$（$0\leq k\leq n$，其中$k=0$与$k=n$均代表目标顶点自身，故边界条件为$f(0)=f(n)=0$）。对$1\leq k\leq n-1$，首步递推给出二阶常系数差分方程
+\[
+  f(k) = 1 + \frac12 f(k-1) + \frac12 f(k+1)
+  \quad\Longleftrightarrow\quad
+  f(k+1) - 2f(k) + f(k-1) = -2.
+\]
+二阶差分为常数$-2$说明$f(k)$是首项系数为$-1$的二次多项式$-k^2+Ak+B$；代入边界条件$f(0)=0$与$f(n)=0$解得$B=0,A=n$，从而相距$k$条边的两点首达期望为
+\begin{equation}
+  h_{i,j} = k(n-k).
+  \label{eq:graph-walk-cycle-hitting}
+\end{equation}
+特别地，当两点位于环的对径端（$k=\lfloor n/2\rfloor$）时，首达期望达到最大值$\lfloor n^2/4\rfloor=\Theta(n^2)$。
+
+\paragraph{5. 二维网格与超立方体$Q_d$（高维空间的分流效应）}
+
+当图的维数升高时，顶点周围的出路增多，游走不再像一维路径那样反复在原地拉锯：在$n$个顶点的二维环面网格$C_{\sqrt n}\square C_{\sqrt n}$上，最远点对的首达期望从一维的$\Theta(n^2)$降至$\Theta(n\log n)$；而在$d$维超立方体$Q_d$（$n=2^d$）上，每个顶点有$d=\log_2 n$条边通向不同坐标维度，绝大多数时间都在高维腰部区域快速混合，任意两个不同顶点间的首达期望为$\Theta(n)$（与完全图同阶）。
+
+\paragraph{6. 棒棒糖图（Lollipop图，团内困滞导致$\Theta(n^3)$极端延迟）}
+
+将一个$k$阶完全图$K_k$与一条长度为$\ell$的路径$u=v_0\!-\!v_1\!-\!\cdots\!-\!v_\ell=v$在接口顶点$u$处拼接，构成顶点数$n=k+\ell$的\emph{棒棒糖图}（图~\ref{fig:graph-walk-hitting-six-archetypes}f）。
+
+若从路径末端$v$出发前往团接口$u$，游走完全局限在路径上，由路径公式~\eqref{eq:graph-walk-path-hitting}知$h_{v,u}=\ell^2$；但若反过来从接口$u$出发前往路径末端$v$，每次棋子退回到接口$u$时，它面前有$k-1$条边连向团$K_k$内部、只有$1$条边踏上路径。一旦误入团$K_k$，从进入的非接口顶点返回$u$还需平均$k-1$步；而在路径上向$v$推进的过程中，又要经历$\Theta(\ell)$次退回$u$的失败尝试。下一小节我们将用往返时间公式精确算出
+\[
+  h_{u,v} = k(k-1)\ell + \ell^2.
+\]
+当取$k=\lceil n/2\rceil,\ell=\lfloor n/2\rfloor$时，$h_{u,v}=\Theta(n^3)$。这是$n$阶连通简单单位权无向图上首达期望的最大渐近量级；一般加权图的等待时间还依赖权重比例。
+
+\subsection{首达时间期望的方程}
+\label{sec:graph-walk-hitting-equation}
+
+在任意一般加权无向图上，如何系统计算所有起点$i$到固定目标$j$的首达期望$h_{i,j}$？下面的定理证明，将首步递推式两边同乘顶点度数$d_i$后，首达期望向量恰好是第~\ref{sec:electrical-grounding}小节\emph{接地拉普拉斯方程组}的唯一解。
+
+\begin{theorem}[首达期望的接地拉普拉斯方程]
+\label{prop:graph-walk-hitting-system}
+设有限无向图的正权支撑连通，固定目标顶点$j\in V$。则从任意起点$i\in V$出发到$j$的首达期望$h_{i,j}<\infty$，满足一阶递推关系
+\begin{equation}
+h_{i,j}=1+\sum_{k=1}^n P_{i,k}h_{k,j}\quad(i\ne j),\qquad h_{j,j}=0,
 \label{eq:graph-walk-first-step}
 \end{equation}
-
-\paragraph{化为拉普拉斯方程}
-
-用$P_{i,k}=w_{i,k}/d_i$代入上式并两边乘$d_i$，一步的代价$1$变成$d_i$，
-\[
-d_i h_{i,j}-\sum_k w_{i,k}h_{k,j}=d_i,\qquad i\ne j.
-\]
-左边正是$\bm{D}-\bm{W}=\bm{L}$作用于首达期望列$\bm{h}_{:,j}$的第$i$个分量。
-
-目标点$j$的分量已经固定为零，乘它的项都消失，因此删掉对应列。$j$处用的是边界条件$h_{j,j}=0$而非一步递推，因此也删掉相应行。记$-j$表示去掉坐标$j$，方程变为
+且删去目标顶点$j$对应的第$j$行和第$j$列后，其余$n-1$个顶点的首达期望列向量$\bm h_{-j,j}\in\mathbb R^{n-1}$是接地拉普拉斯线性系统
 \begin{equation}
-\bm{L}_{-j,-j}\bm{h}_{-j,j}=\bm{d}_{-j}.
+\bm{L}_{-j,-j}\bm{h}_{-j,j}=\bm{d}_{-j}
 \label{eq:graph-walk-grounded-hitting}
 \end{equation}
-这正是第~\ref{sec:graph-laplacian-solve}节的接地系统。右端是度向量，因为乘以$d_i$把"走一步"的代价换算到拉普拉斯的尺度。
+的唯一解，其中$\bm d_{-j}\in\mathbb R^{n-1}$为其余顶点的加权度向量。
+\end{theorem}
 
-\paragraph{四点路径上的消元}
+\begin{proof}
+第一步：证明$h_{i,j}<\infty$。因正权支撑连通，从每个非目标顶点$i\neq j$都存在一条长度至多为$n-1$、通往目标$j$的简单正权路径；记从任意起点沿该路径在$n-1$步内直达$j$的最小概率为$p>0$。将游走按每$n-1$步分块，连续$k$块均未命中$j$的概率至多为$(1-p)^k$，由几何级数求和知$h_{i,j}\leq(n-1)/p<\infty$。
 
-在单位权路径$1\!-\!2\!-\!3\!-\!4$上以$4$为目标。端点$1$的度为$1$，内点$2,3$的度为$2$。逐点写出方程，
-
-从$1$出发：下一步必在$2$，故$h_{1,4}=1+h_{2,4}$。
-
-从$2$出发：第一步以各$1/2$概率到$1$或$3$，故$h_{2,4}=1+(h_{1,4}+h_{3,4})/2$。
-
-从$3$出发：一半概率到$2$，另一半概率到$4$（目标），故$h_{3,4}=1+h_{2,4}/2$。
-
-乘上各点的度并移项，得到
+第二步：导出接地拉普拉斯方程。对第一步转移的位置$X_1=k$应用全期望公式立得式~\eqref{eq:graph-walk-first-step}。将$P_{i,k}=w_{i,k}/d_i$代入式~\eqref{eq:graph-walk-first-step}并两边同乘$d_i$，移项整理得
 \[
-\begin{aligned}
-h_{1,4}-h_{2,4}&=1,\\
--h_{1,4}+2h_{2,4}-h_{3,4}&=2,\\
--h_{2,4}+2h_{3,4}&=2.
-\end{aligned}
+d_i h_{i,j}-\sum_{k=1}^n w_{i,k}h_{k,j}=d_i\qquad(i\ne j).
 \]
-将第一式代入第二式，得到$h_{2,4}-h_{3,4}=3$。代回第三式得到$h_{3,4}=5$，逐项回代有
+左端正是组合拉普拉斯矩阵$\bm L=\bm D-\bm W$与列向量$\bm h_{:,j}$乘积的第$i$行$(\bm L\bm h_{:,j})_i$。代入接地点边界条件$h_{j,j}=0$消去第$j$列，并截取$i\neq j$的$n-1$个方程，即得式~\eqref{eq:graph-walk-grounded-hitting}。由第~\ref{sec:electrical-grounding}小节定理~\ref{prop:electrical-grounded-system}知接地矩阵$\bm L_{-j,-j}$对称正定，故解唯一。
+\end{proof}
+
+从电网络视角看，式~\eqref{eq:graph-walk-grounded-hitting}有如下电网络解释：若将目标顶点$j$接地（电势设为$0$），并向其余每个顶点$i\neq j$注入等于其自身度数$d_i$的电流，那么网络中各顶点的电势就恰好等于从该点到$j$的首达期望$h_{i,j}$。
+
+以图~\ref{fig:graph-walk-hitting-target}的单位权四点路径$1\!-\!2\!-\!3\!-\!4$（目标为$j=4$）核对式~\eqref{eq:graph-walk-grounded-hitting}。保留顶点$1,2,3$的度数为$\bm d_{-4}=(1,2,2)^\top$，接地拉普拉斯方程组为
 \[
-\bm{h}_{:,4}=(9,8,5,0)^\top.
+\begin{pmatrix}
+  1 & -1 & 0 \\
+ -1 &  2 & -1 \\
+  0 & -1 &  2
+\end{pmatrix}
+\begin{pmatrix}
+  h_{1,4} \\ h_{2,4} \\ h_{3,4}
+\end{pmatrix}
+=
+\begin{pmatrix}
+  1 \\ 2 \\ 2
+\end{pmatrix}.
 \]
-图~\ref{fig:graph-walk-hitting-target}画出从$3$出发的两种第一步。两边各占一半加上必走的一步，得到$1+(8+0)/2=5$。
+将第$1$行加到第$2$行得$h_{2,4}-h_{3,4}=3$，再加到第$3$行解得$h_{3,4}=5$，回代得$h_{2,4}=8$、$h_{1,4}=9=(4-1)^2$，与公式~\eqref{eq:graph-walk-path-hitting}完全一致。
 
 \begin{BookInlineFigure}
 \centering
 \includegraphics[width=99.24mm]{figures/03-graphs/05-matrices-and-spectra/tikz/walk-examples/hitting-path-target.pdf}
-\caption{四顶点单位权路径以$4$为目标。节点下方是以该点为起点还要走的期望步数。箭头标出从$3$出发的两个去处及其概率，双圈标出目标。}
+\caption{四顶点单位权路径以顶点$4$（双圈）为目标的首达期望。节点下方标注从该点出发到达$4$的期望步数$\bm h_{:,4}=(9,8,5,0)^\top$，箭头展示顶点$3$处的首步递推$h_{3,4}=1+\frac12(8+0)=5$。}
 \label{fig:graph-walk-hitting-target}
 \end{BookInlineFigure}
 
-\paragraph{两个方向的首达期望不同}
-
-从$1$到$2$只需一步。反过来从$2$到$1$就不一样了：$2$有$1/2$的概率直接到$1$，另有$1/2$的概率先走到$3$。走到$3$之后，要先从$3$绕回$2$，然后再重新尝试。
-
-先算从$3$到$2$的平均时间。从$3$出发，$1/2$概率一步到$2$，$1/2$概率走到$4$。走到$4$后下一步必回$3$，等于白走两步回到原处。因此
-\[
-h_{3,2}=\tfrac{1}{2}\cdot1+\tfrac{1}{2}(2+h_{3,2}).
-\]
-解得$h_{3,2}=3$。
-
-回到从$2$到$1$的问题。$1/2$概率一步到达，$1/2$概率先到$3$（一步），再从$3$回到$2$（平均$3$步），然后重新开始，
-\[
-h_{2,1}=\tfrac{1}{2}\cdot1+\tfrac{1}{2}(1+3+h_{2,1}).
-\]
-解得$h_{2,1}=5$。虽然$\{1,2\}$是一条无向边，但从两端出发绕远的机会完全不同。
-
-在完全图$K_n$上，只要尚未命中目标，从任何非目标顶点出发，下一步命中的概率都是$1/(n-1)$。等待步数的期望就是$n-1$。
-
-\subsection{往返时间与有效电阻}
+\subsection{往返时间}
 \label{sec:graph-walk-commute-resistance}
 
-从$i$去$j$再从$j$回$i$，总等待时间由两段组成。前一段的期望是$h_{i,j}$。前一段结束时，棋子恰好在$j$，此后每一步仍按相同规则转移，返程的条件期望都是$h_{j,i}$。两段相加，\term{往返时间}（commute time）的期望为$h_{i,j}+h_{j,i}$。
-
-单向首达期望不对称。为了找到一个对称的表达式，先把首达方程恢复成全图形式。
-
-将$\bm{L}\bm{h}_{:,j}$的各分量相加。$\bm{L}$的每一列和为零，因此总和也为零。已知$i\ne j$时第$i$项等于$d_i$，所以第$j$项必须抵消其余各项之和，等于$d_j-\operatorname{vol}(V)$。用$\bm{e}_j$记第$j$项为$1$、其余为$0$的列向量，全图方程为
-\begin{equation}
-\bm{L}\bm{h}_{:,j}=\bm{d}-\operatorname{vol}(V)\bm{e}_j.
-\label{eq:graph-walk-full-hitting}
-\end{equation}
-
-右端各分量和为零，可以用伪逆$\bm{L}^\dagger$先求一个解。$\bm{L}^\dagger\bm{e}_j$取出伪逆的第$j$列，因此
+从顶点$i$出发首次到达$j$、再从$j$出发首次返回$i$，两段等待步数之和的期望
 \[
-\bm{x}=\bm{L}^\dagger\bm{d}-\operatorname{vol}(V)\bm{L}^\dagger\bm{e}_j.
+  \kappa_{i,j} = h_{i,j} + h_{j,i}
 \]
-这个解的第$j$项未必为零。由$\bm{L}\bm{1}=\bm{0}$，可以统一减去$x_j$后仍满足方程，同时保证$h_{j,j}=0$。展开$h_{i,j}=x_i-x_j$，得
+称为顶点$i$与$j$之间的\term{往返时间}（commute time）。第~\ref{sec:graph-walk-typical-hitting}小节的算例表明，单向首达期望$h_{i,j}$与$h_{j,i}$往往因为两端邻域度数的不对称而相差悬殊；而把去程$h_{i,j}$与返程$h_{j,i}$相加，相应的不对称项抵消，往返时间直接等于全图总体积$\operatorname{vol}(V)$乘以两点间的\emph{有效电阻}$R_{i,j}$。
+
+\begin{theorem}[往返时间与有效电阻恒等式]
+\label{thm:graph-walk-commute-resistance}
+设有限无向图的正权支撑连通。对任意两个顶点$i,j\in V$，单向首达期望可由拉普拉斯伪逆$\bm L^\dagger$表示为
 \begin{equation}
 h_{i,j}=(\bm{L}^\dagger\bm{d})_i-(\bm{L}^\dagger\bm{d})_j
 +\operatorname{vol}(V)
-\bigl((\bm{L}^\dagger)_{j,j}-(\bm{L}^\dagger)_{i,j}\bigr).
+\bigl((\bm{L}^\dagger)_{j,j}-(\bm{L}^\dagger)_{i,j}\bigr),
 \label{eq:graph-walk-hitting-pseudoinverse}
 \end{equation}
-第一行包含度向量的信息，记录了度分配对单向首达时间的影响。正则图上度为常向量，这一部分消失。
-
-把去程和返程相加。交换$i,j$后，第一行的两个差值恰好符号相反，抵消为零。剩下的是总加权度乘
-\[
-(\bm{L}^\dagger)_{i,i}+(\bm{L}^\dagger)_{j,j}
--(\bm{L}^\dagger)_{i,j}-(\bm{L}^\dagger)_{j,i}.
-\]
-把差向量$\bm{e}_i-\bm{e}_j$放在$\bm{L}^\dagger$的两侧相乘，展开后恰好是这四项。这正是第~\ref{sec:graph-effective-resistance}节的有效电阻二次型。
-
-\begin{theorem}[往返时间与有效电阻]
-\label{thm:graph-walk-commute-resistance}
-对正权支撑连通的有限无向图，任意两点$i,j$的往返期望为
+且$i$与$j$之间的往返时间恒等于全图体积乘以两点间的有效电阻：
 \begin{equation}
 h_{i,j}+h_{j,i}
 =\operatorname{vol}(V)\,R_{i,j}.
@@ -135,10 +179,69 @@ h_{i,j}+h_{j,i}
 \end{equation}
 \end{theorem}
 
-有效电阻衡量一对顶点间的电势响应，乘以总加权度后就给出两次首达所需的平均总步数。
+\begin{proof}
+第一步：将接地方程补全为全图拉普拉斯方程。在$\bm L\bm h_{:,j}$中，由式~\eqref{eq:graph-walk-grounded-hitting}知对所有$i\neq j$有$(\bm L\bm h_{:,j})_i=d_i$；又因$\bm 1^\top\bm L=\bm 0^\top$，全图$n$个分量之和必为$0$，故第$j$行必为$-\sum_{i\neq j}d_i=d_j-\operatorname{vol}(V)$。即列向量$\bm h_{:,j}$满足全图相容方程
+\begin{equation}
+\bm{L}\bm{h}_{:,j}=\bm{d}-\operatorname{vol}(V)\bm{e}_j.
+\label{eq:graph-walk-full-hitting}
+\end{equation}
+该方程的零均值解为$\bm x=\bm L^\dagger\bm d-\operatorname{vol}(V)\bm L^\dagger\bm e_j$。由边界条件$h_{j,j}=0$将$\bm x$平移减去第$j$个分量$x_j$，即得$h_{i,j}=x_i-x_j$，展开正是式~\eqref{eq:graph-walk-hitting-pseudoinverse}。
 
-在四点路径上，总加权度为$1+2+2+1=6$。相邻点$1,2$之间只有一条单位电阻边，$R_{1,2}=1$，往返期望为$6$，与$h_{1,2}+h_{2,1}=1+5$一致。两端之间串联三条边，$R_{1,4}=3$，往返期望为$18$，即两个方向各$9$步。
+第二步：去程与返程相加消去度项。将式~\eqref{eq:graph-walk-hitting-pseudoinverse}中的指标$i,j$互换写出$h_{j,i}$并与$h_{i,j}$相加，前两项$\bigl((\bm L^\dagger\bm d)_i-(\bm L^\dagger\bm d)_j\bigr)+\bigl((\bm L^\dagger\bm d)_j-(\bm L^\dagger\bm d)_i\bigr)=0$精确抵消，余下部分由有效电阻伪逆公式~\eqref{eq:electrical-resistance-pseudoinverse}化为
+\[
+\begin{aligned}
+h_{i,j}+h_{j,i}
+&=\operatorname{vol}(V)\bigl((\bm{L}^\dagger)_{i,i}+(\bm{L}^\dagger)_{j,j}
+-(\bm{L}^\dagger)_{i,j}-(\bm{L}^\dagger)_{j,i}\bigr)\\
+&=\operatorname{vol}(V)(\bm e_i-\bm e_j)^\top\bm L^\dagger(\bm e_i-\bm e_j)
+=\operatorname{vol}(V)\,R_{i,j}.\qedhere
+\end{aligned}
+\]
+\end{proof}
 
-在$n$点单位权环上，若两点沿环相隔$k$条边，两段弧的电阻分别为$k$和$n-k$，并联后得到$R=k(n-k)/n$。总度为$2n$，往返期望为$2k(n-k)$。
+利用往返时间公式~\eqref{eq:graph-walk-commute-time}，此前复杂的首达时间计算立刻化为简单的电阻计算：
+\begin{itemize}
+\item 在星图$K_{1,n-1}$中，总体积为$\operatorname{vol}(V)=2(n-1)$，叶子$u$与中心$c$之间是单条树边（$R_{u,c}=1$），故$h_{u,c}+h_{c,u}=2(n-1)$；已知$h_{u,c}=1$，无需解方程立得$h_{c,u}=2(n-1)-1=2n-3$。
+\item 在$n$元环$C_n$中，总体积为$2n$，相距$k$条边的两点间由阻值为$k$与$n-k$的两段弧并联，有效电阻为$R_{i,j}=\frac{k(n-k)}{n}$，且由环的对称性知$h_{i,j}=h_{j,i}$，故$h_{i,j}=\frac12\cdot 2n\cdot\frac{k(n-k)}{n}=k(n-k)$。
+\item 在第~\ref{sec:graph-walk-typical-hitting}小节的棒棒糖图中，团$K_k$含$\frac{k(k-1)}{2}$条边、路径含$\ell$条边，全图总体积为$\operatorname{vol}(V)=k(k-1)+2\ell$；接口$u$到路径末端$v$之间串联了$\ell$条桥边，团内边不形成跨接路径的并联回路，故$R_{u,v}=\ell$。由式~\eqref{eq:graph-walk-commute-time}减去返程$h_{v,u}=\ell^2$，立得去程首达期望：
+\[
+  h_{u,v} = \operatorname{vol}(V)R_{u,v} - h_{v,u} = \bigl(k(k-1)+2\ell\bigr)\ell - \ell^2 = k(k-1)\ell + \ell^2.
+\]
+\end{itemize}
 
-若把所有电导同时乘$c>0$，每步用边权除以度，转移矩阵保持不变。电阻缩小为原来的$1/c$，总加权度增为$c$倍，二者相乘后仍不变。
+\subsection{首达时间的上界}
+\label{sec:graph-walk-hitting-bounds}
+
+往返时间恒等式$h_{i,j}+h_{j,i}=\operatorname{vol}(V)R_{i,j}$与第~\ref{sec:electrical-resistance-properties}小节有效电阻的度量与单调性质相结合，可以直接导出任意连通图上首达时间与往返时间的通用上界。
+
+\begin{theorem}[首达时间与往返时间的通用上界]
+\label{thm:graph-walk-hitting-upper-bound}
+设$\mathcal G=(V,E)$为包含$n$个顶点、$m$条边的连通简单单位权无向图（$\operatorname{vol}(V)=2m$）。则：
+\begin{enumerate}
+\item \emph{相邻顶点界}：对任意一条边$\{u,v\}\in E$，两端之间的有效电阻$R_{u,v}\leq 1$，故往返时间与单向首达时间满足
+\begin{equation}
+  h_{u,v} + h_{v,u} = 2m\,R_{u,v} \leq 2m.
+  \label{eq:graph-walk-adjacent-hitting-bound}
+\end{equation}
+\item \emph{任意顶点对的距离界与三次方界}：对任意两个不同顶点$i,j\in V$，记其最短路径距离为$\operatorname{dist}(i,j)\leq D\leq n-1$（$D$为图直径），则
+\begin{equation}
+  h_{i,j} < h_{i,j} + h_{j,i} = 2m\,R_{i,j} \leq 2m\,\operatorname{dist}(i,j) \leq 2m(n-1) < n^3.
+  \label{eq:graph-walk-general-hitting-bound}
+\end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+（1）当$\{u,v\}\in E$时，直接沿边$\{u,v\}$输送$1$单位电流的耗散为$1$，由Thomson最小能量原理（或Rayleigh单调性定理~\ref{thm:electrical-resistance-monotonicity}）知$R_{u,v}\leq 1$，代入式~\eqref{eq:graph-walk-commute-time}即得$h_{u,v}+h_{v,u}=2m R_{u,v}\leq 2m$。
+
+（2）设连接$i$与$j$的一条最短路径为$i=v_0\to v_1\to\cdots\to v_\ell=j$，其中$\ell=\operatorname{dist}(i,j)\leq n-1$。由有效电阻的三角不等式（定理~\ref{thm:electrical-resistance-metric}）及每条边$R_{v_{r-1},v_r}\leq 1$，有
+\[
+  R_{i,j} \leq \sum_{r=1}^\ell R_{v_{r-1},v_r} \leq \ell = \operatorname{dist}(i,j) \leq n-1.
+\]
+同乘$\operatorname{vol}(V)=2m$，并注意简单图满足$2m\leq n(n-1)$，即得
+\[
+  h_{i,j} < h_{i,j}+h_{j,i} = 2m\,R_{i,j} \leq 2m\,\operatorname{dist}(i,j) \leq 2m(n-1) \leq n(n-1)^2 < n^3.\qedhere
+\]
+\end{proof}
+
+定理~\ref{thm:graph-walk-hitting-upper-bound}表明，在任意连通简单单位权无向图上，随机游走从任一顶点到达另一顶点的平均步数都是关于$n$的多项式（至多$O(mn)=O(n^3)$，绝不会像有向图那样出现指数级等待时间）；同时，第~\ref{sec:graph-walk-typical-hitting}小节的棒棒糖图算例（$h_{u,v}=\Theta(n^3)$）证明这一$O(n^3)$上界在渐近阶上是紧的，不能再进一步压低。

@@ -12,7 +12,7 @@
 |---|---:|---:|---|
 | 卷一：集合与一元微积分 | 2 | 7 | [集合](01-sets-and-univariate-calculus/01-sets.md)；[实数与一元函数](01-sets-and-univariate-calculus/02-real-numbers-and-univariate-functions.md) |
 | 卷二：向量、矩阵与多元微积分 | 4 | 27 | [向量与线性空间](02-vectors-matrices-and-multivariate-calculus/01-vectors-and-linear-spaces.md)；[谱分析](02-vectors-matrices-and-multivariate-calculus/02-spectral-analysis.md)；[线性方程与优化](02-vectors-matrices-and-multivariate-calculus/03-linear-equations-and-optimization.md)；[多元微积分](02-vectors-matrices-and-multivariate-calculus/04-multivariate-calculus.md) |
-| 卷三：图 | 4 | 13 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md) |
+| 卷三：图 | 5 | 20 | [图结构与结构计算](03-graphs/01-structure-and-computation.md)；[图上的组合优化](03-graphs/02-combinatorial-optimization.md)；[集合函数与子集选择](03-graphs/03-set-functions-and-subset-selection.md)；[图上的动态规划](03-graphs/04-local-functions-and-dynamic-programming.md)；[图的矩阵与谱](03-graphs/05-matrices-and-spectra.md) |
 | 卷四：函数空间与流形 | 4 | 31 | [拓扑与度量](04-spaces-measures-and-geometry/01-topology-and-metric.md)；[测度](04-spaces-measures-and-geometry/02-measure.md)；[函数空间](04-spaces-measures-and-geometry/03-function-spaces.md)；[流形](04-spaces-measures-and-geometry/04-manifolds.md) |
 | 卷五：优化 | 8 | 29 | [线性规划](05-optimization/01-linear-programming.md)；[光滑优化](05-optimization/02-smooth-optimization.md)；[非光滑优化](05-optimization/03-nonsmooth-optimization.md)；[分块优化](05-optimization/04-block-optimization.md)；[随机优化](05-optimization/05-stochastic-optimization.md)；[约束优化](05-optimization/06-constrained-optimization.md)；[多目标与嵌套优化](05-optimization/07-multiple-criteria-and-nested-optimization.md)；[泛函优化](05-optimization/08-functional-optimization.md) |
 | 卷六：微分方程 | 2 | 13 | [常微分方程](06-differential-equations/01-ordinary-differential-equations.md)；[偏微分方程](06-differential-equations/02-partial-differential-equations.md) |
@@ -287,19 +287,19 @@
 
 #### 3.3 最短路
 
-在指定边权条件下寻找最低成本路径，利用距离标签与松弛建立共同计算机制。按无环、一般权重和非负权重分别选择拓扑序、Bellman–Ford或Dijkstra。
+在指定边权条件下寻找最低成本路径，利用距离标签与松弛建立共同计算机制。单源最短路按无环、一般权重和非负权重分别选择拓扑序、Bellman–Ford或Dijkstra，全源最短路分别通过Floyd–Warshall动态规划与Johnson势函数重赋权求解。
 
 #### 3.4 最小生成树
 
-选择总权最小的连通骨架，以割性质和安全选边证明贪心步骤。Kruskal与Prim分别组织候选边，结果同时核对生成性、成本和边界情形。
+选择总权最小的连通骨架，以割性质和安全选边证明贪心步骤。Kruskal与Prim分别组织候选边，并由图拟阵交换公理阐明贪心精确最优的结构边界。
 
 #### 3.5 最大流与最小割
 
-在容量与流守恒约束下最大化输送量，以残量网络和增广建立求解方法。最小割提供最优性证书，Edmonds–Karp与Dinic比较不同的推进机制。
+在容量与流守恒约束下最大化输送量，以残量网络和增广建立求解方法。最小割提供最优性证书并导出Menger割与不相交路径对偶定理，Edmonds–Karp与Dinic比较不同的推进机制。
 
 #### 3.6 二部图匹配与指派
 
-先在二部图上最大化配对数量，再研究带权匹配和指派。交替路、可行标号与价格分别支持增广、KM和Auction方法，目标及精度保证不能混同。
+先在二部图上最大化配对数量并建立König定理与Hall婚姻定理，再研究带权匹配和指派。交替路、可行标号与价格分别支持增广、KM和Auction方法，目标及精度保证不能混同。
 
 #### 3.7 最小费用流
 
@@ -344,6 +344,42 @@
 #### 3.13 一般图上动态规划的计算
 
 按最小成本、带保留变量的最小成本、计数和求和三种问题设定展开具体计算，最小成本的求解与最优配置恢复放在一起。各问题分别说明输入、输出、递推、正确性与算例检验，在相应问题中交代消元顺序的适用条件，最后分析实际计算代价。
+
+### 第五部分：图的矩阵与谱
+
+[查看本部分章、节和小节大纲](03-graphs/05-matrices-and-spectra.md)
+
+怎样把图交给矩阵，再从矩阵的线性结构与特征值读回图的性质。
+
+主要依赖与分工：依赖本卷图表示与连接结构，以及卷二的线性空间、谱分解、广义Rayleigh商、线性方程求解与矩阵不等式。
+
+#### 3.14 关联矩阵
+
+把边的端点写进关联矩阵，统一顶点差分与边流守恒，建立环空间与割空间的正交分解，并用全幺模性解释流与匹配线性规划的整数最优解。
+
+#### 3.15 邻接矩阵
+
+利用邻接矩阵的幂与谱矩计算行走数和局部子图计数，推导典型图的显式谱，建立Perron定理与直径、色数、独立数的谱界，并通过公平划分研究商谱。
+
+#### 3.16 拉普拉斯矩阵
+
+由沿边差分与加权汇总建立组合拉普拉斯及其二次型，分析特征值与连通分量、矩阵树定理与Cayley公式，并引入对称归一化与随机游走归一化拉普拉斯。
+
+#### 3.17 电网络
+
+将无向加权图视为电阻网络，由Kirchhoff定律与Ohm定律导出拉普拉斯方程，建立Thomson能量最小原理，系统研究有效电阻的精确计算、近似计算、度量单调性质及其与生成树边包含概率的联系。
+
+#### 3.18 图的谱划分
+
+用代数连通度、Fiedler向量与Cheeger不等式刻画图的稀疏割瓶颈及扩展图混合性质，并将RatioCut与NCut连续松弛为拉普拉斯特征向量阈值扫描算法。
+
+#### 3.19 图的稀疏化
+
+在Loewner偏序下定义保持全部方向拉普拉斯二次型的谱近似，利用有效电阻抽样与矩阵Chernoff界构造近线性边数的谱稀疏化子图，并用于拉普拉斯线性系统的预条件求解。
+
+#### 3.20 图上的行走
+
+研究无向图随机游走的平稳分布、对称化谱间隙与混合收敛速度，利用电网络有效电阻刻画首达时间、往返时间与遍历时间，并展开有向图PageRank与局部推送个性化PageRank算法。
 
 ## 卷四：函数空间与流形
 

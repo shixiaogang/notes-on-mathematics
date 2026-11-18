@@ -1,168 +1,269 @@
-\section{拉普拉斯特征值}
+\section{拉普拉斯谱}
 \label{sec:graph-laplacian-eigenvalues}
 
-把一组顶点读数全部乘$2$，每条边的差也乘$2$，平方之后能量变成$4$倍。要比较两组读数在图上变化的方式——而不是单纯因为数值放大而显得能量更高——就需要先把它们缩放到相同的长度。特征向量给出了一组这样的标准方向，特征值告诉我们每个标准方向上的沿边能量。
+上一节证明了组合拉普拉斯矩阵$\bm L$是实对称半正定矩阵。根据实对称矩阵的谱定理，可以在顶点空间$\mathbb R^n$上对$\bm L$作正交谱分解，用特征值与特征向量刻画图的全局拓扑性质。本节依次介绍组合拉普拉斯的特征值与正交谱分解、零特征值重数与连通分量的对应关系、特征值的上下界、加边单调性，以及典型图族的拉普拉斯谱。
 
-\subsection{特征向量的变化尺度}
+\subsection{特征值}
 \label{sec:graph-laplacian-frequency}
 
-$\bm L$是实对称矩阵，因此可以取一组标准正交特征向量$\bm u_1,\ldots,\bm u_n$，对应的特征值按$0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_n$排列。实对称矩阵的正交谱分解可参考\BookChapterRef{chap:eigen-spectral-decomposition}{卷二"谱分解"章}。
-
-任意顶点读数$\bm x$可以在这组特征基下表示。将$\bm x$投影到每个特征方向上，得到坐标$a_i=\bm u_i^\top\bm x$。这些坐标还原为顶点读数就是
+由定理~\ref{prop:graph-laplacian-quadratic-form}(1)，组合拉普拉斯矩阵$\bm L\in\mathbb R^{n\times n}$是实对称半正定矩阵，因此它的$n$个特征值均为非负实数，且存在一组标准正交特征向量$\bm u_1,\ldots,\bm u_n\in\mathbb R^n$满足$\bm L\bm u_i=\lambda_i\bm u_i$（实对称矩阵的正交谱分解见\BookChapterRef{chap:eigen-spectral-decomposition}{卷二“谱分解”章}）。按惯例，将拉普拉斯特征值按从小到大的升序排列（这与第~\ref{chap:graph-adjacency-matrix}章邻接特征值按降序排列相反）：
 \[
-  \bm x=\sum_{i=1}^n a_i\bm u_i.
+  0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_n,
 \]
-
-作用一次拉普拉斯矩阵后，每个方向的坐标从$a_i$变成$\lambda_i a_i$：
-\[
-  \bm L\bm x=\sum_{i=1}^n\lambda_i a_i\bm u_i.
-\]
-
-现在用输入$\bm x$与输出$\bm L\bm x$做内积。由于特征向量两两正交，不同方向的交叉项为零，只有同一方向的坐标相乘。第$i$个方向贡献$a_i\cdot\lambda_i a_i=\lambda_i a_i^2$。类似地，$\bm x$与自身的内积给出各坐标平方之和。这就给出
+这组有序特征值称为图$\mathcal G$的\emph{拉普拉斯谱}（Laplacian spectrum）。以$\bm U=[\bm u_1,\ldots,\bm u_n]$记正交特征矩阵、$\bm\Lambda=\operatorname{diag}(\lambda_1,\ldots,\lambda_n)$记特征值对角阵，则$\bm L$的正交谱分解写为
 \begin{equation}
-  \bm x^\top\bm L\bm x
-  =\sum_{i=1}^n\lambda_i a_i^2,\qquad
-  \lVert\bm x\rVert_2^2=\sum_{i=1}^n a_i^2.
+  \bm L=\bm U\bm\Lambda\bm U^\top=\sum_{i=1}^n\lambda_i\bm u_i\bm u_i^\top.
   \label{eq:graph-laplacian-spectral-energy}
 \end{equation}
 
-当$\bm x$恰好等于某个特征向量$\bm u_i$时，只有第$i$个坐标为$1$，其余全为$0$。此时长度为$1$，能量恰好等于$\lambda_i$。零特征值对应的方向在各连通分量内为常值，沿边没有变化。较小的正特征值对应整图上加权平方差之和较小的读数模式——但这是全图加权累计的结果，并不意味着每条边上的差都比其他方向小。
-
-下面在四点图上逐个核验。先取
+拉普拉斯特征值满足两组基本代数关系。第一，由于$\bm L\bm 1=\bm 0$，全一常向量$\bm 1$始终是对应于最小特征值$\lambda_1=0$的特征向量（单位化后为$\bm u_1=\frac{1}{\sqrt n}\bm 1$）；其余特征向量$\bm u_2,\ldots,\bm u_n$均与$\bm 1$正交，即各分量之和为零（$\bm 1^\top\bm u_i=0$）。结合Courant--Fischer极小极大定理，各特征值可由瑞利商$\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}$逐级刻画，特别地，第二小特征值$\lambda_2$与最大特征值$\lambda_n$满足
 \[
-  \bm x=(0,1,0,-1)^\top.
+  \lambda_2=\min_{\substack{\bm x\perp\bm 1\\ \bm x\neq\bm 0}}\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x},\qquad
+  \lambda_n=\max_{\bm x\neq\bm 0}\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}.
 \]
-顶点$1$的三个邻居$2,3,4$读数分别为$1,0,-1$，差值为$-1,0,1$，加起来为$0$。类似地，顶点$3$的输出也为$0$。顶点$2$的两个邻居$1$和$3$都是$0$，差值都等于自己，输出$2$。顶点$4$的两个邻居也都是$0$，输出$-2$。因此$\bm L\bm x=(0,2,0,-2)^\top=2\bm x$，这是特征值$2$的方向。
 
-将此向量归一化为$\bm x/\sqrt2=(0,1/\sqrt2,0,-1/\sqrt2)^\top$。四条环边中，$12$和$41$的差平方为$1/2$，$23$和$34$也是$1/2$，共贡献$4\cdot(1/2)=2$。对角边$13$两端都是$0$，没有贡献。单位向量的总能量为$2$，确实等于特征值。
+第二，矩阵的迹等于全体特征值之和，而$\bm L=\bm D-\bm W$的对角元恰为各顶点的加权度$d_i$，因此
+\[
+  \sum_{i=1}^n\lambda_i=\operatorname{tr}\bm L=\sum_{i=1}^n d_i=2\sum_{e\in E}w_e.
+\]
 
-换成$\bm x=(1,0,-1,0)^\top$。顶点$1$的两个环邻居$2$和$4$各差$1$，对角邻居$3$差$2$，总和$1+2+1=4$。顶点$3$对称地得到$-4$。顶点$2$和$4$的两个邻居一正一负，恰好相消。因此$\bm L\bm x=(4,0,-4,0)^\top=4\bm x$，特征值为$4$。
+下面在四点五边单位权图上逐步计算$\bm L$的全部特征值与正交特征向量（图~\ref{fig:laplacian-four-modes}）。第一个特征方向是全一常向量$\bm 1=(1,1,1,1)^\top$，单位化为$\bm u_1=\frac12(1,1,1,1)^\top$，对应最小特征值$\lambda_1=0$。
 
-最后取$\bm x=(1,-1,1,-1)^\top$。四条环边每对相邻顶点取值相差$2$，差平方为$4$。对角边$13$两端都是$1$，差为零。每个顶点的两个环邻居各贡献$2$，对角邻居（如果有的话）贡献$0$或$2$。以顶点$1$为例，邻居$2,3,4$的差值为$2,-2,2$，之和为$4\cdot1$，于是$\bm L\bm x=4\bm x$，特征值同样为$4$。
+第二个特征方向利用顶点$2$与顶点$4$的对称性：两点在图中地位完全对称且彼此不相邻，取仅在$2,4$上反号的向量$\bm x^{(2)}=(0,1,0,-1)^\top$，代入$\bm L$计算得
+\[
+  \bm L\bm x^{(2)}=(0,2,0,-2)^\top=2\bm x^{(2)},
+\]
+故$\lambda_2=2$，单位特征向量为$\bm u_2=\frac{1}{\sqrt 2}(0,1,0,-1)^\top$。
 
-这三个非零特征方向加上常向量$(1,1,1,1)^\top$，构成四维空间的一组正交基。四点算例的完整拉普拉斯谱是$0,2,4,4$。特征值$4$出现两次，对应的两个特征向量$(1,0,-1,0)^\top$和$(1,-1,1,-1)^\top$描绘了不同的变化方式，但单位长度下的总能量相同。
+第三个特征方向利用顶点$1$与顶点$3$的对称性：两点由对角边$13$直接相连，取仅在$1,3$上反号的向量$\bm x^{(3)}=(1,0,-1,0)^\top$，代入$\bm L$计算得
+\[
+  \bm L\bm x^{(3)}=(4,0,-4,0)^\top=4\bm x^{(3)},
+\]
+故$\lambda_3=4$，单位特征向量为$\bm u_3=\frac{1}{\sqrt 2}(1,0,-1,0)^\top$。
 
-图~\ref{fig:laplacian-four-modes}把四个单位特征向量画在同一张图上。比较后面两个方向：$(1,0,-1,0)^\top$在对角边上两端读数不同，$(1,-1,1,-1)^\top$在对角边上两端相同。但加上四条环边的贡献后，两者的总能量都等于$4$。
+第四个特征方向与前三者均正交，取在$\{1,3\}$与$\{2,4\}$之间正负交替的向量$\bm x^{(4)}=(1,-1,1,-1)^\top$，代入$\bm L$计算得
+\[
+  \bm L\bm x^{(4)}=(4,-4,4,-4)^\top=4\bm x^{(4)},
+\]
+故$\lambda_4=4$，单位特征向量为$\bm u_4=\frac12(1,-1,1,-1)^\top$。由此得到四点五边图的完整拉普拉斯谱为$0,2,4,4$，四个特征值之和$0+2+4+4=10$恰好等于度数总和$\operatorname{tr}\bm L=3+2+3+2=10$。
 
 \begin{BookInlineFigure}
   \centering
   \includegraphics{figures/03-graphs/05-matrices-and-spectra/tikz/laplacian-four-modes.pdf}
-  \caption{四点单位权图的四个单位特征向量。圆内为该点的坐标，浅蓝、浅红和白色分别表示正、负和零。两端读数不同的边画成实线，读数相等的边画成虚线。每幅图下的特征值就是沿边变化能量。}
+  \caption{四点五边单位权图的四个单位特征向量与对应特征值。圆内为顶点坐标，浅蓝、浅红和白色分别表示正、负和零；实线边两端读数不同，虚线边两端读数相等。}
   \label{fig:laplacian-four-modes}
 \end{BookInlineFigure}
 
-\subsection{特征值估计}
+\subsection{零特征值}
+\label{sec:graph-laplacian-kernel}
+
+在拉普拉斯谱$0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_n$中，最小特征值恒为$\lambda_1=0$。那么零特征值一共出现多少次？利用定理~\ref{prop:graph-laplacian-quadratic-form}(1)对$\bm x^\top\bm L\bm x=0$的刻画，可以直接给出零空间$\ker\bm L$的基，并证明零特征值的重数恰好等于正权支撑的连通分量个数。
+
+\begin{theorem}[拉普拉斯的零空间与零特征值重数]
+\label{thm:graph-laplacian-components}
+设有限无向非负加权图的正权支撑$\mathcal G_+=(V,E_+)$有$c$个连通分量$V_1,\ldots,V_c$，以$\bm 1_{V_a}\in\mathbb R^n$表示在分量$V_a$上取$1$、其余位置取$0$的分量指示向量。则
+\begin{equation}
+  \ker\bm L=\operatorname{span}\{\bm 1_{V_1},\ldots,\bm 1_{V_c}\},
+  \qquad
+  \operatorname{rank}\bm L=n-c,
+  \label{eq:graph-laplacian-kernel-components}
+\end{equation}
+且$\bm L$的零特征值重数等于正权支撑的连通分量个数$c$（特别地，正权支撑连通当且仅当第二小特征值$\lambda_2>0$）。
+\end{theorem}
+
+\begin{proof}
+先证$\ker\bm L\subseteq\operatorname{span}\{\bm 1_{V_1},\ldots,\bm 1_{V_c}\}$。若$\bm x\in\ker\bm L$，则$\bm L\bm x=\bm 0$，左乘$\bm x^\top$并应用式~\eqref{eq:graph-laplacian-energy}得
+\[
+  0=\bm x^\top\bm L\bm x=\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2.
+\]
+因为求和中的每一项都非负，总和为零迫使对每条正权边$\{i,j\}\in E_+$（即$w_{i,j}>0$）都有$(x_i-x_j)^2=0$，即$x_i=x_j$。在同一连通分量$V_a$内任取两点$u,v$，沿$\mathcal G_+$中连接$u$到$v$的正权路径逐边传递相等关系，即得$x_u=x_v$。因此$\bm x$在每个连通分量$V_a$上必取某个常数$c_a$，从而可写为$\bm x=\sum_{a=1}^c c_a\bm 1_{V_a}$。
+
+再证$\operatorname{span}\{\bm 1_{V_1},\ldots,\bm 1_{V_c}\}\subseteq\ker\bm L$。对任意线性组合$\bm x=\sum_{a=1}^c c_a\bm 1_{V_a}$，由于不同连通分量之间没有正权边相连，每条正权边$\{i,j\}\in E_+$的两个端点必属于同一个分量$V_a$，两端读数均为$c_a$，差$x_i-x_j=0$。代入定义式~\eqref{eq:graph-combinatorial-laplacian}即得对每个顶点$i$都有$(\bm L\bm x)_i=0$，故$\bm x\in\ker\bm L$。
+
+最后，由于$V_1,\ldots,V_c$互不相交且非空，指示向量$\bm 1_{V_1},\ldots,\bm 1_{V_c}$的非零支撑彼此不交，因而线性无关，构成$\ker\bm L$的一组基，故$\dim\ker\bm L=c$。由秩零度定理得$\operatorname{rank}\bm L=n-\dim\ker\bm L=n-c$；又因实对称矩阵$\bm L$可正交对角化，零特征值的重数等于$\dim\ker\bm L=c$，从而$c=1\iff\lambda_2>0$。
+\end{proof}
+
+这一结论与第~\ref{sec:incidence-rank-dimensions}小节对$\ker\bm B^\top$的分析完全吻合：当所有边权严格为正时，$\bm C^{1/2}$可逆，故
+\[
+  \bm L\bm x=\bm 0
+  \iff \bm C^{1/2}\bm B^\top\bm x=\bm 0
+  \iff \bm B^\top\bm x=\bm 0.
+\]
+
+用具体算例核对：由两条不相交的正权边$\{1,2\}$和$\{3,4\}$组成的四点图有两个连通分量，零空间由$(1,1,0,0)^\top$和$(0,0,1,1)^\top$张成，零特征值重数为$2$。四点五边算例则是连通图（$c=1$），零空间仅由常向量$\bm 1=(1,1,1,1)^\top$张成，$\lambda_2=2>0$；在常向量的正交补空间$\bm 1^\perp=\{\bm x\in\mathbb R^n:\bm 1^\top\bm x=0\}$上，任何非零向量都具有严格正的沿边变化能量$\bm x^\top\bm L\bm x\geq\lambda_2\lVert\bm x\rVert_2^2>0$。
+
+\subsection{特征值的上下界}
 \label{sec:graph-laplacian-eigenvalue-bounds}
 
-即使暂时没有求出全部特征向量，也能从度的信息估计特征值的范围。此外，在固定顶点集上加边后，各特征值只能不减。
+即使没有求出全部特征向量，也可以利用顶点的度数给出拉普拉斯特征值的上下界。
 
-先看上界。对单条边$\{i,j\}$，差的平方可以用两端读数各自的平方控制：
-\[
-  (x_i-x_j)^2\leq 2x_i^2+2x_j^2.
-\]
-将每条边的这个不等式乘上边权后求和。顶点$i$的$x_i^2$在它的每条邻边中都出现一次，这些边的权重加起来就是$d_i$。因此$x_i^2$的总系数为$2d_i$，从而
-\[
-  0\leq \bm x^\top\bm L\bm x
-  \leq 2\sum_{i=1}^n d_ix_i^2
-  \leq 2d_{\max}\lVert\bm x\rVert_2^2,
-\]
-其中$d_{\max}=\max_i d_i$。令$\bm x$取各单位特征向量，得到
+\begin{theorem}[拉普拉斯特征值的度数界]
+\label{prop:graph-laplacian-eigenvalue-bounds}
+设有限无向非负加权图有$n\geq 2$个顶点，最大加权度为$d_{\max}=\max_{1\leq i\leq n}d_i$，平均加权度为$d_{\mathrm{avg}}=\frac1n\sum_{i=1}^n d_i$，组合拉普拉斯矩阵$\bm L$的特征值按升序排列为$0=\lambda_1\leq\lambda_2\leq\cdots\leq\lambda_n$。则全体特征值满足
 \begin{equation}
-  0\leq\lambda_i\leq 2d_{\max},\qquad i=1,\ldots,n.
+  0\leq\lambda_i\leq 2d_{\max},\qquad i=1,\ldots,n,
   \label{eq:graph-laplacian-spectrum-bound}
 \end{equation}
-最大度给出了所有特征值的统一上界。
-
-接下来考虑加边的影响。在固定的顶点集上增加一条权重为$a\geq0$的新边$e$，拉普拉斯矩阵从$\bm L$变为
+且第二小特征值$\lambda_2$与最大特征值$\lambda_n$分别受平均加权度约束：
 \[
-  \bm L'=\bm L+a\bm b_e\bm b_e^\top.
+  \lambda_2\leq\frac{n}{n-1}d_{\mathrm{avg}},\qquad
+  \lambda_n\geq\frac{n}{n-1}d_{\mathrm{avg}}.
 \]
-新增项$a\bm b_e\bm b_e^\top$是半正定的，因此对任何向量$\bm x$，新图的二次型$\bm x^\top\bm L'\bm x$至少不小于旧图的$\bm x^\top\bm L\bm x$。
+\end{theorem}
 
-要把这个逐向量的比较转化为逐特征值的比较，需要用到 Courant--Fischer 刻画：第$i$个最小特征值等于"先选$i$维子空间，在子空间中求最大的单位能量，再在所有$i$维子空间中取最小值"。可参考\BookChapterRef{chap:condition-and-spectral-perturbation}{卷二"条件数与谱扰动"章}。
+\begin{proof}
+对任意单条边$\{i,j\}\in E$，由基本不等式$(x_i+x_j)^2\geq 0$知$(x_i-x_j)^2\leq 2(x_i^2+x_j^2)$。将每条边的该不等式乘以非负边权$w_{i,j}$并对全体无向边求和，每个顶点$i$的平方项$x_i^2$在所有与$i$关联的边上各出现一次，其权重系数之和恰好等于加权度$d_i=\sum_j w_{i,j}$。结合定理~\ref{prop:graph-laplacian-quadratic-form}(1)的非负性，对任意$\bm x\in\mathbb R^n$有
+\[
+  0\leq \bm x^\top\bm L\bm x
+  =\sum_{\{i,j\}\in E}w_{i,j}(x_i-x_j)^2
+  \leq 2\sum_{i=1}^n d_ix_i^2
+  \leq 2d_{\max}\lVert\bm x\rVert_2^2.
+\]
+依次取$\bm x$为各特征值$\lambda_i$对应的单位特征向量，即得式~\eqref{eq:graph-laplacian-spectrum-bound}。
 
-固定任何一个$i$维子空间$U$。旧图中在$U$内达到最大单位能量的向量放进新图，能量只会增加或保持，所以新图在$U$内的最大值不会更小。这对每个$U$都成立。在所有$U$中取最小值时，新图的最小值也不会更小。因此
+进一步，由迹恒等式与$\lambda_1=0$，其余$n-1$个特征值之和满足
+\[
+  (n-1)\lambda_2\leq\sum_{i=2}^n\lambda_i=\operatorname{tr}\bm L=n d_{\mathrm{avg}}\leq (n-1)\lambda_n,
+\]
+两端除以$n-1$即得关于$\lambda_2$与$\lambda_n$的平均度界。
+\end{proof}
+
+\subsection{特征值的单调性}
+\label{sec:graph-laplacian-monotonicity}
+
+当在固定顶点集$V$上添加新边或增大已有边的权重时，图的连接增强，沿边二次型单调增大，由此可导出拉普拉斯特征值的加边单调性。
+
+\begin{theorem}[拉普拉斯特征值的加边单调性]
+\label{thm:graph-laplacian-monotonicity}
+设在同一顶点集$V$上增加一条权重为$a\geq 0$的新边$e$（或将已有边$e$的权重增加$a\geq 0$），记所得新图的拉普拉斯矩阵为$\bm L'=\bm L+a\bm b_e\bm b_e^\top$。则每个序号的特征值均单调不减：
 \begin{equation}
   \lambda_i(\bm L')\geq\lambda_i(\bm L),\qquad i=1,\ldots,n.
   \label{eq:graph-laplacian-edge-monotonicity}
 \end{equation}
-这个比较使用同一个顶点集上的向量空间。删去一个顶点时，向量空间的维数和度都会改变，不能直接套用这个结论。
+\end{theorem}
 
-用四点图来验证。单位权四点环的谱是$0,2,2,4$（下面会给出环图的谱公式）。加入对角边$13$后变为$0,2,4,4$。观察方向$(1,0,-1,0)^\top$，它在新增边上两端读数不同，加入该边后沿边能量增加，这个方向原来对应特征值$2$，现在上升到$4$。另一方向$(0,1,0,-1)^\top$在新增边上两端相等，不受影响，仍对应$2$。
+\begin{proof}
+新增项$a\bm b_e\bm b_e^\top$为实对称半正定矩阵，故对任意非零向量$\bm x\in\mathbb R^n$，新旧两图的瑞利商满足
+\[
+  \frac{\bm x^\top\bm L'\bm x}{\bm x^\top\bm x}
+  =\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}+\frac{a(\bm b_e^\top\bm x)^2}{\bm x^\top\bm x}
+  \geq \frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}.
+\]
+由Courant--Fischer极小极大定理（见\BookChapterRef{chap:eigen-spectral-decomposition}{卷二“谱分解”章}），第$i$个最小特征值可刻画为
+\[
+  \lambda_i(\bm L)=\min_{\dim U=i}\max_{\bm x\in U\setminus\{\bm 0\}}\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}.
+\]
+对任意固定的$i$维子空间$U\subseteq\mathbb R^n$，上述逐向量不等式蕴含
+\[
+  \max_{\bm x\in U\setminus\{\bm 0\}}\frac{\bm x^\top\bm L'\bm x}{\bm x^\top\bm x}
+  \geq\max_{\bm x\in U\setminus\{\bm 0\}}\frac{\bm x^\top\bm L\bm x}{\bm x^\top\bm x}.
+\]
+再对所有$i$维子空间$U$取最小值，即得$\lambda_i(\bm L')\geq\lambda_i(\bm L)$。
+\end{proof}
+
+需要注意，式~\eqref{eq:graph-laplacian-edge-monotonicity}要求新旧两图定义在同一个顶点集$V$上；若删去一个顶点，不仅向量空间的维数从$n$减为$n-1$，保留顶点的度数也会随之改变，不能直接套用加边单调性。
+
+以四点算例核对加边单调性：单位权四点环$C_4$的拉普拉斯谱为$0,2,2,4$（见下一小节）；添入对角边$13$后得到四点五边图，拉普拉斯谱变为$0,2,4,4$。对比两个原本对应特征值$2$的正交特征方向：向量$(1,0,-1,0)^\top$在新增边$13$的两端分别取$1$和$-1$，添边后多出二次型$1\cdot(1-(-1))^2=4$，除以该向量的长度平方$2$后，Rayleigh商增加$2$，且该向量仍为特征向量，故其特征值从$2$增至$4$；而向量$(0,1,0,-1)^\top$在新增边$13$的两端同取$0$，沿新增边的差为零，故该方向的特征值保持$2$不变。
 
 \subsection{典型图的拉普拉斯谱}
 \label{sec:graph-typical-laplacian-spectra}
 
-对几类常见图，可以利用它们的结构直接写出谱。正则图的拉普拉斯谱与邻接谱之间有简单的标量关系。
-
-在简单无权的$d$正则图上，每个顶点的度都为$d$，所以$\bm D=d\bm I$。设$\bm x$是邻接矩阵$\bm A$的特征向量，对应特征值$\alpha$。拉普拉斯作用于$\bm x$时，
+对几类常见图族，可以利用它们的结构对称性直接求出完整的拉普拉斯谱。首先，在简单无权的$d$正则图上，每个顶点的度均为$d$，度矩阵是标量矩阵$\bm D=d\bm I$。若$\bm x$是邻接矩阵$\bm A$对应于特征值$\alpha$的特征向量，则
 \[
   \bm L\bm x=(d\bm I-\bm A)\bm x=d\bm x-\alpha\bm x=(d-\alpha)\bm x.
 \]
-特征向量保持不变，邻接特征值$\alpha$变成了拉普拉斯特征值$d-\alpha$。如果各点度不同，$\bm D$不是标量矩阵，就不能用这种简单的平移换算。
+特征向量保持不变，邻接特征值$\alpha$直接平移反转为拉普拉斯特征值$d-\alpha$（若各点度数不全相等，则$\bm D$不是标量矩阵，不能用这一平移关系换算）。下面按图族逐一给出完全图、环、路径、星图与补图的拉普拉斯谱。
 
-利用这个关系，可以直接把上一章算出的邻接谱转成拉普拉斯谱。
+\subsubsection{完全图}
+\label{sec:graph-complete-laplacian-spectrum}
 
-\begin{theorem}[典型图的拉普拉斯谱]
+\begin{theorem}[完全图的拉普拉斯谱]
 \label{prop:graph-typical-laplacian-spectra}
-\leavevmode
-\begin{enumerate}
-  \item 完全图$K_n$：$0$（重数$1$），$n$（重数$n-1$）。
-  \item 环$C_n$（$n\ge3$）：$\lambda_k=2-2\cos(2\pi k/n)$，$k=0,\ldots,n-1$。
-  \item 路径$P_n$（$n\ge2$）：$\lambda_k=2-2\cos(k\pi/n)$，$k=0,\ldots,n-1$。
-  \item 星$K_{1,n-1}$（$n\ge2$）：$0$（重数$1$），$1$（重数$n-2$），$n$（重数$1$）。
-\end{enumerate}
+单位权完全图$K_n$（$n\geq 2$）的组合拉普拉斯特征值为$0$（重数$1$）和$n$（重数$n-1$）。
 \end{theorem}
 
-\paragraph{完全图}
+\begin{proof}
+完全图$K_n$是$d=n-1$的正则图，且$\bm L(K_n)=(n-1)\bm I-\bm A(K_n)=n\bm I-\bm 1\bm 1^\top$。由定理~\ref{prop:adjacency-complete-spectrum}，其邻接谱为$n-1$（重数$1$，对应常向量$\bm 1$）和$-1$（重数$n-1$，对应正交补空间$\bm 1^\perp$）。用$d-\alpha=(n-1)-\alpha$换算，即得拉普拉斯谱为$0$（重数$1$）和$n$（重数$n-1$）。
+\end{proof}
 
-对完全图$K_n$，邻接谱为$n-1$（重数$1$）和$-1$（重数$n-1$），度$d=n-1$，拉普拉斯谱为$0$（重数$1$）和$n$（重数$n-1$）。
+\subsubsection{环}
+\label{sec:graph-cycle-laplacian-spectrum}
 
-\paragraph{环}
-
-对环图$C_n$（$n\geq3$），邻接特征值为$2\cos(2\pi k/n)$，度$d=2$，拉普拉斯特征值为
+\begin{theorem}[环的拉普拉斯谱]
+\label{thm:graph-cycle-laplacian-spectra}
+单位权环$C_n$（$n\geq 3$）的组合拉普拉斯特征值为
 \begin{equation}
-  \lambda_k^{(C)}=2-2\cos(2\pi k/n),\qquad k=0,\ldots,n-1.
+  \lambda_k^{(C)}=2-2\cos\frac{2\pi k}{n},\qquad k=0,\ldots,n-1.
   \label{eq:graph-cycle-laplacian-spectrum}
 \end{equation}
-$k$是模态编号，写出的顺序不一定是特征值的升序。取$n=4$得到$0,2,4,2$，排序后为$0,2,2,4$，与四点环未加对角线时的谱一致。
+\end{theorem}
 
-\paragraph{路径}
+\begin{proof}
+环$C_n$是$d=2$的正则图。由定理~\ref{prop:adjacency-cycle-spectrum}，其邻接特征值为$2\cos(2\pi k/n)$（$k=0,\ldots,n-1$），用$2-\alpha$换算即得式~\eqref{eq:graph-cycle-laplacian-spectrum}（其中$k$为模态编号，如$n=4$时按$k=0,1,2,3$依次给出$0,2,4,2$，升序排列后为$0,2,2,4$）。
+\end{proof}
 
-对路径$P_n$，因为端点只有一个邻居。内部顶点$i$的拉普拉斯输出是$2x_i-x_{i-1}-x_{i+1}$。端点$1$只有右邻点$2$，输出是$x_1-x_2$。
+\subsubsection{路径}
+\label{sec:graph-cycle-path-laplacian-spectrum}
 
-为了统一处理端点和内部顶点，我们在左端外添一个辅助坐标$x_0=x_1$。此时
-\[
-  2x_1-x_0-x_2=2x_1-x_1-x_2=x_1-x_2,
-\]
-与端点的真实输出一致。等值的辅助坐标没有引入新的沿边差异。右端同样用$x_{n+1}=x_n$。
-
-接下来找满足$x_{i-1}+x_{i+1}=\lambda x_i$的模式。尝试$x_i=\cos\bigl((i-\tfrac12)\theta\bigr)$，其中$\theta$是相邻读数的相位差。利用三角和差公式可得$x_{i-1}+x_{i+1}=2\cos\theta\cdot x_i$，因此内部顶点上的特征值为$2-2\cos\theta$。
-
-左端的辅助条件自动满足：$\cos(-\theta/2)=\cos(\theta/2)$，余弦的偶性保证了$x_0=x_1$。右端的条件要求
-\[
-  x_{n+1}-x_n=-2\sin(n\theta)\sin(\theta/2)=0.
-\]
-取$\theta=k\pi/n$，$k=0,\ldots,n-1$，每个角度给出一个非零向量。$n$个不同的特征值为
+\begin{theorem}[路径的拉普拉斯谱]
+\label{thm:graph-path-laplacian-spectra}
+单位权路径$P_n$（$n\geq 2$）的组合拉普拉斯特征值为
 \begin{equation}
-  \lambda_k^{(P)}=2-2\cos(k\pi/n),\qquad k=0,\ldots,n-1.
+  \lambda_k^{(P)}=2-2\cos\frac{k\pi}{n},\qquad k=0,\ldots,n-1.
   \label{eq:graph-path-laplacian-spectrum}
 \end{equation}
-其中半格偏移$\tfrac12$对应两端保持相同读数的边界条件，这与邻接矩阵路径公式所用的两端为零条件不同。
+\end{theorem}
 
-\paragraph{星图}
+\begin{proof}
+路径$P_n$的内部顶点$i\in\{2,\ldots,n-1\}$度为$2$，拉普拉斯输出为$(\bm L\bm x)_i=2x_i-x_{i-1}-x_{i+1}$；左端点$1$和右端点$n$的度为$1$，输出分别为$(\bm L\bm x)_1=x_1-x_2$与$(\bm L\bm x)_n=x_n-x_{n-1}$。为将端点统一写进内部二阶差分格式，在两端外侧引入虚拟坐标$x_0$与$x_{n+1}$，并令
+\[
+  x_0=x_1,\qquad x_{n+1}=x_n.
+\]
+此时$2x_1-x_0-x_2=x_1-x_2=(\bm L\bm x)_1$且$2x_n-x_{n-1}-x_{n+1}=x_n-x_{n-1}=(\bm L\bm x)_n$，特征方程在全部$i=1,\ldots,n$上统一写为$2x_i-(x_{i-1}+x_{i+1})=\lambda x_i$。
 
-对星图$K_{1,n-1}$（$n\geq2$），设中心读数为零，各叶读数之和也为零。每片叶只与中心相连，输出等于自己的读数减去中心读数，即等于自己。中心读取所有叶的差值之和，由于叶总和为零，输出也为零。这给出维数$n-2$、特征值为$1$的子空间。
+代入带半格相位偏移的余弦驻波模式
+\[
+  x_i=\cos\!\left(\Bigl(i-\frac12\Bigr)\theta\right),\qquad i=0,1,\ldots,n+1.
+\]
+由余弦函数的偶性知$x_0=\cos(-\theta/2)=\cos(\theta/2)=x_1$，左边界条件自动满足；在内部顶点上，由和差化积公式得$x_{i-1}+x_{i+1}=2\cos\theta\cdot x_i$，从而$2x_i-(x_{i-1}+x_{i+1})=(2-2\cos\theta)x_i$，对应特征值$\lambda=2-2\cos\theta$。
 
-剩下两个方向可以取常向量（特征值$0$）和"中心为$n-1$、各叶为$-1$"的向量。后者在每条边上相差$n$，中心的邻居和为$(n-1)\cdot(-1)$，输出为$(n-1)(n-1-(- 1))=n(n-1)$。等等，这里更直接地算：各点的$\bm L$作用下，中心输出$d_{\text{center}}\cdot(n-1)-\sum_{\text{leaves}}(-1)=(n-1)(n-1)+(n-1)=n(n-1)$，而每片叶输出$1\cdot(-1-(n-1))=-n$。因此$\bm L\bm x=n\bm x$，特征值为$n$。四顶点星图的谱为$0,1,1,4$。虽然和四点路径一样有四个顶点三条边，两者的拉普拉斯谱完全不同。
+最后由右边界条件$x_{n+1}=x_n$确定$\theta$的取值：
+\[
+  x_{n+1}-x_n=\cos\!\left(\Bigl(n+\frac12\Bigr)\theta\right)-\cos\!\left(\Bigl(n-\frac12\Bigr)\theta\right)=-2\sin(n\theta)\sin\frac{\theta}{2}=0.
+\]
+取$\theta_k=k\pi/n$（$k=0,1,\ldots,n-1$），每个$\theta_k$均满足$\sin(n\theta_k)=0$且给出非零特征向量，对应的$n$个互异特征值即为$\lambda_k^{(P)}=2-2\cos(k\pi/n)$。注意这里的等值边界条件$x_0=x_1,x_{n+1}=x_n$对应半格偏移余弦模式，区别于第~\ref{sec:adjacency-cycle-path-spectra}小节邻接矩阵路径谱所用的零边界正弦模式。
+\end{proof}
 
-\paragraph{补图}
+\subsubsection{星图}
+\label{sec:graph-star-laplacian-spectrum}
 
-最后看补图的谱换算。对简单无权图$\mathcal G$，它与补图$\overline{\mathcal G}$的边合在一起构成完全图，且没有重复。因此
+\begin{theorem}[星图的拉普拉斯谱]
+\label{thm:graph-star-laplacian-spectrum}
+单位权星图$K_{1,n-1}$（$n\geq 2$）的组合拉普拉斯特征值为$0$（重数$1$）、$1$（重数$n-2$）和$n$（重数$1$）。
+\end{theorem}
+
+\begin{proof}
+星图$K_{1,n-1}$含$1$个度为$n-1$的中心顶点和$n-1$个度为$1$的叶顶点。先构造重数为$n-2$的特征值$1$：取中心读数为$0$、且$n-1$个叶顶点读数之和为$0$的向量$\bm x$。每片叶$i$只与中心相连，输出为$(\bm L\bm x)_i=x_i-0=x_i$；中心处的输出为$(n-1)\cdot 0-\sum_{\text{叶 }i}x_i=0$，故$\bm L\bm x=\bm x$。叶顶点读数零和构成$n-2$维子空间，给出$n-2$个正交特征向量，对应特征值$1$。
+
+再确定其余两个正交特征方向。全一常向量$\bm 1$对应特征值$0$；另一个与$\bm 1$及叶零和子空间均正交的方向是在中心取$n-1$、在每片叶上取$-1$的向量$\bm z$。在$\bm z$上，中心输出为$(n-1)(n-1)-(n-1)(-1)=n(n-1)=n z_{\text{center}}$，每片叶输出为$1\cdot(-1-(n-1))=-n=n z_{\text{leaf}}$，故$\bm L\bm z=n\bm z$，给出重数为$1$的特征值$n$。
+\end{proof}
+
+例如四顶点星图$K_{1,3}$的拉普拉斯谱为$0,1,1,4$，而同为四顶点三边的路径$P_4$的拉普拉斯谱为$0,2-\sqrt 2,2,2+\sqrt 2$，两棵树的拉普拉斯谱完全不同。
+
+\subsubsection{补图}
+\label{sec:graph-complement-laplacian-spectrum}
+
+对于任意简单无权图$\mathcal G$（无需假设$\mathcal G$为正则图，这一点比第~\ref{sec:adjacency-complement-spectrum}小节邻接矩阵补图谱只适用于正则图更为广泛），其补图$\overline{\mathcal G}$的拉普拉斯谱可由原图直接算出。由于$\mathcal G$与$\overline{\mathcal G}$的边集互不相交且并集恰为完全图$K_n$，两图的组合拉普拉斯矩阵之和等于完全图的拉普拉斯矩阵：
 \begin{equation}
   \bm L(\overline{\mathcal G})
   =\bm L(K_n)-\bm L(\mathcal G)
   =n\bm I-\bm1\bm1^\top-\bm L(\mathcal G).
   \label{eq:graph-complement-laplacian}
 \end{equation}
-常向量$\bm1$对两张图都是零方向。沿与常向量正交的原图特征向量$\bm u_i$（$i\geq2$），$\bm1\bm1^\top\bm u_i=\bm0$，因此补图的特征值变成$n-\lambda_i$。如果原图恰好有某个特征值等于$n$，补图在该方向上的特征值为零，对应一个额外的零方向——由定理~\ref{thm:graph-laplacian-components}可知，补图多了一个连通分量。
+
+常向量$\bm 1$对$\bm L(\mathcal G)$和$\bm L(\overline{\mathcal G})$都是对应特征值$0$的特征向量。在正交补空间$\bm 1^\perp$上，取$\bm L(\mathcal G)$对应于$\lambda_2\leq\cdots\leq\lambda_n$的正交特征向量$\bm u_2,\ldots,\bm u_n\in\bm 1^\perp$；因$\bm 1^\top\bm u_i=0$，有$\bm 1\bm 1^\top\bm u_i=\bm 0$，从而
+\[
+  \bm L(\overline{\mathcal G})\bm u_i=(n-\lambda_i)\bm u_i,\qquad i=2,\ldots,n.
+\]
+
+因此，原图在$\bm1^\perp$上的其余特征值$\lambda_2\leq\cdots\leq\lambda_n$在补图中直接转化为$n-\lambda_n\leq\cdots\leq n-\lambda_2$。由于补图本身也是简单无权图、其特征值非负（$n-\lambda_n\geq 0$），立知任意$n$顶点简单无权图的最大拉普拉斯特征值恒满足$\lambda_n\leq n$，且等号$\lambda_n=n$成立当且仅当补图$\overline{\mathcal G}$不连通（即$n-\lambda_n=0$）。

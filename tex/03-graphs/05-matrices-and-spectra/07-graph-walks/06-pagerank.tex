@@ -1,92 +1,101 @@
 \section{PageRank}
 \label{sec:graph-pagerank}
 
-把网页看成顶点，链接看成有向边。只沿链接行走时，棋子可能进入走不出来的区域，也可能来到没有出边的页面。给行走加入重新选择顶点的机会，可以用长期分布为页面排名。这种做法称为\term{PageRank}\scite{page1999pagerank}。
+前四节讨论的都是\emph{无向图}上的随机游走：由于每条无向边都允许双向通行，只要图连通，平稳分布就唯一且简单地与顶点度数成正比（$\pi_i=d_i/\operatorname{vol}(V)$）。然而，现实世界中的许多重要网络——最典型的如万维网（网页为顶点、超链接为有向边）和文献引文网——本质上都是\emph{有向图}。Page等人提出的\term{PageRank}算法\scite{page1999pagerank}通过修改有向图上的随机游走，为网页定义一种基于链接结构的重要性评分。
 
-\subsection{PageRank方程}
+\subsection{背景与核心思想}
 \label{sec:graph-pagerank-equation}
 
-\paragraph{有向图的转移矩阵}
+\paragraph{为什么引入PageRank：历史背景与有向图的两大陷阱}
 
-有向图的弧只从尾端指向头端。计算顶点$i$的转移概率时，只读取从$i$出去的弧，按出弧权重的总和归一化。
+在万维网诞生初期，搜索引擎主要依赖关键词匹配频率对网页排序，极易被网页制作者通过堆砌隐藏关键词作弊操纵。Brin与Page提出利用超链接的拓扑结构定义基于链接结构的网页评分：如果一个网页被许多其他重要网页所指向，那么它自身也应当是重要的。用随机游走的语言来表述，设想一名“随机冲浪者”（random surfer）在网页间不断随机点击超链接，长期下来冲浪者停留在各个网页的时间比例（即有向随机游走的平稳分布），就自然反映了各网页的全局重要程度。
 
-若某个顶点没有出边，就没有权重可以归一化。设$\bm{s}$为给定的概率行，用它补上零出度顶点所在的行。补齐后的$\bm{P}$每行非负、和为一，是一个行随机矩阵。
+然而，若直接在真实万维网的有向图$\mathcal G=(V,E)$上按出弧权重比例转移（记加权出度$d_i^+=\sum_j w_{i,j}$，从$d_i^+>0$的顶点$i$以$P_{i,j}=w_{i,j}/d_i^+$跳往有向邻居$j$），随机游走会立刻遭遇图~\ref{fig:graph-pagerank-traps}(a)所示的两类问题：
 
-\paragraph{平稳分布的存在}
+第一个陷阱是\emph{“死胡同”}（dead ends，亦称悬挂节点，dangling nodes）。互联网中存在大量只有入链而没有任何出链的终端节点（如图~\ref{fig:graph-pagerank-traps}a中的节点$3$，对应PDF文件、图片或未附外链的网页，其出度$d_3^+=0$）。
 
-有限行随机矩阵总有平稳分布。为说明这一点，取任意概率初态$\bm{\nu}^{(0)}$，把前$T$步的分布取平均，
-\[
-\bm{a}^{(T)}=\frac{1}{T}\sum_{t=0}^{T-1}\bm{\nu}^{(0)}\bm{P}^t.
-\]
-右乘$\bm{P}$将每个时刻推进一步，新平均覆盖第$1$到第$T$步。中间$T-1$项相同，首尾两项之差除以$T$趋于零，
-\[
-\bm{a}^{(T)}\bm{P}-\bm{a}^{(T)}
-=\frac{\bm{\nu}^{(0)}\bm{P}^T-\bm{\nu}^{(0)}}{T}
-\to\bm{0}.
-\]
-这些平均都是概率行，位于有限维的闭有界集合中。从中选出一个收敛子列，极限就是平稳分布。
+随机冲浪者一旦走进这类死胡同就无路可走；在矩阵代数上，原始转移矩阵$\bm P$的第$3$行全为$0$（不再是行随机矩阵），位于该点的质量在下一次矩阵更新中会漏失。总质量是否最终降为零还取决于是否存在可到达的、避开死胡同的闭合类，不能一概而论。
 
-\paragraph{不唯一和振荡}
+第二类问题来自有向图的闭合强连通分支，通常称为\emph{“蜘蛛网陷阱”}（spider traps）。例如图~\ref{fig:graph-pagerank-traps}a中的节点集$\{4,5\}$，内部节点互相链接，却没有出弧指向外部。一旦进入该集合，仅沿原有链接的游走就无法离开。
 
-存在平稳分布之后，还要问它是否唯一、迭代能否收敛到它。
+对补齐死胡同后的有限Markov链，暂态顶点的概率质量会逐渐转移至闭合常返类；若存在多个这样的类，平稳分布不唯一，长期分配还依赖初始分布；即使平稳分布唯一，周期性也可能使逐步分布不收敛。这些是不同的障碍，不能都归因于有向图不连通。
 
-两个互不相连的有向环各有一个平稳分布，初态的分配方式会影响极限。即使平稳解唯一，迭代也可能振荡——一个两点有向环的唯一平稳分布是$(1/2,1/2)$，但从一点出发，分布在两个顶点之间永远交替。
+\begin{BookInlineFigure}
+  \centering
+  \includegraphics[width=103.988mm]{figures/03-graphs/05-matrices-and-spectra/tikz/pagerank-traps-and-teleport/figure.pdf}
+  \caption{有向图随机游走的两大陷阱与PageRank的改造机制。(a) 在原始有向图中，节点$3$是没有出边的“死胡同”（概率质量在此漏失），子集$\{4,5\}$是只进不出的“蜘蛛网陷阱”（进入后无法沿原链接离开）。(b) PageRank一方面将死胡同补齐为全局跳转，另一方面在每一步以阻尼系数$\alpha$沿实线有向边转移、以$1-\alpha$概率（绿色虚线）按分布$\bm s$随机跳转；当所有$s_i>0$时，每个顶点均可被直接访问。}
+  \label{fig:graph-pagerank-traps}
+\end{BookInlineFigure}
 
-\paragraph{重启机制}
+\paragraph{PageRank的主要思想：死胡同修补与阻尼随机跳转}
 
-为了同时解决不唯一和振荡，在每一步独立决定是否重启。以概率$\alpha\in(0,1)$按$\bm{s}$选择新位置，以概率$1-\alpha$按补齐后的$\bm{P}$转移。重启这一支不依赖当前位置，总使用同一份$\bm{s}$。
+为处理死胡同和闭合类，PageRank对原始有向游走实施了两步改造（图~\ref{fig:graph-pagerank-traps}b）：
 
-如果当前分布为$\bm{p}$，两支分别向下一步贡献$\alpha\bm{s}$和$(1-\alpha)\bm{p}\bm{P}$。要求下一步仍是$\bm{p}$，得到
+第一步是\emph{修补死胡同}。给定一个固定的概率分布行向量$\bm s=(s_1,\ldots,s_n)$（满足$s_i\geq0,\sum_{i=1}^n s_i=1$，标准PageRank中取均匀分布$\bm s=\frac1n\bm 1^\top$，称为跳转分布或偏好分布）。当冲浪者到达没有出边的死胡同节点$i$（$d_i^+=0$）时，规定他在下一步直接按分布$\bm s$随机跳转到全网任意一个节点。在矩阵上，这等价于把原始转移矩阵$\bm P$中所有全零行替换为行向量$\bm s$，记修补后的行随机转移矩阵为
 \begin{equation}
-\bm{p}=\alpha\bm{s}+(1-\alpha)\bm{p}\bm{P}.
+  \widetilde{\bm P} = \bm P + \bm d_{\mathrm{dan}}\bm s,
+  \label{eq:pagerank-dangling-fix}
+\end{equation}
+其中$\bm d_{\mathrm{dan}}\in\{0,1\}^n$为死胡同指示列向量（当$d_i^+=0$时第$i$项为$1$，否则为$0$）。修补后的$\widetilde{\bm P}$满足$\widetilde{\bm P}\bm 1=\bm 1$，不再漏失任何概率质量。
+
+第二步是\emph{引入阻尼系数$\alpha$与全局随机跳转（Teleportation）}。即便在正出度节点上，冲浪者也不会无休止地顺着超链接盲目走下去：在每一步，他以概率$\alpha\in(0,1)$（称为\term{阻尼系数}，damping factor，经典示例常取$\alpha=0.85$）继续顺着当前页面的超链接点击（按$\widetilde{\bm P}$转移）；同时以概率$1-\alpha$（称为\emph{重启概率}或\emph{随机跳转概率}）放弃当前浏览路径，直接在浏览器地址栏按分布$\bm s$随机跳转到一个新网页重新开始。
+
+将这两部分合在一起，一步转移相当于右乘如下凸组合矩阵（称为\term{Google矩阵}）：
+\begin{equation}
+  \bm G = \alpha\widetilde{\bm P} + (1-\alpha)\bm 1\bm s.
+  \label{eq:pagerank-google-matrix}
+\end{equation}
+Google矩阵$\bm G$的唯一平稳分布$\bm p$就是PageRank向量。
+
+\begin{definition}[PageRank向量]
+\label{def:graph-pagerank}
+设$\widetilde{\bm P}\in\mathbb R^{n\times n}$为按式~\eqref{eq:pagerank-dangling-fix}修补死胡同后的行随机转移矩阵，$\bm s\in\mathbb R^{1\times n}$为跳转概率分布行向量，$\alpha\in(0,1)$为阻尼系数（从而$1-\alpha$为重启/跳转概率）。满足不动点方程
+\begin{equation}
+\bm{p}=\bm p\bm G=\alpha\bm{p}\widetilde{\bm{P}}+(1-\alpha)\bm{s}
 \label{eq:graph-pagerank-fixed-point}
 \end{equation}
-
-这个方程还有另一种理解方式。先按$\bm{s}$选起点，每到一个位置，以概率$\alpha$结束，否则按$\bm{P}$再走一步。绕过前$t$次结束机会才在第$t+1$次结束，行走恰好走了$t$步，概率为$\alpha(1-\alpha)^t$。终点分布按步数加权求和，得
-\begin{equation}
-\bm{p}=\alpha\sum_{t=0}^{\infty}(1-\alpha)^t\bm{s}\bm{P}^t.
-\label{eq:graph-pagerank-series}
-\end{equation}
-第零项对应立即结束的$\alpha\bm{s}$。把其余各项整体前移一个步数，提出公因子$(1-\alpha)$和一次$\bm{P}$，恰好得到$(1-\alpha)\bm{p}\bm{P}$。两部分相加满足式~\eqref{eq:graph-pagerank-fixed-point}。
-
-\paragraph{唯一性与收敛性}
-
-对任意两份概率差$\bm{z}$，一步转移不会放大$\ell^1$距离：逐列取绝对值并利用行和为一，$\lVert\bm{z}\bm{P}\rVert_1\le\lVert\bm{z}\rVert_1$。式~\eqref{eq:graph-pagerank-fixed-point}右端的更新映射$F$满足
-\begin{equation}
-\lVert F(\bm{x})-F(\bm{y})\rVert_1
-\le(1-\alpha)\lVert\bm{x}-\bm{y}\rVert_1.
-\label{eq:graph-pagerank-contraction}
-\end{equation}
-这是因为两个输入共享同一份重启$\alpha\bm{s}$，差值只出现在$1-\alpha$比例的转移部分。
-
-若存在两个平稳解，更新后它们不变、距离不变，但收缩系数$1-\alpha<1$迫使距离为零。唯一性得证。从任意初态出发，第$t$轮与真解的距离每轮至少缩小为$1-\alpha$倍，因此迭代收敛。
+及归一化条件$\sum_{i=1}^n p_i=1$的非负概率行向量$\bm p$称为对应于$(\widetilde{\bm P},\bm s,\alpha)$的\term{PageRank}向量。（注：部分文献将重启概率$1-\alpha$记作$\beta\in(0,1)$，此时方程写为$\bm p=(1-\beta)\bm p\widetilde{\bm P}+\beta\bm s$，两者完全等价。）
+\end{definition}
 
 \subsection{算法实现}
 \label{sec:graph-pagerank-implementation}
 
-输入为有向邻接表、概率行$\bm{s}$、重启概率$\alpha$和$\ell^1$误差容限$\varepsilon$。算法维护一份候选排名$\bm{p}^{(t)}$，从$\bm{p}^{(0)}=\bm{s}$开始。每一轮先沿实际出边传播概率，再加上重启部分。
+\paragraph{基于稀疏分解的幂法迭代}
 
-\begin{algorithm}[PageRank迭代]
+在包含数亿乃至数百亿网页的万维网中，如何数值求解式~\eqref{eq:graph-pagerank-fixed-point}？直接对Google矩阵$\bm G=\alpha\widetilde{\bm P}+(1-\alpha)\bm 1\bm s$做高斯消元或稠密矩阵乘法是不可行的，因为在$\bm s$处处为正时，$\bm1\bm s$是稠密矩阵，$\bm d_{\mathrm{dan}}\bm s$则在每个死胡同行包含整行非零项，显式存储$\bm G$需要$\Theta(n^2)$空间。
+
+算法实现的关键思想是\emph{绝不显式构造$\bm G$或$\widetilde{\bm P}$，而是利用矩阵乘法的分配律，将每轮幂法迭代（power method）拆解为稀疏有向图上的三项线性操作}。对任意当前概率分布行向量$\bm p^{(t)}$（满足$\bm p^{(t)}\bm 1=1$），将$\widetilde{\bm P}=\bm P+\bm d_{\mathrm{dan}}\bm s$代入更新式$\bm p^{(t+1)}=\bm p^{(t)}\bm G$展开：
+\begin{equation}
+\begin{aligned}
+\bm{p}^{(t+1)}
+&= \alpha\bm{p}^{(t)}(\bm P + \bm d_{\mathrm{dan}}\bm s) + (1-\alpha)\bm{s} \\
+&= \underbrace{\alpha\bm{p}^{(t)}\bm{P}}_{\text{沿实际有向边稀疏传播}}
+   \;+\; \underbrace{\bigl(\alpha q^{(t)} + (1-\alpha)\bigr)\bm{s}}_{\text{死胡同质量补偿 + 全局随机跳转}},
+\end{aligned}
+\label{eq:graph-pagerank-iteration}
+\end{equation}
+其中标量$q^{(t)}=\bm p^{(t)}\bm d_{\mathrm{dan}}=\sum_{i:d_i^+=0}p_i^{(t)}$是当前汇总在所有死胡同节点上的概率质量总和。这样一来，每一轮迭代只需要扫描一遍有向图的$m$条实际出弧计算$\alpha\bm p^{(t)}\bm P$，再把死胡同总质量$\alpha q^{(t)}$与全局重启份额$1-\alpha$合并后乘以一次向量$\bm s$即可，单轮时间与空间复杂度从$\Theta(n^2)$降为$O(n+m)$。
+
+\begin{algorithm}[PageRank幂法迭代]
 \label{alg:graph-pagerank-iteration}
-输入：有向邻接表、概率行$\bm{s}$、重启概率$\alpha$、容许$\ell^1$误差$\varepsilon$。输出：近似排名$\bm{p}$。
+输入：有向图邻接表、跳转分布行向量$\bm{s}$、阻尼系数$\alpha\in(0,1)$、容许$\ell^1$误差$\varepsilon>0$。输出：近似PageRank向量$\bm{p}$。
 \begin{enumerate}
-  \item 令$\bm{p}^{(0)}=\bm{s}$。对零出度顶点记录标志。
-  \item 每轮执行更新$\bm{p}^{(t+1)}=\alpha\bm{s}+(1-\alpha)\bm{p}^{(t)}\bm{P}$。实现时：先对每个正出度顶点$i$，把$(1-\alpha)p^{(t)}_i$按出边权重比例分给各头端。同时累计所有零出度顶点上的质量$q$，统一加回$q\bm{s}$。最后再加上重启项$\alpha\bm{s}$。
-  \item 计算残差$\bm{r}=\bm{p}^{(t+1)}-\bm{p}^{(t)}$。若$\lVert\bm{r}\rVert_1\le\alpha\varepsilon$，返回$\bm{p}^{(t+1)}$。
+  \item \textbf{初始化}：令$\bm{p}^{(0)}=\bm{s}$，标记所有零出度（死胡同）顶点集合$\mathcal D=\{i\in V:d_i^+=0\}$。
+  \item \textbf{稀疏幂法更新}：对$t=0,1,2,\ldots$，按式~\eqref{eq:graph-pagerank-iteration}计算$\bm p^{(t+1)}$：
+    \begin{enumerate}
+      \item 将新向量$\bm p^{(t+1)}$置零，汇总死胡同质量$q^{(t)}=\sum_{i\in\mathcal D}p_i^{(t)}$；
+      \item 对每个正出度顶点$i\notin\mathcal D$，将其持有的$\alpha p_i^{(t)}$按出弧权重比例累加到各目标邻居$j$的$p_j^{(t+1)}$中；
+      \item 对所有顶点$j\in V$，统一加上跳转与死胡同补偿项：$p_j^{(t+1)}\leftarrow p_j^{(t+1)}+\bigl(\alpha q^{(t)}+(1-\alpha)\bigr)s_j$。
+    \end{enumerate}
+  \item \textbf{收敛判别}：计算单步残差$\bm{r}=\bm{p}^{(t+1)}-\bm{p}^{(t)}$。若$\lVert\bm{r}\rVert_1\le(1-\alpha)\varepsilon$，停止并返回$\bm{p}^{(t+1)}$。
 \end{enumerate}
 \end{algorithm}
 
-每轮更新写成公式为
-\begin{equation}
-\bm{p}^{(t+1)}=\alpha\bm{s}+(1-\alpha)\bm{p}^{(t)}\bm{P}.
-\label{eq:graph-pagerank-iteration}
-\end{equation}
+\paragraph{四顶点有向图算例}
 
-每轮先沿实际出边传播概率。对于零出度的顶点，只把它的分数加到悬挂质量$q$中。边扫描结束后，统一把$q\bm{s}$加到尚未乘$1-\alpha$的一步结果中。这等价于给每个悬挂点补上同一行$\bm{s}$，只需存一份重启分布。
+考察包含四个顶点及四条单位权有向弧$1\to 2$、$2\to 3$、$3\to 1$、$3\to 4$的有向图（图~\ref{fig:graph-pagerank-fourth-round}），其中顶点$4$是没有出边的死胡同（$\mathcal D=\{4\}$）。为便于手算核对，取阻尼系数$\alpha=1/2$（即沿弧转移与随机跳转概率各为$1/2$），并将跳转分布取为集中在顶点$1$的$\bm s=(1,0,0,0)$。
 
-考虑四个顶点及单位权弧$1\to2$、$2\to3$、$3\to1$、$3\to4$。顶点$4$没有出边。取$\bm{s}=(1,0,0,0)$、$\alpha=1/2$。每轮的重启部分给顶点$1$增加$1/2$的质量。
-
-第一轮开始时全部质量在$1$，沿边部分的$1/2$送往$2$。第二轮将顶点$1$的质量减半后送到$2$，同时将$2$的质量减半后送到$3$，两点各得$1/4$。第三轮中，顶点$3$的$1/4$里有$1/2$沿边分出，分给$1,4$各$1/16$。这是顶点$4$首次收到质量。各轮结果为
+从初态$\bm p^{(0)}=\bm s=(1,0,0,0)$出发执行算法~\ref{alg:graph-pagerank-iteration}：前四轮的分布演化依次为
 \[
 \begin{array}{c@{\qquad}c}
 t&\bm{p}^{(t)}\\
@@ -96,43 +105,167 @@ t&\bm{p}^{(t)}\\
 4&(9/16,9/32,1/8,1/32)
 \end{array}
 \]
-第四轮中，顶点$4$的旧质量$1/16$通过零出度填补分给顶点$1$，再乘沿边比例$1/2$，贡献$1/32$。同轮$3$也沿弧$3\to1$送来$1/32$。重启的$1/2$加上这两笔，$1$的新质量为$9/16$。图~\ref{fig:graph-pagerank-fourth-round}给出这一轮的各笔转移。
+在第四轮（从$t=3$到$t=4$，见图~\ref{fig:graph-pagerank-fourth-round}）中：死胡同顶点$4$持有旧质量$q^{(3)}=1/16$，经死胡同修补送回顶点$1$并乘以阻尼系数$\alpha=1/2$，贡献$1/32$；顶点$3$沿有向弧$3\to 1$同样送来$1/32$；再加上每轮固定的随机跳转项$(1-\alpha)s_1=1/2$，顶点$1$的新质量恰好为$\frac12+\frac{1}{32}+\frac{1}{32}=\frac{9}{16}$。
 
 \begin{BookInlineFigure}
 \centering
 \includegraphics[width=73.459mm]{figures/03-graphs/05-matrices-and-spectra/tikz/walk-examples/pagerank-fourth-round.pdf}
-\caption{四页算例在第四轮的质量分配，重启概率为$1/2$，重启集中到顶点$1$。深灰实线沿实际链接送出质量，虚线是零出度顶点$4$补齐后送出的份额。重启直接增加顶点$1$的质量。}
+\caption{四顶点有向图算例在第四轮的质量分配（$\alpha=1/2$，$\bm s=(1,0,0,0)$）。深灰实线表示沿真实有向弧按阻尼系数$\alpha$输送的质量，虚线表示死胡同顶点$4$修补后跳回顶点$1$的份额，上方箭头表示$(1-\alpha)\bm s$的重启输入。}
 \label{fig:graph-pagerank-fourth-round}
 \end{BookInlineFigure}
-
-每轮所得各项非负，总和应为一，可据此检查传播、悬挂补偿和重启项是否漏加。
 
 \subsection{算法分析}
 \label{sec:graph-pagerank-cost}
 
-由式~\eqref{eq:graph-pagerank-contraction}及两份概率行的$\ell^1$距离至多为$2$，第$t$轮的误差满足
+下面分析PageRank平稳分布的存在唯一性、Google矩阵的第二特征值界，以及给定阻尼系数和误差容限时所需的迭代次数。
+
+\paragraph{1. 存在唯一、全局严格非零的平稳分布}
+
+当跳转分布$\bm s=(s_1,\ldots,s_n)$处处为正（如均匀分布$s_i=1/n>0$）且$\alpha\in(0,1)$时，Google矩阵$\bm G=\alpha\widetilde{\bm P}+(1-\alpha)\bm 1\bm s$的每一个矩阵元都满足
+\[
+  G_{i,j} = \alpha\widetilde P_{i,j} + (1-\alpha)s_j \geq (1-\alpha)s_j > 0\qquad(\forall i,j\in V).
+\]
+也就是说，$\bm G$是一个\emph{严格正的行随机矩阵}——全图任意两个节点之间在一步之内都有正概率相通，既不可约（强连通）又非周期。为了从定量角度剖析PageRank平稳分布的性质，我们将一步幂法更新写为$\mathbb R^{1\times n}$上的仿射算子
+\[
+  F(\bm x) = \alpha\bm x\widetilde{\bm P} + (1-\alpha)\bm s,
+\]
+并分三步依次证明其$\ell^1$严格收缩性、平稳分布的存在唯一性与级数展开、以及全局严格非零性。
+
+首先考察一步更新算子$F$对两个不同分布之间$\ell^1$距离的影响。直觉上，任何行随机矩阵$\widetilde{\bm P}$都只是将各顶点的概率质量按出边比例重新搬运与混合，不会增大两个行向量之间的$\ell^1$距离；而在作差$F(\bm x)-F(\bm y)$时，与状态无关的固定跳转项$(1-\alpha)\bm s$恰好完全抵消，只剩下被阻尼系数$\alpha\in(0,1)$严格压缩的游走项。
+
+\begin{theorem}[PageRank更新算子的$\ell^1$严格收缩性]
+\label{thm:graph-pagerank-contraction}
+设$\widetilde{\bm P}\in\mathbb R^{n\times n}$为任意行随机矩阵，$\bm s\in\mathbb R^{1\times n}$为概率分布行向量，阻尼系数$\alpha\in(0,1)$。则更新映射$F(\bm x)=\alpha\bm x\widetilde{\bm P}+(1-\alpha)\bm s$对任意行向量$\bm x,\bm y\in\mathbb R^{1\times n}$满足
 \begin{equation}
-\lVert\bm{p}^{(t)}-\bm{p}\rVert_1\le 2(1-\alpha)^t.
+\lVert F(\bm{x})-F(\bm{y})\rVert_1
+\le\alpha\lVert\bm{x}-\bm{y}\rVert_1.
+\label{eq:graph-pagerank-contraction}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+记差向量为$\bm z=\bm x-\bm y\in\mathbb R^{1\times n}$。利用行随机矩阵$\widetilde{\bm P}$元素非负（$\widetilde P_{i,j}\geq 0$）且每行元素之和恒为$\sum_{j=1}^n\widetilde P_{i,j}=1$，由三角不等式与交换求和次序可得
+\[
+\begin{aligned}
+  \lVert\bm z\widetilde{\bm P}\rVert_1
+  &=\sum_{j=1}^n\left|\sum_{i=1}^n z_i\widetilde P_{i,j}\right|
+  \leq\sum_{j=1}^n\sum_{i=1}^n|z_i|\widetilde P_{i,j}\\
+  &=\sum_{i=1}^n|z_i|\left(\sum_{j=1}^n\widetilde P_{i,j}\right)
+  =\sum_{i=1}^n|z_i|=\lVert\bm z\rVert_1.
+\end{aligned}
+\]
+又因常数项$(1-\alpha)\bm s$在相减时消去，有$F(\bm x)-F(\bm y)=\alpha(\bm x-\bm y)\widetilde{\bm P}=\alpha\bm z\widetilde{\bm P}$，两边取$\ell^1$范数即得$\lVert F(\bm x)-F(\bm y)\rVert_1=\alpha\lVert\bm z\widetilde{\bm P}\rVert_1\leq\alpha\lVert\bm x-\bm y\rVert_1$。
+\end{proof}
+
+有了收缩率严格小于$1$的$\ell^1$收缩性，不动点方程$\bm p=F(\bm p)$的解不仅唯一，而且可以直接通过不断将$\bm p=\alpha\bm p\widetilde{\bm P}+(1-\alpha)\bm s$向自身递归代入，展开成关于步数$t$的几何级数（即Neumann级数）。
+
+从随机过程的角度看，由于冲浪者在每一步以$1-\alpha$的概率触发重置，他在触发下一次重置前恰好连续顺着超链接走$t$步（$t=0,1,2,\ldots$）的概率正是几何分布$(1-\alpha)\alpha^t$；而从跳转分布$\bm s$出发连续走$t$步后的位置分布恰为$\bm s\widetilde{\bm P}^t$。因此，PageRank平稳分布本质上就是各步长路径终点分布按几何分布权重的期望叠加。
+
+\begin{theorem}[PageRank平稳分布的存在唯一性与级数展开]
+\label{thm:graph-pagerank-uniqueness}
+设$\widetilde{\bm P}$为行随机矩阵，$\bm s$为概率分布行向量，阻尼系数$\alpha\in(0,1)$。则PageRank不动点方程~\eqref{eq:graph-pagerank-fixed-point}存在唯一的概率分布解$\bm p$，且$\bm p$可显式表示为绝对收敛的几何级数或逆矩阵形式：
+\begin{equation}
+\bm{p}=(1-\alpha)\sum_{t=0}^{\infty}\alpha^t\bm{s}\widetilde{\bm{P}}^t
+=(1-\alpha)\bm s(\bm I-\alpha\widetilde{\bm P})^{-1}.
+\label{eq:graph-pagerank-series}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+对任意整数$t\geq 0$，由于$\bm s$是概率分布且$\widetilde{\bm P}^t$仍为行随机矩阵，$\bm s\widetilde{\bm P}^t$是一个非负概率分布行向量，满足$\lVert\bm s\widetilde{\bm P}^t\rVert_1=\bm s\widetilde{\bm P}^t\bm 1=1$。因$0<\alpha<1$，无穷级数~\eqref{eq:graph-pagerank-series}各项的$\ell^1$范数之和为$(1-\alpha)\sum_{t=0}^\infty\alpha^t=1<\infty$，故级数在$\mathbb R^{1\times n}$中按$\ell^1$范数绝对收敛，其和向量$\bm p$满足$\bm p\geq\bm 0$且分量总和为$\bm p\bm 1=(1-\alpha)\sum_{t=0}^\infty\alpha^t(\bm s\widetilde{\bm P}^t\bm 1)=1$，确为合法的概率分布。
+
+验证$\bm p$满足不动点方程：将级数~\eqref{eq:graph-pagerank-series}代入$\alpha\bm p\widetilde{\bm P}+(1-\alpha)\bm s$，得
+\[
+\begin{aligned}
+  \alpha\bm p\widetilde{\bm P}+(1-\alpha)\bm s
+  &= (1-\alpha)\sum_{t=0}^\infty\alpha^{t+1}\bm s\widetilde{\bm P}^{t+1}+(1-\alpha)\bm s\\
+  &= (1-\alpha)\sum_{k=0}^\infty\alpha^k\bm s\widetilde{\bm P}^k
+  =\bm p.
+\end{aligned}
+\]
+同理，$\bm p(\bm I-\alpha\widetilde{\bm P})=\bm p-\alpha\bm p\widetilde{\bm P}=(1-\alpha)\bm s$，又因$\lVert\alpha\widetilde{\bm P}\rVert_\infty=\alpha<1$，矩阵Neumann级数$\sum_{t\geq0}\alpha^t\widetilde{\bm P}^t$收敛并等于$(\bm I-\alpha\widetilde{\bm P})^{-1}$，故得到所述逆矩阵表示。最后证明唯一性：若另有概率分布$\bm q$满足$\bm q=F(\bm q)$，由定理~\ref{thm:graph-pagerank-contraction}的式~\eqref{eq:graph-pagerank-contraction}得
+\[
+  \lVert\bm p-\bm q\rVert_1 = \lVert F(\bm p)-F(\bm q)\rVert_1 \leq \alpha\lVert\bm p-\bm q\rVert_1.
+\]
+因$0<\alpha<1$，必有$\lVert\bm p-\bm q\rVert_1=0$，即$\bm p=\bm q$。
+\end{proof}
+
+最后，式~\eqref{eq:graph-pagerank-series}的$t=0$项给出$\bm p\geq(1-\alpha)\bm s$。因此，若跳转分布对每个顶点都赋予正概率，则每个顶点的平稳得分也严格为正。
+
+\begin{theorem}[PageRank的全局严格非零性]
+\label{thm:graph-pagerank-positivity}
+在定理~\ref{thm:graph-pagerank-uniqueness}的条件下，若跳转分布满足$\bm s>\bm 0$（即对所有$i\in V$均有$s_i>0$），则唯一的PageRank平稳分布$\bm p$在全图所有顶点上均严格非零，且每个顶点$i\in V$的PageRank得分满足下界
+\begin{equation}
+  p_i \geq (1-\alpha)s_i > 0.
+  \label{eq:graph-pagerank-positivity-bound}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+在级数展开式~\eqref{eq:graph-pagerank-series}中，因为$\bm s\geq\bm 0$且$\widetilde{\bm P}$非负，所有步数$t\geq 1$的传播项$\alpha^t\bm s\widetilde{\bm P}^t$均为逐分量非负的行向量。舍去所有$t\geq 1$的非负项、仅保留$t=0$的零步重启项，即得逐分量不等式
+\[
+  \bm p = (1-\alpha)\bm s + (1-\alpha)\sum_{t=1}^\infty\alpha^t\bm s\widetilde{\bm P}^t \geq (1-\alpha)\bm s > \bm 0,
+\]
+取第$i$个分量即为$p_i\geq(1-\alpha)s_i>0$。
+\end{proof}
+
+\paragraph{2. Google矩阵的谱间隙：第二大特征值模长永远不超过阻尼系数$\alpha$}
+
+普通随机游走接近可约时，某些非平稳特征值可能接近$1$，从而减慢收敛。PageRank加入重启后，除平稳特征值$1$以外的特征值都乘以$\alpha$，其模长不超过$\alpha$。下面用分块相似变换证明这一结论。
+
+\begin{theorem}[Google矩阵的特征值压缩定理]
+\label{thm:pagerank-second-eigenvalue}
+设$\widetilde{\bm P}\in\mathbb R^{n\times n}$为任意行随机矩阵，特征值为$1=\lambda_1(\widetilde{\bm P}),\lambda_2(\widetilde{\bm P}),\ldots,\lambda_n(\widetilde{\bm P})$（除首个$1$外按模长非增排列，且$|\lambda_k(\widetilde{\bm P})|\leq 1$）。对任意满足$\bm s\bm 1=1$的概率行向量$\bm s$和阻尼系数$\alpha\in(0,1)$，Google矩阵$\bm G=\alpha\widetilde{\bm P}+(1-\alpha)\bm 1\bm s$的全体特征值为
+\[
+  1,\; \alpha\lambda_2(\widetilde{\bm P}),\; \alpha\lambda_3(\widetilde{\bm P}),\; \ldots,\; \alpha\lambda_n(\widetilde{\bm P}).
+\]
+特别地，$n\geq2$时，$\bm G$的第二大特征值模长满足
+\begin{equation}
+  |\lambda_2(\bm G)| = \alpha\,|\lambda_2(\widetilde{\bm P})| \leq \alpha.
+  \label{eq:pagerank-second-eigenvalue-bound}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+因为$\widetilde{\bm P}\bm 1=\bm 1$且$\bm s\bm 1=1$，全一列向量$\bm 1$同时是$\widetilde{\bm P}$与$\bm G$对应于最大特征值$\lambda_1=1$的右特征向量：$\bm G\bm 1=\alpha\bm 1+(1-\alpha)\bm 1(\bm s\bm 1)=\bm 1$。
+
+取可逆矩阵$\bm Q=\begin{pmatrix}\bm 1 & \bm V\end{pmatrix}\in\mathbb R^{n\times n}$，其中后$n-1$列$\bm V\in\mathbb R^{n\times(n-1)}$张成满足$\bm s\bm v=0$的$n-1$维核子空间$\ker(\bm s)$（即$\bm s\bm V=\bm 0_{1\times(n-1)}$）。由于$\widetilde{\bm P}\bm 1=\bm 1$，$\widetilde{\bm P}$在基$\bm Q$下的相似变换必呈分块上三角形式：
+\[
+  \bm Q^{-1}\widetilde{\bm P}\bm Q = \begin{pmatrix} 1 & \bm c^\top \\ \bm 0 & \bm B \end{pmatrix},
+\]
+其中$(n-1)\times(n-1)$子矩阵$\bm B$的特征值正是$\widetilde{\bm P}$除去$\lambda_1=1$以外的其余$n-1$个特征值$\lambda_2(\widetilde{\bm P}),\ldots,\lambda_n(\widetilde{\bm P})$。另一方面，由于$\bm s\bm 1=1$且$\bm s\bm V=\bm 0$，秩一矩阵$\bm 1\bm s$在同一组基$\bm Q$下的作用满足$(\bm 1\bm s)\bm 1=\bm 1$且$(\bm 1\bm s)\bm V=\bm 0$，故
+\[
+  \bm Q^{-1}(\bm 1\bm s)\bm Q = \begin{pmatrix} 1 & \bm 0^\top \\ \bm 0 & \bm O \end{pmatrix}.
+\]
+将两式按$\bm G=\alpha\widetilde{\bm P}+(1-\alpha)\bm 1\bm s$线性组合，立得
+\[
+  \bm Q^{-1}\bm G\bm Q = \begin{pmatrix} 1 & \alpha\bm c^\top \\ \bm 0 & \alpha\bm B \end{pmatrix}.
+\]
+分块三角矩阵的特征值由对角块决定，因此$\bm G$的特征值恰好为$1$以及$\alpha\bm B$的特征值$\alpha\lambda_2(\widetilde{\bm P}),\ldots,\alpha\lambda_n(\widetilde{\bm P})$。又因行随机矩阵$\widetilde{\bm P}$的谱半径为$1$（$|\lambda_k(\widetilde{\bm P})|\leq 1$），故$|\lambda_2(\bm G)|=\alpha|\lambda_2(\widetilde{\bm P})|\leq\alpha$。
+\end{proof}
+
+\paragraph{3. 收敛速度、残差停止准则与阻尼系数$\alpha$的权衡}
+
+结合定理~\ref{thm:graph-pagerank-contraction}与定理~\ref{thm:pagerank-second-eigenvalue}，由于任意两个概率分布的$\ell^1$距离$\lVert\bm p^{(0)}-\bm p\rVert_1\leq 2$，算法~\ref{alg:graph-pagerank-iteration}第$t$轮迭代的先验误差满足几何衰减界：
+\begin{equation}
+\lVert\bm{p}^{(t)}-\bm{p}\rVert_1\le 2\alpha^t.
 \label{eq:graph-pagerank-geometric-bound}
 \end{equation}
-要将上界压到$\varepsilon$，对$2(1-\alpha)^t\le\varepsilon$取对数，得到充分的迭代轮数
+要使$\ell^1$误差不超过$\varepsilon$，只需迭代
 \[
-t\ge \left\lceil\frac{\log(2/\varepsilon)}{-\log(1-\alpha)}\right\rceil.
+t\ge \left\lceil\frac{\log(2/\varepsilon)}{\log(1/\alpha)}\right\rceil
 \]
-例如$\alpha=1/2$时，六轮可把上界压到$1/32$。当$\alpha$很小时，$-\log(1-\alpha)$与$\alpha$同阶，轮数约为$\alpha^{-1}\log(2/\varepsilon)$。
+轮即可使精确算术下的$\ell^1$误差不超过$\varepsilon$。轮数上界只依赖$\alpha$和$\varepsilon$，但每轮仍需$O(n+m)$工作量。例如，$\alpha=0.85$、$\varepsilon=10^{-6}$时，上界为$90$轮。实际浮点实现还须考虑舍入误差。
 
-在运行中，真解$\bm{p}$未知，但可以计算候选$\bm{q}$再走一轮会变多少。记残差为$\bm{r}=F(\bm{q})-\bm{q}$。从$\bm{q}$到真解$\bm{p}$的距离，可以先走到$F(\bm{q})$再走到$F(\bm{p})=\bm{p}$。第一段距离是$\lVert\bm{r}\rVert_1$，第二段由收缩性控制，因此
+在实际运行中，真实解$\bm p$未知，我们可以通过单步残差$\bm r=F(\bm q)-\bm q=\bm p^{(t+1)}-\bm p^{(t)}$直接给出当前候选解$\bm q=\bm p^{(t)}$的后验误差证书：由三角不等式与收缩性~\eqref{eq:graph-pagerank-contraction}，
 \[
 \lVert\bm{q}-\bm{p}\rVert_1
-\le\lVert\bm{r}\rVert_1+(1-\alpha)\lVert\bm{q}-\bm{p}\rVert_1.
+\le\lVert\bm{q}-F(\bm{q})\rVert_1+\lVert F(\bm{q})-F(\bm{p})\rVert_1
+\le\lVert\bm{r}\rVert_1+\alpha\lVert\bm{q}-\bm{p}\rVert_1,
 \]
-移项得到
+移项即得
 \begin{equation}
-\lVert\bm{q}-\bm{p}\rVert_1\le\frac{\lVert\bm{r}\rVert_1}{\alpha}.
+\lVert\bm{q}-\bm{p}\rVert_1\le\frac{\lVert\bm{r}\rVert_1}{1-\alpha}.
 \label{eq:graph-pagerank-residual-bound}
 \end{equation}
-若残差范数不超过$\alpha\varepsilon$，当前候选的误差就不超过$\varepsilon$。
-
-设图有$n$个顶点、$m$条弧。每轮传播扫描$m$条弧，初始化和悬挂补偿需$O(n)$。每轮时间和整个存储均为$O(n+m)$。
-
-$\alpha$越大，一次行走越可能很快结束，终点分布越接近$\bm{s}$，迭代也越快收敛。较小的$\alpha$留下更多沿边传播的机会，但也让每轮保留更多旧误差。选择$\alpha$同时改变排名的含义和计算的速度。
+因此，算法第三步检查$\lVert\bm r\rVert_1\leq(1-\alpha)\varepsilon$即可严格保证输出误差$\lVert\bm p^{(t+1)}-\bm p\rVert_1\leq\varepsilon$。在选择阻尼系数$\alpha$时，连续沿修补后转移矩阵行走的步数$T$满足$\mathbb P(T=t)=(1-\alpha)\alpha^t$，故$\mathbb E[T]=\alpha/(1-\alpha)$；若把最后一次重启也计为一步，则相邻重启之间的平均间隔为$1/(1-\alpha)$。例如$\alpha=0.85$时，两者分别约为$5.67$步和$6.67$步。增大$\alpha$会增加长路径的权重，并使收缩界所保证的迭代次数增加；实际谱隙至少为$1-\alpha$，不一定恰等于该值。另一方面，当$\alpha\to0$时，PageRank趋于跳转分布$\bm s$。
